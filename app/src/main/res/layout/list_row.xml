@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:focusable="true"
+    android:clickable="true"
+    android:foreground="?android:attr/selectableItemBackground"
+    android:padding="8dp">
+
+    <TextView
+        android:id="@+id/tapName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="TAP Name"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:layout_editor_absoluteX="57dp" />
+
+    <TextView
+        android:id="@+id/tapAddress"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:text="TAP Address"
+        app:layout_constraintStart_toEndOf="@id/tapName"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <View
+        android:id="@+id/finger1"
+        style="@style/TapCircle"
+        android:layout_marginTop="4dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/tapName" />
+
+    <View
+        android:id="@+id/finger2"
+        style="@style/TapCircle"
+        android:layout_marginStart="2dp"
+        app:layout_constraintStart_toEndOf="@id/finger1"
+        app:layout_constraintTop_toTopOf="@id/finger1" />
+
+    <View
+        android:id="@+id/finger3"
+        style="@style/TapCircle"
+        android:layout_marginStart="2dp"
+        app:layout_constraintStart_toEndOf="@id/finger2"
+        app:layout_constraintTop_toTopOf="@id/finger1" />
+
+    <View
+        android:id="@+id/finger4"
+        style="@style/TapCircle"
+        android:layout_marginStart="2dp"
+        app:layout_constraintStart_toEndOf="@id/finger3"
+        app:layout_constraintTop_toTopOf="@id/finger1" />
+
+    <View
+        android:id="@+id/finger5"
+        style="@style/TapCircle"
+        android:layout_marginStart="2dp"
+        app:layout_constraintStart_toEndOf="@id/finger4"
+        app:layout_constraintTop_toTopOf="@id/finger1" />
+
+    <TextView
+        android:id="@+id/tapInputInt"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:text="TAP Input Int"
+        android:textAlignment="center"
+        app:layout_constraintBottom_toBottomOf="@id/finger5"
+        app:layout_constraintStart_toEndOf="@id/finger5"
+        app:layout_constraintTop_toTopOf="@+id/finger5" />
+
+    <TextView
+        android:id="@+id/tapMode"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Mode"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+</android.support.constraint.ConstraintLayout>
