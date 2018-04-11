@@ -71,44 +71,44 @@ TapSdk API
 > As mentioned, to correctly switch between Modes, `TapSdk` needs to be aware of your application's lifecycle, in particular when your application goes to the background and return from it, so it is needed for you to call the corresponding methods when such events occur.
 
 #### `ArrayList<String> getConnectedTaps()`
-If you wish at any point in your application, you can receive a list of connected TAPs.
+> If you wish at any point in your application, you can receive a list of connected TAPs.
 
 #### `void registerTapListener(TapListener listener)`
-Pass `TapListener` to get all `TapSdk` callbacks.
+> Pass `TapListener` to get all `TapSdk` callbacks.
 
 #### `void unregisterTapListener(TapListener listener)`
-Unregister registered `TapListener`.
+> Unregister registered `TapListener`.
 
 #### `void startTextMode(String tapIdentifier)`
-If your application need to use the TAP device as regular bluetooth keyboard, you can manually switch to Text mode and passing the relevant TAP identifier.
+> If your application need to use the TAP device as regular bluetooth keyboard, you can manually switch to Text mode and passing the relevant TAP identifier.
 
 #### `void startControllerMode(String tapIdentifier)`
-Manually switch to Controller mode, passing the relevant TAP identifier.
+> Manually switch to Controller mode, passing the relevant TAP identifier.
 
 #### `boolean isControllerModeEnabled(String tapIdentifier)`
-Check if Controller Mode is enabled for a specific TAP device.
+> Check if Controller Mode is enabled for a specific TAP device.
 
 #### `void readName(String tapIdentifier)`
-Read TAP name.
+> Read TAP name.
 
 #### `void writeName(String tapIdentifier, String name)`
-Write TAP name.
+> Write TAP name.
 
 #### `void readCharacteristic(String tapAddress, UUID serviceUUID, UUID characteristicUUID)`
-Read characteristic from TAP device using given service UUID and characteristic UUID.
+> Read characteristic from TAP device using given service UUID and characteristic UUID.
 
 #### `void writeCharacteristic(String tapAddress, UUID serviceUUID, UUID characteristicUUID, byte[] data)`
-Write characteristic in TAP device using given service UUID and characteristic UUID.
+> Write characteristic in TAP device using given service UUID and characteristic UUID.
 
 #### `void close()`
-Releasing assosiated inner bluetooth manager.
+> Releasing assosiated inner bluetooth manager.
 
 #### `static boolean[] toFingers(int tapInput)`
-As said before, the `tapInput` is an unsigned 8-bit integer. to convert it to array of booleans:
+> As said before, the `tapInput` is an unsigned 8-bit integer. to convert it to array of booleans:
 ```Java
 boolean[] fingers = TapSdk.toFingers(tapInput);
 ```
-While:  
+> While:  
 fingers[0] indicates if the thumb wqas tapped.  
 fingers[1] indicates if the index finger was tapped.  
 fingers[2] indicates if the middle finger was tapped.  
