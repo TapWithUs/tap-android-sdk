@@ -62,7 +62,7 @@ public interface TapListener {
 ```
 Just implement it and pass it to `TapSdk` class by calling `tapSdk.registerTapListener(tapListener)`.
 
-__Important Note__:  
+> __Important Note__:  
 `void onTapInputReceived(String tapIdentifier, int data)` is a callback function which will be triggered every time a specific TAP device was being tapped, and which fingers were tapped. The returned data is an integer representing a 8-bit unsigned number, between 1 and 31. It's binary form represents the fingers that are tapped. The LSB is thumb finger, the MSB (bit number 5) is the pinky finger. For example: if combination equals 3 - it's binary form is 10100, Which means that the thumb and the middle fingers are tapped. For your convenience, you can convert the binary format into fingers boolean array by calling static funtion `TapSdk.toFingers(tapInput)` listed below.
 
 TapSdk API
