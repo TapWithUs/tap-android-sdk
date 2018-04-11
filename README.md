@@ -29,7 +29,7 @@ As stated in the official [Tap BLE API Documentation](https://www.tapwithus.com/
 
 When using the SDK, it is required to get input data for a specific TAP device. In order to achieve this goal, after a connection with the TAP been established, we need to switch the TAP device to Controller Mode. In addition, it is important we switch back to Text Mode once the application goes to the background, so the regular TAP behaviour will be restroed.
 
-To simplify the process TAP SDK will perform the needed actions in order to correctly connect and switch between Modes automatically, so you don't have to.
+__To simplify the process TAP SDK will perform the needed actions in order to correctly connect and switch between Modes automatically, so you don't have to.__
 
 What now?
 =========
