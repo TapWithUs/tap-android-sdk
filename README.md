@@ -62,58 +62,74 @@ public interface TapListener {
 ```
 Just implement it and pass it to `TapSdk` class by calling `tapSdk.registerTapListener(tapListener)`.
 
-__Important Note__:  
+___
+#### Important Note:  
 `void onTapInputReceived(String tapIdentifier, int data)` is a callback function which will be triggered every time a specific TAP device was being tapped, and which fingers were tapped. The returned data is an integer representing a 8-bit unsigned number, between 1 and 31. It's binary form represents the fingers that are tapped. The LSB is thumb finger, the MSB (bit number 5) is the pinky finger. For example: if combination equals 3 - it's binary form is 10100, Which means that the thumb and the middle fingers are tapped. For your convenience, you can convert the binary format into fingers boolean array by calling static funtion `TapSdk.toFingers(tapInput)` listed below.
+___
 
 TapSdk API
 ==========
 #### `void resume()` and `void pause()`
-As mentioned, to correctly switch between Modes, `TapSdk` needs to be aware of your application's lifecycle, in particular when your application goes to the background and return from it, so it is needed for you to call the corresponding methods when such events occur.
-
+> As mentioned, to correctly switch between Modes, `TapSdk` needs to be aware of your application's lifecycle, in particular when your application goes to the background and return from it, so it is needed for you to call the corresponding methods when such events occur.
+&nbsp;  
+&nbsp;
 #### `ArrayList<String> getConnectedTaps()`
-If you wish at any point in your application, you can receive a list of connected TAPs.
-
+> If you wish at any point in your application, you can receive a list of connected TAPs.
+&nbsp;  
+&nbsp;
 #### `void registerTapListener(TapListener listener)`
-Pass `TapListener` to get all `TapSdk` callbacks.
-
+> Pass `TapListener` to get all `TapSdk` callbacks.
+&nbsp;  
+&nbsp;
 #### `void unregisterTapListener(TapListener listener)`
-Unregister registered `TapListener`.
-
+> Unregister registered `TapListener`.
+&nbsp;  
+&nbsp;
 #### `void startTextMode(String tapIdentifier)`
-If your application need to use the TAP device as regular bluetooth keyboard, you can manually switch to Text mode and passing the relevant TAP identifier.
-
+> If your application need to use the TAP device as regular bluetooth keyboard, you can manually switch to Text mode and passing the relevant TAP identifier.
+&nbsp;  
+&nbsp;
 #### `void startControllerMode(String tapIdentifier)`
-Manually switch to Controller mode, passing the relevant TAP identifier.
-
+> Manually switch to Controller mode, passing the relevant TAP identifier.
+&nbsp;  
+&nbsp;
 #### `boolean isControllerModeEnabled(String tapIdentifier)`
-Check if Controller Mode is enabled for a specific TAP device.
-
+> Check if Controller Mode is enabled for a specific TAP device.
+&nbsp;  
+&nbsp;
 #### `void readName(String tapIdentifier)`
-Read TAP name.
-
+> Read TAP name.
+&nbsp;  
+&nbsp;
 #### `void writeName(String tapIdentifier, String name)`
-Write TAP name.
-
+> Write TAP name.
+&nbsp;  
+&nbsp;
 #### `void readCharacteristic(String tapAddress, UUID serviceUUID, UUID characteristicUUID)`
-Read characteristic from TAP device using given service UUID and characteristic UUID.
-
+> Read characteristic from TAP device using given service UUID and characteristic UUID.
+&nbsp;  
+&nbsp;
 #### `void writeCharacteristic(String tapAddress, UUID serviceUUID, UUID characteristicUUID, byte[] data)`
-Write characteristic in TAP device using given service UUID and characteristic UUID.
-
+> Write characteristic in TAP device using given service UUID and characteristic UUID.
+&nbsp;  
+&nbsp;
 #### `void close()`
-Releasing assosiated inner bluetooth manager.
-
+> Releasing assosiated inner bluetooth manager.
+&nbsp;  
+&nbsp;
 #### `static boolean[] toFingers(int tapInput)`
-As said before, the `tapInput` is an unsigned 8-bit integer. to convert it to array of booleans:
+> As said before, the `tapInput` is an unsigned 8-bit integer. to convert it to array of booleans:
 ```Java
 boolean[] fingers = TapSdk.toFingers(tapInput);
 ```
-While:  
+> While:  
 fingers[0] indicates if the thumb wqas tapped.  
 fingers[1] indicates if the index finger was tapped.  
 fingers[2] indicates if the middle finger was tapped.  
 fingers[3] indicates if the ring finger was tapped.  
 fingers[4] indicates if the pinky finger was tapped.
+&nbsp;  
+&nbsp;
 
 Debugging
 =========
