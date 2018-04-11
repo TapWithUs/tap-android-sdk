@@ -11,7 +11,7 @@ To add TAP SDK library to your project:
 - Make sure you have JCenter in your Gradle repositories.
 - Add the following Gradle dependency to your build.gradle:
 ```Groovy
-  implementation 'com.tapwithus:tap-sdk:1.0.4'
+  implementation 'com.tapwithus.sdk:tap-android-sdk:0.1.9'
 ```
 
 Getting instance of TapSdk
