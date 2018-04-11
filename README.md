@@ -13,7 +13,8 @@ Getting instance of TapSdk
 ==========================
 The entry point of TAP SDK is the `com.tapwithus.sdk.TapSdk` class.
 
-If your application might be using the default `TapSdk` instance, a `TapSdk` single instance can be retrieved simply by using the `TapSdkFactory` helper class by calling `TapSdkFactory.getDefault(context)`. This helper method will return a single instance of `TapSdk` relatively to the passed context lifecycle.  
+If your application might be using the default `TapSdk` instance, a `TapSdk` single instance can be retrieved simply by using the `TapSdkFactory` helper class by calling `TapSdkFactory.getDefault(context)`. This helper method will return a single instance of `TapSdk` relatively to the passed context lifecycle.
+
 If an alternative `TapSdk` instance is required, or if you might be using a dependency injection framework where custom scopes is implemented, call `new TapSdk(context.getApplicationContext(), BluetoothAdapter.getDefaultAdapter())` instead, passing the appropriate arguments.
 
 Debugging
