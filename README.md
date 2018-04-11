@@ -62,6 +62,9 @@ public interface TapListener {
 ```
 Just implement it and pass it to `TapSdk` class by calling `tapSdk.registerTapListener(tapListener)`.
 
+__Important Note__:  
+`void onTapInputReceived(String tapIdentifier, int data)` is a callback function which will be triggered every time a specific TAP device was being tapped, and which fingers were tapped. The returned data is an integer representing a 8-bit unsigned number, between 1 and 31. It's binary form represents the fingers that are tapped. The LSB is thumb finger, the MSB (bit number 5) is the pinky finger. For example: if combination equals 3 - it's binary form is 10100, Which means that the thumb and the middle fingers are tapped. For your convenience, you can convert the binary format into fingers boolean array by calling static funtion `TapSdk.toFingers(tapInput)` listed below.
+
 TapSdk API
 ==========
 #### `void resume()` and `void pause()`
@@ -83,18 +86,34 @@ If your application need to use the TAP device as regular bluetooth keyboard, yo
 Manually switch to Controller mode, passing the relevant TAP identifier.
 
 #### `boolean isControllerModeEnabled(String tapIdentifier)`
+Check if Controller Mode is enabled for a specific TAP device.
 
 #### `void readName(String tapIdentifier)`
+Read TAP name.
 
 #### `void writeName(String tapIdentifier, String name)`
+Write TAP name.
 
 #### `void readCharacteristic(String tapAddress, UUID serviceUUID, UUID characteristicUUID)`
+Read characteristic from TAP device using given service UUID and characteristic UUID.
 
 #### `void writeCharacteristic(String tapAddress, UUID serviceUUID, UUID characteristicUUID, byte[] data)`
+Write characteristic in TAP device using given service UUID and characteristic UUID.
 
 #### `void close()`
+Releasing assosiated inner bluetooth manager.
 
 #### `static boolean[] toFingers(int tapInput)`
+As said before, the `tapInput` is an unsigned 8-bit integer. to convert it to array of booleans:
+```Java
+boolean[] fingers = TapSdk.toFingers(tapInput);
+```
+While:  
+fingers[0] indicates if the thumb wqas tapped.  
+fingers[1] indicates if the index finger was tapped.  
+fingers[2] indicates if the middle finger was tapped.  
+fingers[3] indicates if the ring finger was tapped.  
+fingers[4] indicates if the pinky finger was tapped.
 
 Debugging
 =========
