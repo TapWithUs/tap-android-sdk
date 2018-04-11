@@ -11,5 +11,5 @@ public interface BluetoothListener {
     void onCharacteristicRead(String deviceAddress, UUID characteristic, byte[] data);
     void onCharacteristicWrite(String deviceAddress, UUID characteristic, byte[] data);
     void onNotificationSubscribed(String deviceAddress, UUID characteristic);
-    void onNotificationReceived(String deviceAddress, UUID characteristic, int data);
+    void onNotificationReceived(String deviceAddress, UUID characteristic, byte[] data);
 }

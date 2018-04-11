@@ -68,7 +68,7 @@ public class TapSdk {
         tapListeners.registerListener(listener);
     }
 
-    public void unregisterTapBluetoothListener(@NonNull TapListener listener) {
+    public void unregisterTapListener(@NonNull TapListener listener) {
         tapListeners.unregisterListener(listener);
     }
 
@@ -188,6 +188,11 @@ public class TapSdk {
         @Override
         public void onTapInputReceived(String tapAddress, int data) {
             notifyOnTapInputReceived(tapAddress, data);
+        }
+
+        @Override
+        public void onMouseInputReceived(String tapAddress, byte[] data) {
+
         }
     };
 

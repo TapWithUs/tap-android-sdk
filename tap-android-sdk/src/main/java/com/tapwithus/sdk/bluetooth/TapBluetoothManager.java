@@ -27,6 +27,7 @@ public class TapBluetoothManager {
     private static final UUID NUS = UUID.fromString("6E400001-B5A3-F393-E0A9-E50E24DCCA9E");
     private static final UUID RX = UUID.fromString("6E400002-B5A3-F393-E0A9-E50E24DCCA9E");
     private static final UUID NAME = UUID.fromString("C3FF0003-1D8B-40FD-A56F-C7BD5D0F3370");
+    private static final UUID MOUSE_DATA = UUID.fromString("C3FF0006-1D8B-40FD-A56F-C7BD5D0F3370");
 
     private BluetoothManager bluetoothManager;
     private List<String> tapInputSubscribers = new CopyOnWriteArrayList<>();
@@ -191,13 +192,29 @@ public class TapBluetoothManager {
         public void onNotificationSubscribed(String deviceAddress, UUID characteristic) {
             log("Notification Subscribed");
 
-            notifyOnTapConnected(deviceAddress);
+            if (characteristic.equals(TAP_DATA)) {
+                notifyOnTapConnected(deviceAddress);
+            } else if (characteristic.equals(MOUSE_DATA)) {
+
+            }
         }
 
         @Override
-        public void onNotificationReceived(String deviceAddress, UUID characteristic, int data) {
-            log("Notification Received " + data);
-            notifyOnTapInputReceived(deviceAddress, data);
+        public void onNotificationReceived(String deviceAddress, UUID characteristic, byte[] data) {
+            if (data == null) {
+                logError("Unable to read notification data");
+                return;
+            }
+
+            log("Notification Received " + Arrays.toString(data));
+
+            if (characteristic.equals(TAP_DATA)) {
+                if (data[0] != 0) {
+                    notifyOnTapInputReceived(deviceAddress, data[0]);
+                }
+            } else if (characteristic.equals(MOUSE_DATA)) {
+
+            }
         }
     };
 
