@@ -1,1 +1,1 @@
-include ':app', ':tap-android-sdk'
+include ':app', ':tap-android-sdk', ':tap-unity'

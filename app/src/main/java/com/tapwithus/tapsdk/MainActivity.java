@@ -74,7 +74,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onPause() {
         super.onPause();
         tapSdk.pause();
-        tapSdk.unregisterTapBluetoothListener(tapListener);
+        tapSdk.unregisterTapListener(tapListener);
     }
 
     @Override
@@ -82,7 +82,7 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy();
 
         log("onDestroy");
-        tapSdk.unregisterTapBluetoothListener(tapListener);
+        tapSdk.unregisterTapListener(tapListener);
     }
 
     private void initRecyclerView() {

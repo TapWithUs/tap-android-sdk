@@ -186,7 +186,8 @@ public class BluetoothManager {
             String deviceAddress = gatt.getDevice().getAddress();
             byte[] data = characteristic.getValue();
             if (data != null && data[0] != 0) {
-                notifyOnNotificationReceived(deviceAddress, characteristic.getUuid(), data[0]);
+//                notifyOnNotificationReceived(deviceAddress, characteristic.getUuid(), data[0]);
+                notifyOnNotificationReceived(deviceAddress, characteristic.getUuid(), data);
             }
         }
 
@@ -493,7 +494,7 @@ public class BluetoothManager {
         });
     }
 
-    private void notifyOnNotificationReceived(final String deviceAddress, final UUID characteristic, final int data) {
+    private void notifyOnNotificationReceived(final String deviceAddress, final UUID characteristic, final byte[] data) {
         bluetoothListeners.notifyListeners(new ListenerManager.NotifyAction<BluetoothListener>() {
             @Override
             public void onNotify(BluetoothListener listener) {

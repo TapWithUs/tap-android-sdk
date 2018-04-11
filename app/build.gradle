@@ -20,12 +20,17 @@ android {
 
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
-    implementation 'com.android.support:appcompat-v7:27.1.0'
-    implementation 'com.android.support:recyclerview-v7:27.1.0'
+    implementation 'com.android.support:appcompat-v7:27.1.1'
+    implementation 'com.android.support:recyclerview-v7:27.1.1'
     implementation 'com.android.support.constraint:constraint-layout:1.0.2'
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'com.android.support.test:runner:1.0.1'
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.1'
-    implementation project(':tap-android-sdk')
-    implementation 'com.android.support:recyclerview-v7:27.1.0'
+//    implementation project(':tap-android-sdk')
+    implementation 'com.android.support:recyclerview-v7:27.1.1'
+//    implementation 'com.tapwithus.sdk:tap-android-sdk:0.1.9'
+    implementation 'com.tapwithus:tap-android-sdk:0.1.10'
+//    implementation 'com.tapwithus:tap-sdk:1.0.4'
+//    implementation 'com.tapwithus:tap-android-sdk:1.0.7'
 }
+

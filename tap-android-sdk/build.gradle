@@ -1,5 +1,28 @@
 apply plugin: 'com.android.library'
 
+ext {
+    bintrayRepo = 'maven'
+    bintrayName = 'tap-android-sdk'
+    bintrayUserOrg = 'tap'
+    allLicenses = ["Apache-2.0"]
+    gitUrl = 'https://github.com/TapWithUs/tap-android-sdk.git'
+    libraryDescription = 'TAP official SDK'
+
+    libraryName = 'TapSdk'
+    libraryVersion = '0.1.10'
+    siteUrl = 'https://github.com/TapWithUs/tap-android-sdk'
+
+    publishedGroupId = 'com.tapwithus'
+    publishedArtifactId = 'tap-android-sdk'
+
+    licenseName = 'The Apache Software License, Version 2.0'
+    licenseUrl = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+
+    developerId = 'tap'
+    developerName = 'Yaniv Gal'
+    developerEmail = 'yaniv.gal@tapwithus.com'
+}
+
 android {
     compileSdkVersion 27
 
@@ -19,11 +42,21 @@ android {
     }
 }
 
-dependencies {
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
+//task javadoc(type: Javadoc) {
+//    source = android.sourceSets.main.java.srcDirs
+//    configurations.implementation.setCanBeResolved(true)
+//    classpath += project.files(android.getBootClasspath().join(File.pathSeparator)) + configurations.implementation
+//}
 
-    implementation 'com.android.support:appcompat-v7:27.1.0'
-    testImplementation 'junit:junit:4.12'
-    androidTestImplementation 'com.android.support.test:runner:1.0.1'
-    androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.1'
+dependencies {
+//    implementation fileTree(dir: 'libs', include: ['*.jar'])
+//
+//    implementation 'com.android.support:appcompat-v7:27.1.1'
+    implementation 'com.android.support:support-annotations:27.1.1'
+//    testImplementation 'junit:junit:4.12'
+//    androidTestImplementation 'com.android.support.test:runner:1.0.1'
+//    androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.1'
 }
+
+apply from: '../install.gradle'
+apply from: '../bintray.gradle'

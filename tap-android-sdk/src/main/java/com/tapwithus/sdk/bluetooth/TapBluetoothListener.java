@@ -15,4 +15,5 @@ public interface TapBluetoothListener {
     void onControllerModeStarted(String tapAddress);
     void onTextModeStarted(String tapAddress);
     void onTapInputReceived(String tapAddress, int data);
+    void onMouseInputReceived(String tapAddress, byte[] data);
 }
