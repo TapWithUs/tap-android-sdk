@@ -27,14 +27,19 @@ Key features
 ##### Controller Mode & Text Mode
 As stated in the official [Tap BLE API Documentation](https://www.tapwithus.com/wp-content/uploads/2018/04/TapBLEAPIdocumentation_1_0_0_20180408-1.pdf), once you turn ON the TAP device, by default, the TAP will be in Text Mode, meaning that the TAP functions as a bluetooth keyboard, every recognized tap will be mapped to a letter, and no input data will be sent to the SDK.
 
-When using the SDK, it is required to get input data for a specific TAP device. In order to achieve this goal, after a connection with the TAP been established, we need to switch the TAP device to Controller Mode. In addition, it is important we switch back to Text Mode once the application goes to the background, so the regular TAP behaviour will be restroed.
+When using the SDK, it is required to get input data for a specific TAP device. In order to achieve this goal, after a connection with the TAP been established, we need to switch the TAP device to Controller Mode. In addition, it is important we switch back to Text Mode once the application goes to background, so the regular TAP behaviour will be restroed.
 
-__To simplify the process TAP SDK will perform the needed actions in order to correctly connect and switch between Modes automatically, so you don't have to.__
+To simplify the process TAP SDK will perform the needed actions in order to correctly connect and switch between Modes automatically, __so you don't have to.__
 
 What now?
 =========
 Once a `TapSdk` instance been instantiated, TAP SDK will start doing his magic, by performing the following actions:
-* Auto establishing connections with paired TAP devices, and configurating nessesary TAP configurations in order
+* Auto establishing connections with paired TAP devices.
+* After a connection with a TAP device been established successfully, switching it to Controller Mode.
+* When the application goes to background, switching back to Text Mode.
+* When the application returns from background, switching back to Controller Mode.
+
+The only thing you need to take care of is to register for the necessary events.
 
 Registering TapListener
 =======================
