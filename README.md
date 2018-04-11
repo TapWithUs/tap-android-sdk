@@ -43,7 +43,24 @@ The only thing you need to take care of is to register for the necessary events.
 
 Registering TapListener
 =======================
-`com.tapwithus.sdk.TapListener` is an interface, describing the various data you can retrieve from `TapSdk`. Just implement it and pass it to `TapSdk` class by calling `tapSdk.registerTapListener(tapListener)`.
+`com.tapwithus.sdk.TapListener` is an interface, describing the various data you can retrieve from `TapSdk`.
+
+```Java
+public interface TapListener {
+    void onBluetoothTurnedOn();
+    void onBluetoothTurnedOff();
+    void onTapConnected(String tapIdentifier);
+    void onTapDisconnected(String tapIdentifier);
+    void onNameRead(String tapIdentifier, String name);
+    void onNameWrite(String tapIdentifier, String name);
+    void onCharacteristicRead(String tapIdentifier, UUID characteristic, byte[] data);
+    void onCharacteristicWrite(String tapIdentifier, UUID characteristic, byte[] data);
+    void onControllerModeStarted(String tapIdentifier);
+    void onTextModeStarted(String tapIdentifier);
+    void onTapInputReceived(String tapIdentifier, int data);
+}
+```
+Just implement it and pass it to `TapSdk` class by calling `tapSdk.registerTapListener(tapListener)`.
 
 Debugging
 =========
