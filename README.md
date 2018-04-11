@@ -62,6 +62,40 @@ public interface TapListener {
 ```
 Just implement it and pass it to `TapSdk` class by calling `tapSdk.registerTapListener(tapListener)`.
 
+TapSdk API
+==========
+#### `void resume()` and `void pause()`
+As mentioned, to correctly switch between Modes, `TapSdk` needs to be aware of your application's lifecycle, in particular when your application goes to the background and return from it, so it is needed for you to call the corresponding methods when such events occur.
+
+#### `ArrayList<String> getConnectedTaps()`
+If you wish at any point in your application, you can receive a list of connected TAPs.
+
+#### `void registerTapListener(TapListener listener)`
+Pass `TapListener` to get all `TapSdk` callbacks.
+
+#### `void unregisterTapListener(TapListener listener)`
+Unregister registered `TapListener`.
+
+#### `void startTextMode(String tapIdentifier)`
+If your application need to use the TAP device as regular bluetooth keyboard, you can manually switch to Text mode and passing the relevant TAP identifier.
+
+#### `void startControllerMode(String tapIdentifier)`
+Manually switch to Controller mode, passing the relevant TAP identifier.
+
+#### `boolean isControllerModeEnabled(String tapIdentifier)`
+
+#### `void readName(String tapIdentifier)`
+
+#### `void writeName(String tapIdentifier, String name)`
+
+#### `void readCharacteristic(String tapAddress, UUID serviceUUID, UUID characteristicUUID)`
+
+#### `void writeCharacteristic(String tapAddress, UUID serviceUUID, UUID characteristicUUID, byte[] data)`
+
+#### `void close()`
+
+#### `static boolean[] toFingers(int tapInput)`
+
 Debugging
 =========
 It is often desirable and useful to print out more `TapSdk` inner logs in LogCat. You can manually enable inner log prints by calling `tapSdk.enableDebug()`, and corresponding, you can disable inner log prints by calling `tapSdk.disableDebug`
