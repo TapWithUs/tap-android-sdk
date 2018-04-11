@@ -1,4 +1,4 @@
-# tap-android-sdk
+# TAP Official Android SDK
 
 Getting started
 ===============
