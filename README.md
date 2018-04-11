@@ -69,7 +69,9 @@ TapSdk API
 ==========
 #### `void resume()` and `void pause()`
 > As mentioned, to correctly switch between Modes, `TapSdk` needs to be aware of your application's lifecycle, in particular when your application goes to the background and return from it, so it is needed for you to call the corresponding methods when such events occur.
-
+&nbsp;
+&nbsp;  
+&nbsp;
 #### `ArrayList<String> getConnectedTaps()`
 > If you wish at any point in your application, you can receive a list of connected TAPs.
 
