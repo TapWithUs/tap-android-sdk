@@ -11,7 +11,7 @@ To add TAP SDK library to your project:
 - Make sure you have JCenter in your Gradle repositories.
 - Add the following Gradle dependency to your build.gradle:
 ```Groovy
-  implementation 'com.tapwithus.sdk:tap-android-sdk:0.1.9'
+  implementation 'com.tapwithus:tap-android-sdk:0.1.10'
 ```
 
 Getting instance of TapSdk
@@ -25,7 +25,7 @@ If an alternative `TapSdk` instance is required, or if you might be using a depe
 Key features
 ============
 ##### Controller Mode & Text Mode
-As stated in the official [Tap BLE API Documentation](https://www.tapwithus.com/wp-content/uploads/2018/04/TapBLEAPIdocumentation_1_0_0_20180408-1.pdf), once you turn ON the TAP device, by default, the TAP will be in Text Mode, meaning that the TAP functions as a bluetooth keyboard, every recognized tap will be mapped to a letter, and no input data will be sent to the SDK.
+As stated in the official [Tap BLE API Documentation](https://www.tapwithus.com/api), once you turn ON the TAP device, by default, the TAP will be in Text Mode, meaning that the TAP functions as a bluetooth keyboard, every recognized tap will be mapped to a letter, and no input data will be sent to the SDK.
 
 When using the SDK, it is required to get input data for a specific TAP device. In order to achieve this goal, after a connection with the TAP been established, we need to switch the TAP device to Controller Mode. In addition, it is important we switch back to Text Mode once the application goes to background, so the regular TAP behaviour will be restroed.
 
