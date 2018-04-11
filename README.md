@@ -43,7 +43,7 @@ The only thing you need to take care of is to register for the necessary events.
 
 Registering TapListener
 =======================
-`com.tapwithus.sdk.TapListener` is an interface, describing the various data you can retrieve from `TapSdk`.
+`com.tapwithus.sdk.TapListener` is an interface, describing the various callbacks you can get back from `TapSdk`.
 
 ```Java
 public interface TapListener {
