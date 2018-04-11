@@ -24,6 +24,11 @@ If an alternative `TapSdk` instance is required, or if you might be using a depe
 
 Key features
 ============
+##### Controller Mode and Text Mode
+As stated in the official [Tap BLE API Documentation](https://www.tapwithus.com/wp-content/uploads/2018/04/TapBLEAPIdocumentation_1_0_0_20180408-1.pdf), once you turn ON the TAP device, by default, the TAP will be in Text Mode, meaning that the TAP functions as a bluetooth keyboard, every recognized tap will be mapped to a letter, and no input data will be sent to the SDK.  
+When using the SDK, it is required to get input data for a specific TAP device. In order to achieve this goal, after a connection with the TAP been established, we need to switch the TAP device to Controller Mode.  
+To simplify the process TAP SDK will perform the needed actions to connect and switch the TAP device to Controller mode automatically, so you don't have to.
+
 Once a `TapSdk` instance been instantiated, TAP SDK will start doing his magic, by performing the following actions:
 * Auto establishing connections with paired TAP devices, and configurating nessesary TAP configurations in order
 
