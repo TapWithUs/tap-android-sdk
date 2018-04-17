@@ -76,7 +76,8 @@ public class TapUnityAdapter {
     }
 
     public void getMode(String tapIdentifier) {
-        String modeArg = String.valueOf(tapSdk.getMode(tapIdentifier));
+        int mode = tapSdk.getMode(tapIdentifier);
+        String modeArg = tapIdentifier + UNITY_ARGS_SEPARATOR + mode;
         UnityPlayer.UnitySendMessage(UNITY_GAME_OBJECT, UNITY_GET_MODE_CALLBACK, modeArg);
     }
 
