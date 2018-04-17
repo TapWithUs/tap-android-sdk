@@ -9,7 +9,7 @@ ext {
     libraryDescription = 'TAP official SDK'
 
     libraryName = 'TapSdk'
-    libraryVersion = '0.1.11'
+    libraryVersion = '0.1.12'
     siteUrl = 'https://github.com/TapWithUs/tap-android-sdk'
 
     publishedGroupId = 'com.tapwithus'

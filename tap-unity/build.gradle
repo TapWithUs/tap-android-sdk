@@ -24,7 +24,7 @@ android {
 
 dependencies {
     implementation fileTree(include: ['*.jar', '*.aar'], dir: 'libs')
-    compile 'com.tapwithus:tap-android-sdk:0.1.11'
+    compile 'com.tapwithus:tap-android-sdk:0.1.12'
 //    implementation project(':tap-android-sdk')
 }
 
