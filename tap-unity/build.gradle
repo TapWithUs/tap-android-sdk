@@ -23,10 +23,8 @@ android {
 }
 
 dependencies {
-    implementation fileTree(include: ['*.jar', '*.aar'], dir: 'libs')
-    compile 'com.tapwithus:tap-android-sdk:0.1.12'
+//    compile fileTree(include: ['*.jar', '*.aar'], dir: 'libs')
+    implementation 'com.tapwithus:tap-android-sdk:0.1.12'
 //    implementation project(':tap-android-sdk')
+    provided files('unityLibs/classes.jar')
 }
-
-
-apply from: '../buildWithCompileDependencies.gradle'
