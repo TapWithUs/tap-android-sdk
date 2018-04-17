@@ -13,7 +13,7 @@ import java.util.UUID;
 
 public class TapUnityAdapter {
 
-    private static final String UNITY_ARGS_DIVIDER = "|";
+    private static final String UNITY_ARGS_SEPARATOR = "|";
     private static final String UNITY_GAME_OBJECT = "TapInputAndroid";
     private static final String UNITY_BLUETOOTH_ON_CALLBACK = "onBluetoothTurnedOn";
     private static final String UNITY_BLUETOOTH_OFF_CALLBACK = "onBluetoothTurnedOff";
@@ -23,6 +23,8 @@ public class TapUnityAdapter {
     private static final String UNITY_CONTROLLER_MODE_CALLBACK = "onControllerModeStarted";
     private static final String UNITY_TEXT_MODE_CALLBACK = "onTextModeStarted";
     private static final String UNITY_TAP_INPUT_CALLBACK = "onTapInputReceived";
+    private static final String UNITY_CONNECTED_TAPS_CALLBACK = "onConnectedTapsReceived";
+    private static final String UNITY_GET_MODE_CALLBACK = "onModeReceived";
 
     private TapSdk tapSdk;
 
@@ -54,15 +56,28 @@ public class TapUnityAdapter {
     }
 
     public void startControllerMode(String tapIdentifier) {
-        tapSdk.startControllerMode(tapIdentifier);
+        tapSdk.startMode(tapIdentifier, TapSdk.MODE_CONTROLLER);
     }
 
     public void startTextMode(String tapIdentifier) {
-        tapSdk.startTextMode(tapIdentifier);
+        tapSdk.startMode(tapIdentifier, TapSdk.MODE_TEXT);
     }
 
     public void readName(String tapIdentifier) {
         tapSdk.readName(tapIdentifier);
+    }
+
+    public void getConnectedTaps() {
+        String connectedTapsString = tapSdk.getConnectedTaps().toString();
+        String connectTapsArg = connectedTapsString
+                .substring(1, connectedTapsString.length() - 1)
+                .replaceAll(", ", UNITY_ARGS_SEPARATOR);
+        UnityPlayer.UnitySendMessage(UNITY_GAME_OBJECT, UNITY_CONNECTED_TAPS_CALLBACK, connectTapsArg);
+    }
+
+    public void getMode(String tapIdentifier) {
+        String modeArg = String.valueOf(tapSdk.getMode(tapIdentifier));
+        UnityPlayer.UnitySendMessage(UNITY_GAME_OBJECT, UNITY_GET_MODE_CALLBACK, modeArg);
     }
 
     private TapListener tapListener = new TapListener() {
@@ -95,7 +110,7 @@ public class TapUnityAdapter {
         public void onNameRead(String tapIdentifier, String name) {
             log(tapIdentifier + " Name read " + name);
 
-            String args = tapIdentifier + UNITY_ARGS_DIVIDER + name;
+            String args = tapIdentifier + UNITY_ARGS_SEPARATOR + name;
             UnityPlayer.UnitySendMessage(UNITY_GAME_OBJECT, UNITY_NAME_READ_CALLBACK, args);
         }
 
@@ -130,7 +145,7 @@ public class TapUnityAdapter {
         public void onTapInputReceived(String tapIdentifier, int data) {
             log(tapIdentifier + " TAP input received " + String.valueOf(data));
 
-            String args = tapIdentifier + UNITY_ARGS_DIVIDER + data;
+            String args = tapIdentifier + UNITY_ARGS_SEPARATOR + data;
             UnityPlayer.UnitySendMessage(UNITY_GAME_OBJECT, UNITY_TAP_INPUT_CALLBACK, args);
         }
     };

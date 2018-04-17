@@ -3,22 +3,30 @@ package com.tapwithus.sdk;
 import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
 import android.support.annotation.NonNull;
+import android.util.Log;
 
 import com.tapwithus.sdk.bluetooth.BluetoothManager;
 import com.tapwithus.sdk.bluetooth.TapBluetoothListener;
 import com.tapwithus.sdk.bluetooth.TapBluetoothManager;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class TapSdk {
 
+    private static final int NUM_OF_MODES = 2;
+    public static final int MODE_TEXT = 1;
+    public static final int MODE_CONTROLLER = 2;
+
+    private static final String TAG = "TapSdk";
+
     private TapBluetoothManager tapBluetoothManager;
     private ListenerManager<TapListener> tapListeners = new ListenerManager<>();
-    private List<String> controllerModeSubscribers = new CopyOnWriteArrayList<>();
+    private Map<String, Integer> modeSubscribers = new ConcurrentHashMap<>();
     private List<String> notifyOnConnectedAfterControllerModeStarted = new CopyOnWriteArrayList<>();
 
     public TapSdk(Context context, BluetoothAdapter bluetoothAdapter) {
@@ -38,6 +46,7 @@ public class TapSdk {
     public void resume() {
         tapBluetoothManager.registerTapBluetoothListener(tapBluetoothListener);
         List<String> actuallyConnectTaps = getConnectedTaps();
+        List<String> controllerModeSubscribers = getTapsInMode(MODE_CONTROLLER);
         for (String tapIdentifier: controllerModeSubscribers) {
             if (actuallyConnectTaps.contains(tapIdentifier)) {
                 tapBluetoothManager.startControllerMode(tapIdentifier);
@@ -49,6 +58,7 @@ public class TapSdk {
     }
 
     public void pause() {
+        List<String> controllerModeSubscribers = getTapsInMode(MODE_CONTROLLER);
         for (String tapIdentifier: controllerModeSubscribers) {
             tapBluetoothManager.startTextMode(tapIdentifier);
         }
@@ -72,22 +82,51 @@ public class TapSdk {
         tapListeners.unregisterListener(listener);
     }
 
-    public void startControllerMode(@NonNull String tapIdentifier) {
-        if (!controllerModeSubscribers.contains(tapIdentifier)) {
-            controllerModeSubscribers.add(tapIdentifier);
+    public void startMode(String tapIdentifier, int mode) {
+        if (!isModeValid(mode)) {
+            Log.e(TAG, "subscribeMode - Invalid mode passed.");
+            return;
         }
-        tapBluetoothManager.startControllerMode(tapIdentifier);
+
+        modeSubscribers.put(tapIdentifier, mode);
+        switch (mode) {
+            case MODE_TEXT:
+                tapBluetoothManager.startTextMode(tapIdentifier);
+                break;
+            case MODE_CONTROLLER:
+                tapBluetoothManager.startControllerMode(tapIdentifier);
+                break;
+        }
     }
 
-    public boolean isControllerModeEnabled(String tapIdentifier) {
-        return controllerModeSubscribers.contains(tapIdentifier);
+    private boolean isModeValid(int mode) {
+        return mode >= 1 && mode >> NUM_OF_MODES <= 0;
     }
 
-    public void startTextMode(@NonNull String tapIdentifier) {
-        if (controllerModeSubscribers.contains(tapIdentifier)) {
-            controllerModeSubscribers.remove(tapIdentifier);
+    public int getMode(String tapIdentifier) {
+        return modeSubscribers.containsKey(tapIdentifier) ? modeSubscribers.get(tapIdentifier) : 0;
+    }
+
+    public List<String> getTapsInMode(int mode) {
+        List<String> taps = new ArrayList<>();
+
+        if (isModeValid(mode)) {
+            for (Map.Entry<String, Integer> entry : modeSubscribers.entrySet()) {
+                String tapIdentifier = entry.getKey();
+                if (isInMode(tapIdentifier, mode)) {
+                    taps.add(tapIdentifier);
+                }
+            }
         }
-        tapBluetoothManager.startTextMode(tapIdentifier);
+
+        return taps;
+    }
+
+    public boolean isInMode(String tapIdentifier, int mode) {
+        if (!modeSubscribers.containsKey(tapIdentifier)) {
+            return false;
+        }
+        return (modeSubscribers.get(tapIdentifier) & mode) == mode;
     }
 
     public void readName(@NonNull String tapIdentifier) {
@@ -132,16 +171,25 @@ public class TapSdk {
 
         @Override
         public void onTapConnected(String tapAddress) {
-            notifyOnTapConnected(tapAddress);
-            if (controllerModeSubscribers.contains(tapAddress)) {
-                tapBluetoothManager.startControllerMode(tapAddress);
+            List<String> textModeSubscribers = getTapsInMode(MODE_TEXT);
+            if (textModeSubscribers.contains(tapAddress)) {
+                modeSubscribers.put(tapAddress, MODE_TEXT);
+                notifyOnTapConnected(tapAddress);
+            } else {
+                notifyOnConnectedAfterControllerModeStarted.add(tapAddress);
+                startMode(tapAddress, MODE_CONTROLLER);
             }
         }
 
         @Override
         public void onTapAlreadyConnected(String tapAddress) {
-            if (controllerModeSubscribers.contains(tapAddress)) {
-                tapBluetoothManager.startControllerMode(tapAddress);
+            List<String> textModeSubscribers = getTapsInMode(MODE_TEXT);
+            if (textModeSubscribers.contains(tapAddress)) {
+                modeSubscribers.put(tapAddress, MODE_TEXT);
+                notifyOnTapConnected(tapAddress);
+            } else {
+                notifyOnConnectedAfterControllerModeStarted.add(tapAddress);
+                startMode(tapAddress, MODE_CONTROLLER);
             }
         }
 
@@ -182,7 +230,12 @@ public class TapSdk {
 
         @Override
         public void onTextModeStarted(String tapAddress) {
-            notifyOnTextModeStarted(tapAddress);
+            if (notifyOnConnectedAfterControllerModeStarted.contains(tapAddress)) {
+                notifyOnConnectedAfterControllerModeStarted.remove(tapAddress);
+                notifyOnTapConnected(tapAddress);
+            } else {
+                notifyOnTextModeStarted(tapAddress);
+            }
         }
 
         @Override

@@ -3,8 +3,6 @@ apply plugin: 'com.android.library'
 android {
     compileSdkVersion 27
 
-
-
     defaultConfig {
         minSdkVersion 18
         targetSdkVersion 27
@@ -25,8 +23,10 @@ android {
 }
 
 dependencies {
-    //    implementation fileTree(include: ['*.jar'], dir: 'libs')
-    compileOnly project(':tap-android-sdk')
-    compileOnly files('libs/classes.jar')
-    //    compile 'com.tapwithus.sdk:tap-android-sdk:0.1.8'
+    implementation fileTree(include: ['*.jar', '*.aar'], dir: 'libs')
+    compile 'com.tapwithus:tap-android-sdk:0.1.11'
+//    implementation project(':tap-android-sdk')
 }
+
+
+apply from: '../buildWithCompileDependencies.gradle'

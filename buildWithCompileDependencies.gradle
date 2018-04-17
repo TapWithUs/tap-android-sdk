@@ -1,0 +1,28 @@
+task copyCompileDependenciesToLibs(type: Copy) {
+    def libsPath = project.projectDir.toString() + "/libs"
+
+    from configurations.compile
+    into libsPath
+}
+
+task deleteCompileDependenciesFromLibs(type: Delete) {
+    def libsPath = project.projectDir.toString() + "/libs"
+
+    def dependencies = []
+    configurations.compile.collect {
+        File file = new File(it.toString())
+        String fileName = file.parentFile.toURI().relativize(file.toURI()).getPath()
+
+        dependencies.add(fileName)
+    }
+
+    delete fileTree(dir: libsPath, includes: dependencies)
+}
+
+tasks.whenTaskAdded { task ->
+    if (task.name == 'bundleRelease' || task.name == 'bundleDebug' ) {
+        task.dependsOn copyCompileDependenciesToLibs
+        task.finalizedBy deleteCompileDependenciesFromLibs
+    }
+}
+

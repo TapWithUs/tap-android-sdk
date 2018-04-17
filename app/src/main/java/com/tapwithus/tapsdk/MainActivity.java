@@ -48,9 +48,9 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onClick(TapListItem item) {
             if (item.isInControllerMode) {
-                tapSdk.startTextMode(item.tapIdentifier);
+                tapSdk.startMode(item.tapIdentifier, TapSdk.MODE_TEXT);
             } else {
-                tapSdk.startControllerMode(item.tapIdentifier);
+                tapSdk.startMode(item.tapIdentifier, TapSdk.MODE_CONTROLLER);
             }
         }
     };
@@ -62,7 +62,9 @@ public class MainActivity extends AppCompatActivity {
         List<String> connectedTaps = tapSdk.getConnectedTaps();
         List<TapListItem> listItems = new ArrayList<>();
         for (String tapIdentifier: connectedTaps) {
-            listItems.add(new TapListItem(tapIdentifier, itemOnClickListener));
+            TapListItem tapListItem = new TapListItem(tapIdentifier, itemOnClickListener);
+            tapListItem.isInControllerMode = tapSdk.isInMode(tapIdentifier, TapSdk.MODE_CONTROLLER);
+            listItems.add(tapListItem);
         }
         adapter.updateList(listItems);
 
@@ -129,6 +131,17 @@ public class MainActivity extends AppCompatActivity {
 
             TapListItem newItem = new TapListItem(tapIdentifier, itemOnClickListener);
             newItem.tapName = name;
+
+            int mode = tapSdk.getMode(tapIdentifier);
+            switch (mode) {
+                case TapSdk.MODE_TEXT:
+                    newItem.isInControllerMode = false;
+                    break;
+                case TapSdk.MODE_CONTROLLER:
+                    newItem.isInControllerMode = true;
+                    break;
+            }
+
             adapter.addItem(newItem);
         }
 
