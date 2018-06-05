@@ -1,5 +1,7 @@
 package com.tapwithus.sdk;
 
+import com.tapwithus.sdk.bluetooth.MousePacket;
+
 import java.util.UUID;
 
 public interface TapListener {
@@ -14,4 +16,5 @@ public interface TapListener {
     void onControllerModeStarted(String tapIdentifier);
     void onTextModeStarted(String tapIdentifier);
     void onTapInputReceived(String tapIdentifier, int data);
+    void onMouseInputReceived(String tapIdentifier, MousePacket data);
 }

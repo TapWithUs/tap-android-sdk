@@ -6,6 +6,7 @@ import android.support.annotation.NonNull;
 import android.util.Log;
 
 import com.tapwithus.sdk.ListenerManager;
+import com.tapwithus.sdk.NotifyAction;
 
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
@@ -130,7 +131,7 @@ public class TapBluetoothManager {
         @Override
         public void onDeviceConnected(String deviceAddress) {
             log("Device Connected");
-            setupNotification(deviceAddress);
+            setupTapNotification(deviceAddress);
         }
 
         @Override
@@ -193,9 +194,9 @@ public class TapBluetoothManager {
             log("Notification Subscribed");
 
             if (characteristic.equals(TAP_DATA)) {
-                notifyOnTapConnected(deviceAddress);
+                setupMouseNotification(deviceAddress);
             } else if (characteristic.equals(MOUSE_DATA)) {
-
+                notifyOnTapConnected(deviceAddress);
             }
         }
 
@@ -213,13 +214,19 @@ public class TapBluetoothManager {
                     notifyOnTapInputReceived(deviceAddress, data[0]);
                 }
             } else if (characteristic.equals(MOUSE_DATA)) {
-
+                data = Arrays.copyOfRange(data, 1, data.length - 1);
+                MousePacket mousePacket = new MousePacket(data);
+                notifyOnMouseInputReceived(deviceAddress, mousePacket);
             }
         }
     };
 
-    private void setupNotification(@NonNull String tapAddress) {
+    private void setupTapNotification(@NonNull String tapAddress) {
         bluetoothManager.setupNotification(tapAddress, TAP, TAP_DATA);
+    }
+
+    public void setupMouseNotification(@NonNull String tapAddress) {
+        bluetoothManager.setupNotification(tapAddress, TAP, MOUSE_DATA);
     }
 
     private void startRawModeLoop() {
@@ -263,7 +270,7 @@ public class TapBluetoothManager {
     }
 
     private void notifyOnBluetoothTurnedOn() {
-        tapBluetoothListeners.notifyListeners(new ListenerManager.NotifyAction<TapBluetoothListener>() {
+        tapBluetoothListeners.notifyAll(new NotifyAction<TapBluetoothListener>() {
             @Override
             public void onNotify(TapBluetoothListener listener) {
                 listener.onBluetoothTurnedOn();
@@ -272,7 +279,7 @@ public class TapBluetoothManager {
     }
 
     private void notifyOnBluetoothTurnedOff() {
-        tapBluetoothListeners.notifyListeners(new ListenerManager.NotifyAction<TapBluetoothListener>() {
+        tapBluetoothListeners.notifyAll(new NotifyAction<TapBluetoothListener>() {
             @Override
             public void onNotify(TapBluetoothListener listener) {
                 listener.onBluetoothTurnedOff();
@@ -281,7 +288,7 @@ public class TapBluetoothManager {
     }
 
     private void notifyOnTapConnected(final String tapAddress) {
-        tapBluetoothListeners.notifyListeners(new ListenerManager.NotifyAction<TapBluetoothListener>() {
+        tapBluetoothListeners.notifyAll(new NotifyAction<TapBluetoothListener>() {
             @Override
             public void onNotify(TapBluetoothListener listener) {
                 listener.onTapConnected(tapAddress);
@@ -290,7 +297,7 @@ public class TapBluetoothManager {
     }
 
     private void notifyOnTapAlreadyConnected(final String tapAddress) {
-        tapBluetoothListeners.notifyListeners(new ListenerManager.NotifyAction<TapBluetoothListener>() {
+        tapBluetoothListeners.notifyAll(new NotifyAction<TapBluetoothListener>() {
             @Override
             public void onNotify(TapBluetoothListener listener) {
                 listener.onTapAlreadyConnected(tapAddress);
@@ -299,7 +306,7 @@ public class TapBluetoothManager {
     }
 
     private void notifyOnTapDisconnected(final String tapAddress) {
-        tapBluetoothListeners.notifyListeners(new ListenerManager.NotifyAction<TapBluetoothListener>() {
+        tapBluetoothListeners.notifyAll(new NotifyAction<TapBluetoothListener>() {
             @Override
             public void onNotify(TapBluetoothListener listener) {
                 listener.onTapDisconnected(tapAddress);
@@ -308,7 +315,7 @@ public class TapBluetoothManager {
     }
 
     private void notifyOnNameRead(@NonNull final String tapAddress, @NonNull final String name) {
-        tapBluetoothListeners.notifyListeners(new ListenerManager.NotifyAction<TapBluetoothListener>() {
+        tapBluetoothListeners.notifyAll(new NotifyAction<TapBluetoothListener>() {
             @Override
             public void onNotify(TapBluetoothListener listener) {
                 listener.onNameRead(tapAddress, name);
@@ -317,7 +324,7 @@ public class TapBluetoothManager {
     }
 
     private void notifyOnNameWrite(@NonNull final String tapAddress, @NonNull final String name) {
-        tapBluetoothListeners.notifyListeners(new ListenerManager.NotifyAction<TapBluetoothListener>() {
+        tapBluetoothListeners.notifyAll(new NotifyAction<TapBluetoothListener>() {
             @Override
             public void onNotify(TapBluetoothListener listener) {
                 listener.onNameWrite(tapAddress, name);
@@ -326,7 +333,7 @@ public class TapBluetoothManager {
     }
 
     private void notifyOnCharacteristicRead(final String tapAddress, final UUID characteristic, final byte[] data) {
-        tapBluetoothListeners.notifyListeners(new ListenerManager.NotifyAction<TapBluetoothListener>() {
+        tapBluetoothListeners.notifyAll(new NotifyAction<TapBluetoothListener>() {
             @Override
             public void onNotify(TapBluetoothListener listener) {
                 listener.onCharacteristicRead(tapAddress, characteristic, data);
@@ -335,7 +342,7 @@ public class TapBluetoothManager {
     }
 
     private void notifyOnCharacteristicWrite(final String tapAddress, final UUID characteristic, final byte[] data) {
-        tapBluetoothListeners.notifyListeners(new ListenerManager.NotifyAction<TapBluetoothListener>() {
+        tapBluetoothListeners.notifyAll(new NotifyAction<TapBluetoothListener>() {
             @Override
             public void onNotify(TapBluetoothListener listener) {
                 listener.onCharacteristicWrite(tapAddress, characteristic, data);
@@ -344,7 +351,7 @@ public class TapBluetoothManager {
     }
 
     private void notifyOnControllerModeStarted(final String tapAddress) {
-        tapBluetoothListeners.notifyListeners(new ListenerManager.NotifyAction<TapBluetoothListener>() {
+        tapBluetoothListeners.notifyAll(new NotifyAction<TapBluetoothListener>() {
             @Override
             public void onNotify(TapBluetoothListener listener) {
                 listener.onControllerModeStarted(tapAddress);
@@ -353,7 +360,7 @@ public class TapBluetoothManager {
     }
 
     private void notifyOnTextModeStarted(final String tapAddress) {
-        tapBluetoothListeners.notifyListeners(new ListenerManager.NotifyAction<TapBluetoothListener>() {
+        tapBluetoothListeners.notifyAll(new NotifyAction<TapBluetoothListener>() {
             @Override
             public void onNotify(TapBluetoothListener listener) {
                 listener.onTextModeStarted(tapAddress);
@@ -362,10 +369,19 @@ public class TapBluetoothManager {
     }
 
     private void notifyOnTapInputReceived(final String tapAddress, final int data) {
-        tapBluetoothListeners.notifyListeners(new ListenerManager.NotifyAction<TapBluetoothListener>() {
+        tapBluetoothListeners.notifyAll(new NotifyAction<TapBluetoothListener>() {
             @Override
             public void onNotify(TapBluetoothListener listener) {
                 listener.onTapInputReceived(tapAddress, data);
+            }
+        });
+    }
+
+    private void notifyOnMouseInputReceived(final String tapAddress, final MousePacket data) {
+        tapBluetoothListeners.notifyAll(new NotifyAction<TapBluetoothListener>() {
+            @Override
+            public void onNotify(TapBluetoothListener listener) {
+                listener.onMouseInputReceived(tapAddress, data);
             }
         });
     }

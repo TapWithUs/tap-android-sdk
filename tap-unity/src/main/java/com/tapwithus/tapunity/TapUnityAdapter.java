@@ -1,11 +1,15 @@
 package com.tapwithus.tapunity;
 
 import android.content.Context;
+import android.os.Build;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
 import android.util.Log;
 
 import com.tapwithus.sdk.TapListener;
 import com.tapwithus.sdk.TapSdk;
 import com.tapwithus.sdk.TapSdkFactory;
+import com.tapwithus.sdk.bluetooth.MousePacket;
 import com.unity3d.player.UnityPlayer;
 
 import java.util.Arrays;
@@ -17,12 +21,13 @@ public class TapUnityAdapter {
     private static final String UNITY_GAME_OBJECT = "TapInputAndroid";
     private static final String UNITY_BLUETOOTH_ON_CALLBACK = "onBluetoothTurnedOn";
     private static final String UNITY_BLUETOOTH_OFF_CALLBACK = "onBluetoothTurnedOff";
-    private static final String UNITY_DEVICE_CONNECTED_CALLBACK = "onDeviceConnected";
-    private static final String UNITY_DEVICE_DISCONNECTED_CALLBACK = "onDeviceDisconnected";
+    private static final String UNITY_TAP_CONNECTED_CALLBACK = "onTapConnected";
+    private static final String UNITY_TAP_DISCONNECTED_CALLBACK = "onTapDisconnected";
     private static final String UNITY_NAME_READ_CALLBACK = "onNameRead";
     private static final String UNITY_CONTROLLER_MODE_CALLBACK = "onControllerModeStarted";
     private static final String UNITY_TEXT_MODE_CALLBACK = "onTextModeStarted";
     private static final String UNITY_TAP_INPUT_CALLBACK = "onTapInputReceived";
+    private static final String UNITY_MOUSE_INPUT_CALLBACK = "onMouseInputReceived";
     private static final String UNITY_CONNECTED_TAPS_CALLBACK = "onConnectedTapsReceived";
     private static final String UNITY_GET_MODE_CALLBACK = "onModeReceived";
 
@@ -41,11 +46,13 @@ public class TapUnityAdapter {
     }
 
     public void resume() {
+        log("resume");
         tapSdk.registerTapListener(tapListener);
         tapSdk.resume();
     }
 
     public void pause() {
+        log("pause");
         tapSdk.pause();
         tapSdk.unregisterTapListener(tapListener);
     }
@@ -81,6 +88,17 @@ public class TapUnityAdapter {
         UnityPlayer.UnitySendMessage(UNITY_GAME_OBJECT, UNITY_GET_MODE_CALLBACK, modeArg);
     }
 
+    public void vibrate(Context context, int milliseconds) {
+        Vibrator v = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
+        // Vibrate for 500 milliseconds
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            v.vibrate(VibrationEffect.createOneShot(milliseconds, VibrationEffect.DEFAULT_AMPLITUDE));
+        } else {
+            //deprecated in API 26
+            v.vibrate(milliseconds);
+        }
+    }
+
     private TapListener tapListener = new TapListener() {
 
         @Override
@@ -98,13 +116,13 @@ public class TapUnityAdapter {
         @Override
         public void onTapConnected(String tapIdentifier) {
             log("TAP connected " + tapIdentifier);
-            UnityPlayer.UnitySendMessage(UNITY_GAME_OBJECT, UNITY_DEVICE_CONNECTED_CALLBACK, tapIdentifier);
+            UnityPlayer.UnitySendMessage(UNITY_GAME_OBJECT, UNITY_TAP_CONNECTED_CALLBACK, tapIdentifier);
         }
 
         @Override
         public void onTapDisconnected(String tapIdentifier) {
             log("TAP disconnected " + tapIdentifier);
-            UnityPlayer.UnitySendMessage(UNITY_GAME_OBJECT, UNITY_DEVICE_DISCONNECTED_CALLBACK, tapIdentifier);
+            UnityPlayer.UnitySendMessage(UNITY_GAME_OBJECT, UNITY_TAP_DISCONNECTED_CALLBACK, tapIdentifier);
         }
 
         @Override
@@ -149,9 +167,15 @@ public class TapUnityAdapter {
             String args = tapIdentifier + UNITY_ARGS_SEPARATOR + data;
             UnityPlayer.UnitySendMessage(UNITY_GAME_OBJECT, UNITY_TAP_INPUT_CALLBACK, args);
         }
+
+        @Override
+        public void onMouseInputReceived(String tapIdentifier, MousePacket data) {
+            String args = tapIdentifier + UNITY_ARGS_SEPARATOR + data.dx.getInt() + UNITY_ARGS_SEPARATOR + data.dy.getInt();
+            UnityPlayer.UnitySendMessage(UNITY_GAME_OBJECT, UNITY_MOUSE_INPUT_CALLBACK, args);
+        }
     };
 
     private void log(String message) {
-        Log.e(this.getClass().getSimpleName(), message);
+        Log.e("TapUnityAdapter", message);
     }
 }

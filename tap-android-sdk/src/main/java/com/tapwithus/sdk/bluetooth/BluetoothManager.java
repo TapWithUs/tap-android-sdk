@@ -16,6 +16,7 @@ import android.support.annotation.NonNull;
 import android.util.Log;
 
 import com.tapwithus.sdk.ListenerManager;
+import com.tapwithus.sdk.NotifyAction;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -185,7 +186,7 @@ public class BluetoothManager {
             log("On characteristic changed");
             String deviceAddress = gatt.getDevice().getAddress();
             byte[] data = characteristic.getValue();
-            if (data != null && data[0] != 0) {
+            if (data != null) {
 //                notifyOnNotificationReceived(deviceAddress, characteristic.getUuid(), data[0]);
                 notifyOnNotificationReceived(deviceAddress, characteristic.getUuid(), data);
             }
@@ -423,7 +424,7 @@ public class BluetoothManager {
     };
 
     private void notifyOnBluetoothTurnedOn() {
-        bluetoothListeners.notifyListeners(new ListenerManager.NotifyAction<BluetoothListener>() {
+        bluetoothListeners.notifyAll(new NotifyAction<BluetoothListener>() {
             @Override
             public void onNotify(BluetoothListener listener) {
                 listener.onBluetoothTurnedOn();
@@ -432,7 +433,7 @@ public class BluetoothManager {
     }
 
     private void notifyOnBluetoothTurnedOff() {
-        bluetoothListeners.notifyListeners(new ListenerManager.NotifyAction<BluetoothListener>() {
+        bluetoothListeners.notifyAll(new NotifyAction<BluetoothListener>() {
             @Override
             public void onNotify(BluetoothListener listener) {
                 listener.onBluetoothTurnedOff();
@@ -441,7 +442,7 @@ public class BluetoothManager {
     }
 
     private void notifyOnDeviceConnected(final String deviceAddress) {
-        bluetoothListeners.notifyListeners(new ListenerManager.NotifyAction<BluetoothListener>() {
+        bluetoothListeners.notifyAll(new NotifyAction<BluetoothListener>() {
             @Override
             public void onNotify(BluetoothListener listener) {
                 listener.onDeviceConnected(deviceAddress);
@@ -450,7 +451,7 @@ public class BluetoothManager {
     }
 
     private void notifyOnDeviceAlreadyConnected(final String deviceAddress) {
-        bluetoothListeners.notifyListeners(new ListenerManager.NotifyAction<BluetoothListener>() {
+        bluetoothListeners.notifyAll(new NotifyAction<BluetoothListener>() {
             @Override
             public void onNotify(BluetoothListener listener) {
                 listener.onDeviceAlreadyConnected(deviceAddress);
@@ -459,7 +460,7 @@ public class BluetoothManager {
     }
 
     private void notifyOnDeviceDisconnected(final String deviceAddress) {
-        bluetoothListeners.notifyListeners(new ListenerManager.NotifyAction<BluetoothListener>() {
+        bluetoothListeners.notifyAll(new NotifyAction<BluetoothListener>() {
             @Override
             public void onNotify(BluetoothListener listener) {
                 listener.onDeviceDisconnected(deviceAddress);
@@ -468,7 +469,7 @@ public class BluetoothManager {
     }
 
     private void notifyOnCharacteristicRead(final String deviceAddress, final UUID characteristic, final byte[] data) {
-        bluetoothListeners.notifyListeners(new ListenerManager.NotifyAction<BluetoothListener>() {
+        bluetoothListeners.notifyAll(new NotifyAction<BluetoothListener>() {
             @Override
             public void onNotify(BluetoothListener listener) {
                 listener.onCharacteristicRead(deviceAddress, characteristic, data);
@@ -477,7 +478,7 @@ public class BluetoothManager {
     }
 
     private void notifyOnCharacteristicWrite(final String deviceAddress, final UUID characteristic, final byte[] data) {
-        bluetoothListeners.notifyListeners(new ListenerManager.NotifyAction<BluetoothListener>() {
+        bluetoothListeners.notifyAll(new NotifyAction<BluetoothListener>() {
             @Override
             public void onNotify(BluetoothListener listener) {
                 listener.onCharacteristicWrite(deviceAddress, characteristic, data);
@@ -486,7 +487,7 @@ public class BluetoothManager {
     }
 
     private void notifyOnNotificationSubscribed(final String deviceAddress, final UUID characteristic) {
-        bluetoothListeners.notifyListeners(new ListenerManager.NotifyAction<BluetoothListener>() {
+        bluetoothListeners.notifyAll(new NotifyAction<BluetoothListener>() {
             @Override
             public void onNotify(BluetoothListener listener) {
                 listener.onNotificationSubscribed(deviceAddress, characteristic);
@@ -495,7 +496,7 @@ public class BluetoothManager {
     }
 
     private void notifyOnNotificationReceived(final String deviceAddress, final UUID characteristic, final byte[] data) {
-        bluetoothListeners.notifyListeners(new ListenerManager.NotifyAction<BluetoothListener>() {
+        bluetoothListeners.notifyAll(new NotifyAction<BluetoothListener>() {
             @Override
             public void onNotify(BluetoothListener listener) {
                 listener.onNotificationReceived(deviceAddress, characteristic, data);
