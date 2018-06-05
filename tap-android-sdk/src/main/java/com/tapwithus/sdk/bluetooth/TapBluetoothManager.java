@@ -30,7 +30,7 @@ public class TapBluetoothManager {
     private static final UUID NAME = UUID.fromString("C3FF0003-1D8B-40FD-A56F-C7BD5D0F3370");
     private static final UUID MOUSE_DATA = UUID.fromString("C3FF0006-1D8B-40FD-A56F-C7BD5D0F3370");
 
-    private BluetoothManager bluetoothManager;
+    protected BluetoothManager bluetoothManager;
     private List<String> tapInputSubscribers = new CopyOnWriteArrayList<>();
     private List<String> controllerModeSubscribers = new CopyOnWriteArrayList<>();
     private Handler rawModeHandler;
