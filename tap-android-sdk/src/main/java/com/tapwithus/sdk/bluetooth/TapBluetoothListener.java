@@ -12,6 +12,7 @@ public interface TapBluetoothListener {
     void onNameWrite(String tapAddress, String name);
     void onCharacteristicRead(String tapAddress, UUID characteristic, byte[] data);
     void onCharacteristicWrite(String tapAddress, UUID characteristic, byte[] data);
+    void onNotificationSubscribed(String tapAddress, UUID characteristic);
     void onControllerModeStarted(String tapAddress);
     void onTextModeStarted(String tapAddress);
     void onTapInputReceived(String tapAddress, int data);

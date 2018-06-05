@@ -229,6 +229,11 @@ public class TapSdk {
         }
 
         @Override
+        public void onNotificationSubscribed(String tapAddress, UUID characteristic) {
+
+        }
+
+        @Override
         public void onControllerModeStarted(String tapAddress) {
             Log.e("A", "onControllerModeStarted");
             if (notifyOnConnectedAfterControllerModeStarted.contains(tapAddress)) {
@@ -329,6 +334,15 @@ public class TapSdk {
             @Override
             public void onNotify(TapListener listener) {
                 listener.onCharacteristicWrite(tapIdentifier, characteristic, data);
+            }
+        });
+    }
+
+    private void notifyOnNotificationSubscribed(final String tapIdentifier, final UUID characteristic) {
+        tapListeners.notifyAll(new NotifyAction<TapListener>() {
+            @Override
+            public void onNotify(TapListener listener) {
+                listener.onNotificationSubscribed(tapIdentifier, characteristic);
             }
         });
     }

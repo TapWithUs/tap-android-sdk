@@ -197,6 +197,8 @@ public class TapBluetoothManager {
                 setupMouseNotification(deviceAddress);
             } else if (characteristic.equals(MOUSE_DATA)) {
                 notifyOnTapConnected(deviceAddress);
+            } else {
+                notifyOnNotificationSubscribed(deviceAddress, characteristic);
             }
         }
 
@@ -350,6 +352,15 @@ public class TapBluetoothManager {
             @Override
             public void onNotify(TapBluetoothListener listener) {
                 listener.onCharacteristicWrite(tapAddress, characteristic, data);
+            }
+        });
+    }
+
+    private void notifyOnNotificationSubscribed(final String tapAddress, final UUID characteristic) {
+        tapBluetoothListeners.notifyAll(new NotifyAction<TapBluetoothListener>() {
+            @Override
+            public void onNotify(TapBluetoothListener listener) {
+                listener.onNotificationSubscribed(tapAddress, characteristic);
             }
         });
     }
