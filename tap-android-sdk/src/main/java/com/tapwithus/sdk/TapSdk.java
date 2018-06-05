@@ -151,6 +151,10 @@ public class TapSdk {
         tapBluetoothManager.writeCharacteristic(tapAddress, serviceUUID, characteristicUUID, data);
     }
 
+    public void setupNotification(@NonNull String tapAddress, @NonNull UUID serviceUUID, @NonNull UUID characteristicUUID) {
+        tapBluetoothManager.setupNotification(tapAddress, serviceUUID, characteristicUUID);
+    }
+
     public static boolean[] toFingers(int tapInput) {
         final boolean[] fingers = new boolean[5];
         for (int i = 0; i < 5; i++) {

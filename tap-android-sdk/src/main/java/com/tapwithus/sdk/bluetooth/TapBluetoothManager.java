@@ -221,6 +221,10 @@ public class TapBluetoothManager {
         }
     };
 
+    public void setupNotification(@NonNull String tapAddress, @NonNull UUID serviceUUID, @NonNull UUID characteristicUUID) {
+        bluetoothManager.setupNotification(tapAddress, serviceUUID, characteristicUUID);
+    }
+
     private void setupTapNotification(@NonNull String tapAddress) {
         bluetoothManager.setupNotification(tapAddress, TAP, TAP_DATA);
     }
