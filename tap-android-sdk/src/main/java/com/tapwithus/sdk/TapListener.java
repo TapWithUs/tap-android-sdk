@@ -13,6 +13,7 @@ public interface TapListener {
     void onNameWrite(String tapIdentifier, String name);
     void onCharacteristicRead(String tapIdentifier, UUID characteristic, byte[] data);
     void onCharacteristicWrite(String tapIdentifier, UUID characteristic, byte[] data);
+    void onNotificationSubscribed(String tapIdentifier, UUID characteristic);
     void onControllerModeStarted(String tapIdentifier);
     void onTextModeStarted(String tapIdentifier);
     void onTapInputReceived(String tapIdentifier, int data);

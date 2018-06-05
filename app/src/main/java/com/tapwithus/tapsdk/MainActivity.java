@@ -164,6 +164,11 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @Override
+        public void onNotificationSubscribed(String tapIdentifier, UUID characteristic) {
+            log("Notification subscribed " + characteristic.toString());
+        }
+
+        @Override
         public void onControllerModeStarted(String tapIdentifier) {
             log("Controller mode started " + tapIdentifier);
             adapter.onControllerModeStarted(tapIdentifier);
