@@ -12,6 +12,7 @@ import android.widget.Button;
 import com.tapwithus.sdk.TapListener;
 import com.tapwithus.sdk.TapSdk;
 import com.tapwithus.sdk.TapSdkFactory;
+import com.tapwithus.sdk.bluetooth.MousePacket;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -39,7 +40,7 @@ public class MainActivity extends AppCompatActivity {
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                tapSdk.refreshConnections();
+//                tapSdk.setMouseNotification("D7:A9:E0:8C:17:6E");
             }
         });
     }
@@ -48,8 +49,10 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onClick(TapListItem item) {
             if (item.isInControllerMode) {
+                log("Switching to TEXT mode");
                 tapSdk.startMode(item.tapIdentifier, TapSdk.MODE_TEXT);
             } else {
+                log("Switching to CONTROLLER mode");
                 tapSdk.startMode(item.tapIdentifier, TapSdk.MODE_CONTROLLER);
             }
         }
@@ -176,6 +179,11 @@ public class MainActivity extends AppCompatActivity {
         public void onTapInputReceived(String tapIdentifier, int data) {
             log(tapIdentifier + " TAP input received " + String.valueOf(data));
             adapter.updateTapInput(tapIdentifier, data);
+        }
+
+        @Override
+        public void onMouseInputReceived(String tapIdentifier, MousePacket data) {
+            log(tapIdentifier + " MOUSE input received " + data.dx.getInt() + " " + data.dy.getInt() + " " + data.dt.getUnsignedLong());
         }
     };
 

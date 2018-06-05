@@ -27,7 +27,7 @@ dependencies {
     androidTestImplementation 'com.android.support.test:runner:1.0.1'
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.1'
     implementation 'com.android.support:recyclerview-v7:27.1.1'
-//    implementation project(':tap-android-sdk')
-    implementation 'com.tapwithus:tap-android-sdk:0.1.12'
+    implementation project(':tap-android-sdk')
+//    implementation 'com.tapwithus:tap-android-sdk:0.1.12'
 }
 

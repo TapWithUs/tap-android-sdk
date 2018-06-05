@@ -1,11 +1,15 @@
 package com.tapwithus.tapunity;
 
 import android.content.Context;
+import android.os.Build;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
 import android.util.Log;
 
 import com.tapwithus.sdk.TapListener;
 import com.tapwithus.sdk.TapSdk;
 import com.tapwithus.sdk.TapSdkFactory;
+import com.tapwithus.sdk.bluetooth.MousePacket;
 import com.unity3d.player.UnityPlayer;
 
 import java.util.Arrays;
@@ -23,6 +27,7 @@ public class TapUnityAdapter {
     private static final String UNITY_CONTROLLER_MODE_CALLBACK = "onControllerModeStarted";
     private static final String UNITY_TEXT_MODE_CALLBACK = "onTextModeStarted";
     private static final String UNITY_TAP_INPUT_CALLBACK = "onTapInputReceived";
+    private static final String UNITY_MOUSE_INPUT_CALLBACK = "onMouseInputReceived";
     private static final String UNITY_CONNECTED_TAPS_CALLBACK = "onConnectedTapsReceived";
     private static final String UNITY_GET_MODE_CALLBACK = "onModeReceived";
 
@@ -81,6 +86,17 @@ public class TapUnityAdapter {
         int mode = tapSdk.getMode(tapIdentifier);
         String modeArg = tapIdentifier + UNITY_ARGS_SEPARATOR + mode;
         UnityPlayer.UnitySendMessage(UNITY_GAME_OBJECT, UNITY_GET_MODE_CALLBACK, modeArg);
+    }
+
+    public void vibrate(Context context, int milliseconds) {
+        Vibrator v = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
+        // Vibrate for 500 milliseconds
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            v.vibrate(VibrationEffect.createOneShot(milliseconds, VibrationEffect.DEFAULT_AMPLITUDE));
+        } else {
+            //deprecated in API 26
+            v.vibrate(milliseconds);
+        }
     }
 
     private TapListener tapListener = new TapListener() {
@@ -150,6 +166,12 @@ public class TapUnityAdapter {
 
             String args = tapIdentifier + UNITY_ARGS_SEPARATOR + data;
             UnityPlayer.UnitySendMessage(UNITY_GAME_OBJECT, UNITY_TAP_INPUT_CALLBACK, args);
+        }
+
+        @Override
+        public void onMouseInputReceived(String tapIdentifier, MousePacket data) {
+            String args = tapIdentifier + UNITY_ARGS_SEPARATOR + data.dx.getInt() + UNITY_ARGS_SEPARATOR + data.dy.getInt();
+            UnityPlayer.UnitySendMessage(UNITY_GAME_OBJECT, UNITY_MOUSE_INPUT_CALLBACK, args);
         }
     };
 

@@ -4,15 +4,11 @@ import android.support.annotation.NonNull;
 
 import java.util.ArrayList;
 import java.util.Iterator;
-
+import java.util.List;
 
 public class ListenerManager<ListenerType> {
 
-    public interface NotifyAction<ListenerType> {
-        void onNotify(ListenerType listener);
-    }
-
-    private final ArrayList<ListenerType> listeners = new ArrayList<>();
+    private final List<ListenerType> listeners = new ArrayList<>();
 
     public void registerListener(@NonNull ListenerType listener) {
         if (!listeners.contains(listener)) {
@@ -30,7 +26,7 @@ public class ListenerManager<ListenerType> {
     }
 
     @NonNull
-    public ArrayList<ListenerType> getAllListeners() {
+    public List<ListenerType> getAllListeners() {
         return new ArrayList<>(listeners);
     }
 
@@ -38,7 +34,7 @@ public class ListenerManager<ListenerType> {
         listeners.clear();
     }
 
-    public void notifyListeners(@NonNull NotifyAction<ListenerType> notifyAction) {
+    public void notifyAll(@NonNull NotifyAction<ListenerType> notifyAction) {
         for (Iterator<ListenerType> iterator = listeners.iterator(); iterator.hasNext();) {
             notifyAction.onNotify(iterator.next());
         }

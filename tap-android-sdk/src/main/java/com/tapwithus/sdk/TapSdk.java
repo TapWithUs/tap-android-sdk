@@ -6,6 +6,7 @@ import android.support.annotation.NonNull;
 import android.util.Log;
 
 import com.tapwithus.sdk.bluetooth.BluetoothManager;
+import com.tapwithus.sdk.bluetooth.MousePacket;
 import com.tapwithus.sdk.bluetooth.TapBluetoothListener;
 import com.tapwithus.sdk.bluetooth.TapBluetoothManager;
 
@@ -46,6 +47,12 @@ public class TapSdk {
     public void resume() {
         tapBluetoothManager.registerTapBluetoothListener(tapBluetoothListener);
         List<String> actuallyConnectTaps = getConnectedTaps();
+        // Check if a new TAP was connected while the app was in background
+        for (String tapIdentifier: actuallyConnectTaps) {
+            if (!modeSubscribers.containsKey(tapIdentifier)) {
+                modeSubscribers.put(tapIdentifier, MODE_CONTROLLER);
+            }
+        }
         List<String> controllerModeSubscribers = getTapsInMode(MODE_CONTROLLER);
         for (String tapIdentifier: controllerModeSubscribers) {
             if (actuallyConnectTaps.contains(tapIdentifier)) {
@@ -54,7 +61,6 @@ public class TapSdk {
                 controllerModeSubscribers.remove(tapIdentifier);
             }
         }
-        refreshConnections();
     }
 
     public void pause() {
@@ -220,6 +226,7 @@ public class TapSdk {
 
         @Override
         public void onControllerModeStarted(String tapAddress) {
+            Log.e("A", "onControllerModeStarted");
             if (notifyOnConnectedAfterControllerModeStarted.contains(tapAddress)) {
                 notifyOnConnectedAfterControllerModeStarted.remove(tapAddress);
                 notifyOnTapConnected(tapAddress);
@@ -230,6 +237,7 @@ public class TapSdk {
 
         @Override
         public void onTextModeStarted(String tapAddress) {
+            Log.e("A", "onTextModeStarted");
             if (notifyOnConnectedAfterControllerModeStarted.contains(tapAddress)) {
                 notifyOnConnectedAfterControllerModeStarted.remove(tapAddress);
                 notifyOnTapConnected(tapAddress);
@@ -244,13 +252,13 @@ public class TapSdk {
         }
 
         @Override
-        public void onMouseInputReceived(String tapAddress, byte[] data) {
-
+        public void onMouseInputReceived(String tapAddress, MousePacket data) {
+            notifyOnMouseInputReceived(tapAddress, data);
         }
     };
 
     private void notifyOnBluetoothTurnedOn() {
-        tapListeners.notifyListeners(new ListenerManager.NotifyAction<TapListener>() {
+        tapListeners.notifyAll(new NotifyAction<TapListener>() {
             @Override
             public void onNotify(TapListener listener) {
                 listener.onBluetoothTurnedOn();
@@ -259,7 +267,7 @@ public class TapSdk {
     }
 
     private void notifyOnBluetoothTurnedOff() {
-        tapListeners.notifyListeners(new ListenerManager.NotifyAction<TapListener>() {
+        tapListeners.notifyAll(new NotifyAction<TapListener>() {
             @Override
             public void onNotify(TapListener listener) {
                 listener.onBluetoothTurnedOff();
@@ -268,7 +276,7 @@ public class TapSdk {
     }
 
     private void notifyOnTapConnected(final String tapIdentifier) {
-        tapListeners.notifyListeners(new ListenerManager.NotifyAction<TapListener>() {
+        tapListeners.notifyAll(new NotifyAction<TapListener>() {
             @Override
             public void onNotify(TapListener listener) {
                 listener.onTapConnected(tapIdentifier);
@@ -277,7 +285,7 @@ public class TapSdk {
     }
 
     private void notifyOnTapDisconnected(final String tapIdentifier) {
-        tapListeners.notifyListeners(new ListenerManager.NotifyAction<TapListener>() {
+        tapListeners.notifyAll(new NotifyAction<TapListener>() {
             @Override
             public void onNotify(TapListener listener) {
                 listener.onTapDisconnected(tapIdentifier);
@@ -286,7 +294,7 @@ public class TapSdk {
     }
 
     private void notifyOnNameRead(@NonNull final String tapIdentifier, @NonNull final String name) {
-        tapListeners.notifyListeners(new ListenerManager.NotifyAction<TapListener>() {
+        tapListeners.notifyAll(new NotifyAction<TapListener>() {
             @Override
             public void onNotify(TapListener listener) {
                 listener.onNameRead(tapIdentifier, name);
@@ -295,7 +303,7 @@ public class TapSdk {
     }
 
     private void notifyOnNameWrite(@NonNull final String tapIdentifier, @NonNull final String name) {
-        tapListeners.notifyListeners(new ListenerManager.NotifyAction<TapListener>() {
+        tapListeners.notifyAll(new NotifyAction<TapListener>() {
             @Override
             public void onNotify(TapListener listener) {
                 listener.onNameWrite(tapIdentifier, name);
@@ -304,7 +312,7 @@ public class TapSdk {
     }
 
     private void notifyOnCharacteristicRead(final String tapIdentifier, final UUID characteristic, final byte[] data) {
-        tapListeners.notifyListeners(new ListenerManager.NotifyAction<TapListener>() {
+        tapListeners.notifyAll(new NotifyAction<TapListener>() {
             @Override
             public void onNotify(TapListener listener) {
                 listener.onCharacteristicRead(tapIdentifier, characteristic, data);
@@ -313,7 +321,7 @@ public class TapSdk {
     }
 
     private void notifyOnCharacteristicWrite(final String tapIdentifier, final UUID characteristic, final byte[] data) {
-        tapListeners.notifyListeners(new ListenerManager.NotifyAction<TapListener>() {
+        tapListeners.notifyAll(new NotifyAction<TapListener>() {
             @Override
             public void onNotify(TapListener listener) {
                 listener.onCharacteristicWrite(tapIdentifier, characteristic, data);
@@ -322,7 +330,7 @@ public class TapSdk {
     }
 
     private void notifyOnControllerModeStarted(final String tapIdentifier) {
-        tapListeners.notifyListeners(new ListenerManager.NotifyAction<TapListener>() {
+        tapListeners.notifyAll(new NotifyAction<TapListener>() {
             @Override
             public void onNotify(TapListener listener) {
                 listener.onControllerModeStarted(tapIdentifier);
@@ -331,7 +339,7 @@ public class TapSdk {
     }
 
     private void notifyOnTextModeStarted(final String tapIdentifier) {
-        tapListeners.notifyListeners(new ListenerManager.NotifyAction<TapListener>() {
+        tapListeners.notifyAll(new NotifyAction<TapListener>() {
             @Override
             public void onNotify(TapListener listener) {
                 listener.onTextModeStarted(tapIdentifier);
@@ -340,10 +348,19 @@ public class TapSdk {
     }
 
     private void notifyOnTapInputReceived(final String tapIdentifier, final int data) {
-        tapListeners.notifyListeners(new ListenerManager.NotifyAction<TapListener>() {
+        tapListeners.notifyAll(new NotifyAction<TapListener>() {
             @Override
             public void onNotify(TapListener listener) {
                 listener.onTapInputReceived(tapIdentifier, data);
+            }
+        });
+    }
+
+    private void notifyOnMouseInputReceived(final String tapIdentifier, final MousePacket data) {
+        tapListeners.notifyAll(new NotifyAction<TapListener>() {
+            @Override
+            public void onNotify(TapListener listener) {
+                listener.onMouseInputReceived(tapIdentifier, data);
             }
         });
     }
