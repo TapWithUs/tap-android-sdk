@@ -219,6 +219,8 @@ public class TapBluetoothManager {
                 data = Arrays.copyOfRange(data, 1, data.length - 1);
                 MousePacket mousePacket = new MousePacket(data);
                 notifyOnMouseInputReceived(deviceAddress, mousePacket);
+            } else {
+                notifyOnNotificationReceived(deviceAddress, characteristic, data);
             }
         }
     };
@@ -361,6 +363,15 @@ public class TapBluetoothManager {
             @Override
             public void onNotify(TapBluetoothListener listener) {
                 listener.onNotificationSubscribed(tapAddress, characteristic);
+            }
+        });
+    }
+
+    private void notifyOnNotificationReceived(final String tapAddress, final UUID characteristic, final byte[] data) {
+        tapBluetoothListeners.notifyAll(new NotifyAction<TapBluetoothListener>() {
+            @Override
+            public void onNotify(TapBluetoothListener listener) {
+                listener.onNotificationReceived(tapAddress, characteristic, data);
             }
         });
     }

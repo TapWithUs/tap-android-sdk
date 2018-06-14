@@ -230,7 +230,12 @@ public class TapSdk {
 
         @Override
         public void onNotificationSubscribed(String tapAddress, UUID characteristic) {
+            notifyOnNotificationSubscribed(tapAddress, characteristic);
+        }
 
+        @Override
+        public void onNotificationReceived(String tapAddress, UUID characteristic, byte[] data) {
+            notifyOnNotificationReceived(tapAddress, characteristic, data);
         }
 
         @Override
@@ -343,6 +348,15 @@ public class TapSdk {
             @Override
             public void onNotify(TapListener listener) {
                 listener.onNotificationSubscribed(tapIdentifier, characteristic);
+            }
+        });
+    }
+
+    private void notifyOnNotificationReceived(final String tapIdentifier, final UUID characteristic, final byte[] data) {
+        tapListeners.notifyAll(new NotifyAction<TapListener>() {
+            @Override
+            public void onNotify(TapListener listener) {
+                listener.onNotificationReceived(tapIdentifier, characteristic, data);
             }
         });
     }
