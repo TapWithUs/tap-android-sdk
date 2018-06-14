@@ -21,6 +21,8 @@ import java.util.UUID;
 
 public class MainActivity extends AppCompatActivity {
 
+    private static final String CHARSET = "UTF-8";
+
     private TapSdk tapSdk;
     private RecyclerViewAdapter adapter;
 
@@ -146,6 +148,8 @@ public class MainActivity extends AppCompatActivity {
             }
 
             adapter.addItem(newItem);
+
+            tapSdk.setupNotification(tapIdentifier, UUID.fromString("C3FF0001-1D8B-40FD-A56F-C7BD5D0F3370"), UUID.fromString("C3FF0008-1D8B-40FD-A56F-C7BD5D0F3370"));
         }
 
         @Override
@@ -166,6 +170,17 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onNotificationSubscribed(String tapIdentifier, UUID characteristic) {
             log("Notification subscribed " + characteristic.toString());
+
+            tapSdk.writeCharacteristic(
+                    tapIdentifier,
+                    UUID.fromString("C3FF0001-1D8B-40FD-A56F-C7BD5D0F3370"),
+                    UUID.fromString("C3FF0007-1D8B-40FD-A56F-C7BD5D0F3370"),
+                    new byte[] { 0x0, 0x0, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0 });
+        }
+
+        @Override
+        public void onNotificationReceived(String tapIdentifier, UUID characteristic, byte[] data) {
+
         }
 
         @Override

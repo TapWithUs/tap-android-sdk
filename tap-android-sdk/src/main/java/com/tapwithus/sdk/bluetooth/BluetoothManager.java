@@ -142,6 +142,7 @@ public class BluetoothManager {
         @Override
         public void onServicesDiscovered(BluetoothGatt gatt, int status) {
             String deviceAddress = gatt.getDevice().getAddress();
+            gatts.put(deviceAddress, gatt);
 
             if (status != BluetoothGatt.GATT_SUCCESS) {
                 logError(deviceAddress + " Unable to discover services");
@@ -213,7 +214,7 @@ public class BluetoothManager {
             closeGatt(storedGatt);
         }
 
-        gatts.put(deviceAddress, gatt);
+//        gatts.put(deviceAddress, gatt);
 
         log(deviceAddress + " connected.");
 
