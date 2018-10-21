@@ -91,7 +91,17 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
                 break;
             }
         }
+    }
 
+    public void updateFwVer(String tapIdentifier, String fwVer) {
+        for (int position = 0; position < dataSet.size(); position++) {
+            TapListItem item = dataSet.get(position);
+            if (item.tapIdentifier.equals(tapIdentifier)) {
+                item.tapFwVer = fwVer;
+                notifyItemChanged(position);
+                break;
+            }
+        }
     }
 
     public void onTextModeStarted(String tapIdentifier) {
@@ -124,6 +134,7 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
         public View finger4;
         public View finger5;
         public TextView mode;
+        public TextView fwVer;
 
         public ViewHolder(ConstraintLayout itemView) {
             super(itemView);
@@ -145,6 +156,7 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
             finger4 = itemView.findViewById(R.id.finger4);
             finger5 = itemView.findViewById(R.id.finger5);
             mode = itemView.findViewById(R.id.tapMode);
+            fwVer = itemView.findViewById(R.id.tapFwVer);
         }
 
         public void bindTapListItem(final TapListItem listItem) {
@@ -165,6 +177,7 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
                 finger5.setBackgroundResource(listItem.tapInputFingers[4] ? R.drawable.circle_filled : R.drawable.circle_empty);
             }
             mode.setText(listItem.isInControllerMode ? "Controller Mode" : "Text Mode");
+            fwVer.setText(listItem.tapFwVer);
         }
     }
 }

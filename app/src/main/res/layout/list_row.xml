@@ -4,8 +4,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:focusable="true"
     android:clickable="true"
+    android:focusable="true"
     android:foreground="?android:attr/selectableItemBackground"
     android:padding="8dp">
 
@@ -74,11 +74,20 @@
         app:layout_constraintTop_toTopOf="@+id/finger5" />
 
     <TextView
+        android:id="@+id/tapFwVer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="fwVer"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/tapMode" />
+
+    <TextView
         android:id="@+id/tapMode"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Mode"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/tapFwVer"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 

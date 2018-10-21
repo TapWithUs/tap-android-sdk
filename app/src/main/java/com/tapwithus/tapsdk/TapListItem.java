@@ -4,6 +4,7 @@ public class TapListItem {
 
     public String tapIdentifier;
     public String tapName;
+    public String tapFwVer;
     public int tapInputInt;
     public boolean[] tapInputFingers;
     public boolean isInControllerMode = true;
