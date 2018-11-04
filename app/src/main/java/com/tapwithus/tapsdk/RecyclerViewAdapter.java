@@ -3,6 +3,7 @@ package com.tapwithus.tapsdk;
 import android.support.annotation.NonNull;
 import android.support.constraint.ConstraintLayout;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -16,14 +17,18 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
 
     private List<TapListItem> dataSet;
 
+    private boolean onBind;
+
     public RecyclerViewAdapter(List<TapListItem> dataSet) {
         this.dataSet = dataSet;
     }
 
     public void updateList(List<TapListItem> items) {
-        dataSet.clear();
-        dataSet.addAll(items);
-        notifyDataSetChanged();
+        if (!onBind) {
+            dataSet.clear();
+            dataSet.addAll(items);
+            notifyDataSetChanged();
+        }
     }
 
     @NonNull
@@ -38,7 +43,14 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        holder.bindTapListItem(dataSet.get(position));
+        onBind = true;
+        try {
+            holder.bindTapListItem(dataSet.get(position));
+        } catch (IndexOutOfBoundsException e) {
+            Log.e("RecyclerViewAdapter", "Mmm... " + e.getMessage());
+        } finally {
+            onBind = false;
+        }
     }
 
     @Override
@@ -47,21 +59,25 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
     }
 
     public void addItem(TapListItem item) {
-        for (TapListItem i: dataSet) {
+        for (TapListItem i : dataSet) {
             if (i.tapIdentifier.equals(item.tapIdentifier)) {
                 return;
             }
         }
-        dataSet.add(item);
-        notifyItemInserted(dataSet.size());
+        if (!onBind) {
+            dataSet.add(item);
+            notifyItemInserted(dataSet.size());
+        }
     }
 
     public void removeItem(String tapIdentifier) {
         int position;
         for (position = 0; position < dataSet.size(); position++) {
             if (dataSet.get(position).tapIdentifier.equals(tapIdentifier)) {
-                dataSet.remove(position);
-                notifyItemRemoved(position);
+                if (!onBind) {
+                    dataSet.remove(position);
+                    notifyItemRemoved(position);
+                }
                 break;
             }
         }
@@ -75,9 +91,11 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
         for (int position = 0; position < dataSet.size(); position++) {
             TapListItem item = dataSet.get(position);
             if (item.tapIdentifier.equals(tapIdentifier)) {
-                item.tapInputInt = tapInputInt;
-                item.tapInputFingers = TapSdk.toFingers(tapInputInt);
-                notifyItemChanged(position);
+                if (!onBind) {
+                    item.tapInputInt = tapInputInt;
+                    item.tapInputFingers = TapSdk.toFingers(tapInputInt);
+                    notifyItemChanged(position);
+                }
             }
         }
     }
@@ -86,8 +104,10 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
         for (int position = 0; position < dataSet.size(); position++) {
             TapListItem item = dataSet.get(position);
             if (item.tapIdentifier.equals(tapIdentifier)) {
-                item.tapName = name;
-                notifyItemChanged(position);
+                if (!onBind) {
+                    item.tapName = name;
+                    notifyItemChanged(position);
+                }
                 break;
             }
         }
@@ -97,8 +117,10 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
         for (int position = 0; position < dataSet.size(); position++) {
             TapListItem item = dataSet.get(position);
             if (item.tapIdentifier.equals(tapIdentifier)) {
-                item.tapFwVer = fwVer;
-                notifyItemChanged(position);
+                if (!onBind) {
+                    item.tapFwVer = fwVer;
+                    notifyItemChanged(position);
+                }
                 break;
             }
         }
@@ -115,8 +137,10 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
         for (int position = 0; position < dataSet.size(); position++) {
             TapListItem item = dataSet.get(position);
             if (item.tapIdentifier.equals(tapIdentifier)) {
-                item.isInControllerMode = isInControllerMode;
-                notifyItemChanged(position);
+                if (!onBind) {
+                    item.isInControllerMode = isInControllerMode;
+                    notifyItemChanged(position);
+                }
                 break;
             }
         }

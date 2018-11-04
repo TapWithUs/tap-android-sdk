@@ -40,6 +40,8 @@ public class TapSdk {
     private List<String> notifyOnConnectedAfterControllerModeStarted = new CopyOnWriteArrayList<>();
     private List<String> notifyOnResumedAfterControllerModeStarted = new CopyOnWriteArrayList<>();
     private boolean debug = false;
+    private boolean isClosing = false;
+    private boolean isClosed = false;
     private boolean isPaused = false;
     private boolean autoSetControllerModeOnConnection = true;
 
@@ -129,6 +131,11 @@ public class TapSdk {
         }
 
         startRawModeLoop();
+
+        if (isClosed) {
+            isClosed = false;
+            tapBluetoothManager.refreshConnections();
+        }
     }
 
     public void pause() {
@@ -157,6 +164,8 @@ public class TapSdk {
     }
 
     public void registerTapListener(@NonNull TapListener listener) {
+        isClosed = false;
+
         tapListeners.registerListener(listener);
     }
 
@@ -264,9 +273,12 @@ public class TapSdk {
     }
 
     public void close() {
+        isClosing = true;
         stopRawModeLoop();
         tapBluetoothManager.close();
-        tapListeners.removeAllListeners();
+        modeSubscribers.clear();
+
+        handleCloseReset();
     }
 
     @SuppressWarnings("FieldCanBeLocal")
@@ -274,7 +286,7 @@ public class TapSdk {
 
         @Override
         public void onBluetoothTurnedOn() {
-            if (isPaused) {
+            if (isPaused || isClosing) {
                 return;
             }
             notifyOnBluetoothTurnedOn();
@@ -283,7 +295,7 @@ public class TapSdk {
 
         @Override
         public void onBluetoothTurnedOff() {
-            if (isPaused) {
+            if (isPaused || isClosing) {
                 return;
             }
             notifyOnBluetoothTurnedOff();
@@ -291,6 +303,9 @@ public class TapSdk {
 
         @Override
         public void onTapStartConnecting(@NonNull String tapAddress) {
+            if (isPaused || isClosing) {
+                return;
+            }
             notifyOnTapStartConnecting(tapAddress);
         }
 
@@ -538,7 +553,7 @@ public class TapSdk {
 
 
     private void handleTapConnection(@NonNull String tapIdentifier) {
-        if (isPaused) {
+        if (isPaused || isClosing) {
             return;
         }
 
@@ -562,9 +577,20 @@ public class TapSdk {
             cache.clear(tapIdentifier);
         }
         modeSubscribers.remove(tapIdentifier);
-        notifyOnTapDisconnected(tapIdentifier);
+
+        if (!isClosing) {
+            notifyOnTapDisconnected(tapIdentifier);
+        }
+
+        handleCloseReset();
     }
 
+    private void handleCloseReset() {
+        if (isClosing && tapBluetoothManager.numOfConnectedTaps() == 0) {
+            isClosing = false;
+            isClosed = true;
+        }
+    }
 
     private void handleEmission(@NonNull String tapIdentifier) {
         if (!cache.isCached(tapIdentifier)) {

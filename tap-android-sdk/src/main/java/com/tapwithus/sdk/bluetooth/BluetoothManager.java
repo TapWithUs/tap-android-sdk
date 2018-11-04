@@ -19,18 +19,24 @@ import android.util.Log;
 
 import com.tapwithus.sdk.ListenerManager;
 import com.tapwithus.sdk.NotifyAction;
+import com.tapwithus.sdk.bluetooth.callbacks.OnCompletionListener;
+import com.tapwithus.sdk.bluetooth.callbacks.OnErrorListener;
+import com.tapwithus.sdk.bluetooth.operations.CharacteristicReadOperation;
+import com.tapwithus.sdk.bluetooth.operations.CharacteristicWriteOperation;
+import com.tapwithus.sdk.bluetooth.operations.DiscoverServicesOperation;
+import com.tapwithus.sdk.bluetooth.operations.GattExecutor;
+import com.tapwithus.sdk.bluetooth.operations.GattOperation;
+import com.tapwithus.sdk.bluetooth.operations.RefreshOperation;
+import com.tapwithus.sdk.bluetooth.operations.SetNotificationOperation;
 
 import java.lang.reflect.Method;
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 public class BluetoothManager {
 
@@ -39,7 +45,9 @@ public class BluetoothManager {
     protected static final UUID GENERIC_ATTRIBUTE = UUID.fromString("00001801-0000-1000-8000-00805f9b34fb");
     protected static final UUID SERVICE_CHANGED = UUID.fromString("00002a05-0000-1000-8000-00805f9b34fb");
     private static final Map<String, BluetoothGatt> gatts = new ConcurrentHashMap<>();
+    private static final Map<String, GattExecutor> executors = new ConcurrentHashMap<>();
     private static final List<String> establishConnectionSent = new CopyOnWriteArrayList<>();
+    private static final Set<String> isConnected = new CopyOnWriteArraySet<>();
 
     public static final int ERR_BLUETOOTH_OFF = 1;
     public static final int ERR_BLUETOOTH_NOT_SUPPORTED = 2;
@@ -66,8 +74,10 @@ public class BluetoothManager {
     private boolean bluetoothRestartRequested = false;
     private boolean restartBondRequested = false;
 
-    private boolean serviceDiscoveryRequested = false;
-    private int numOfServiceDiscoveryRequests = 0;
+    private boolean isClosing = false;
+    private boolean isClosed = false;
+    private boolean isBluetoothTurnedOff = false;
+
     private boolean pairRequested = false;
     private int numOfPairRequests = 0;
     private boolean unpairRequested = false;
@@ -87,7 +97,13 @@ public class BluetoothManager {
         debug = false;
     }
 
+    public boolean isClosing() {
+        return isClosing;
+    }
+
     public void registerBluetoothListener(@NonNull BluetoothListener listener) {
+        isClosed = false;
+
         bluetoothListeners.registerListener(listener);
         if (bluetoothAdapter != null && bluetoothAdapter.getState() == BluetoothAdapter.STATE_ON) {
             listener.onBluetoothTurnedOn();
@@ -110,14 +126,19 @@ public class BluetoothManager {
     }
 
     public void refreshConnections() {
+        isClosed = false;
         establishConnections();
     }
 
     public void close() {
         log("BluetoothManager is closing...");
-        bluetoothListeners.removeAllListeners();
-        disconnectDevices();
-        unregisterBluetoothState();
+        isClosing = true;
+
+        if (numOfConnectedDevices() != 0) {
+            disconnectDevices();
+        } else {
+            handleCloseAfterAllDevicesDisconnected();
+        }
     }
 
     private void registerBluetoothState() {
@@ -172,19 +193,9 @@ public class BluetoothManager {
             BluetoothDevice device = gatt.getDevice();
             log(device.getName() + " " + device.getAddress() + " status: " + status + " newState: " + newState);
 
-            if (status == 8) {
-                notifyOnError(device.getAddress(), ERR_TIMEOUT, "Timeout");
-                return;
-            }
-
             if (status == 22) {
                 log("Status " + status);
-                handleDeviceDisconnection(gatt);
-                return;
-            }
-
-            if (status == BluetoothGatt.GATT_SUCCESS && newState == BluetoothAdapter.STATE_DISCONNECTED) {
-                device.connectGatt(context, false, this);
+                handleDeviceUnpaired(gatt);
                 return;
             }
 
@@ -193,24 +204,65 @@ public class BluetoothManager {
                     handleDeviceConnection(gatt);
                     break;
                 case BluetoothAdapter.STATE_DISCONNECTED:
-                    handleDeviceDisconnectionWithAutoReconnect(gatt);
+                    handleDeviceDisconnection(gatt);
                     break;
             }
         }
 
         @Override
         public void onServicesDiscovered(BluetoothGatt gatt, int status) {
+            GattExecutor executor = getExecutor(gatt);
+            if (executor != null) {
+                executor.onServicesDiscovered(status);
+            }
+        }
+
+        @Override
+        public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
+//            log("On Characteristic Read - " + characteristic.getUuid().toString());
+            GattExecutor executor = getExecutor(gatt);
+            if (executor != null) {
+                executor.onCharRead(characteristic, status);
+            }
+        }
+
+        @Override
+        public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
+//            log("On Characteristic Write");
+            GattExecutor executor = getExecutor(gatt);
+            if (executor != null) {
+                executor.onCharWrite(characteristic, status);
+            }
+        }
+
+        @Override
+        public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
+//            log("On characteristic changed");
+            GattExecutor executor = getExecutor(gatt);
+            if (executor != null) {
+                executor.onCharChange(characteristic);
+            }
+
+            String deviceAddress = gatt.getDevice().getAddress();
+
+            notifyOnNotificationReceived(deviceAddress, characteristic.getUuid(), characteristic.getValue());
+        }
+
+        @Override
+        public void onDescriptorWrite(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
+//            log("On Descriptor Write");
+            GattExecutor executor = getExecutor(gatt);
+            if (executor != null) {
+                executor.onDescWrite(descriptor, status);
+            }
+        }
+    };
+
+    private void onDiscoverServicesCompleted(BluetoothGatt gatt, List<BluetoothGattService> services) {
             String deviceAddress = gatt.getDevice().getAddress();
             gatts.put(deviceAddress, gatt);
 
-            serviceDiscoveryRequested = false;
-
-            if (status != BluetoothGatt.GATT_SUCCESS) {
-                notifyOnError(deviceAddress, ERR_DISCOVER_SERVICES, "Unable to discover services");
-                return;
-            }
-
-            if (gatt.getServices().isEmpty()) {
+            if (services.isEmpty()) {
                 log(deviceAddress + " no services discovered");
             } else {
                 log(deviceAddress + " services discovered");
@@ -221,66 +273,7 @@ public class BluetoothManager {
 
             connectionInProgress.remove(deviceAddress);
             notifyOnDeviceConnected(deviceAddress);
-        }
-
-        @Override
-        public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
-            String deviceAddress = gatt.getDevice().getAddress();
-
-            if (status != BluetoothGatt.GATT_SUCCESS) {
-                notifyOnError(deviceAddress, ERR_GATT_READ, "Characteristic GATT Read Error - " + characteristic.getUuid().toString());
-                return;
-            }
-
-            log("On Characteristic Read - " + characteristic.getUuid().toString());
-
-            notifyOnCharacteristicRead(deviceAddress, characteristic.getUuid(), characteristic.getValue());
-        }
-
-        @Override
-        public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
-            String deviceAddress = gatt.getDevice().getAddress();
-
-            if (status != BluetoothGatt.GATT_SUCCESS) {
-                notifyOnError(deviceAddress, ERR_GATT_WRITE, "Characteristic GATT Write Error - " + characteristic.getUuid().toString());
-                return;
-            }
-
-            log("On Characteristic Write");
-
-            notifyOnCharacteristicWrite(deviceAddress, characteristic.getUuid(), characteristic.getValue());
-        }
-
-        @Override
-        public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
-            log("On characteristic changed");
-            String deviceAddress = gatt.getDevice().getAddress();
-            byte[] data = characteristic.getValue();
-
-            if (data == null) {
-                notifyOnError(deviceAddress, ERR_NOTIFICATION_DATA, "Unable to read notification data");
-                return;
-            }
-
-            notifyOnNotificationReceived(deviceAddress, characteristic.getUuid(), data);
-        }
-
-        @Override
-        public void onDescriptorWrite(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
-            String deviceAddress = gatt.getDevice().getAddress();
-
-            if (status != BluetoothGatt.GATT_SUCCESS) {
-                notifyOnError(deviceAddress, ERR_GATT_WRITE, "Descriptor GATT Write Error - " + descriptor.getUuid().toString());
-                return;
-            }
-
-            log("On Descriptor Write");
-
-            if (descriptor.getUuid().equals(CCCD)) {
-                notifyOnNotificationSubscribed(deviceAddress, descriptor.getCharacteristic().getUuid());
-            }
-        }
-    };
+    }
 
     private void handleDeviceConnection(final BluetoothGatt gatt) {
         String deviceAddress = gatt.getDevice().getAddress();
@@ -294,69 +287,137 @@ public class BluetoothManager {
         BluetoothGatt storedGatt = gatts.get(deviceAddress);
 
         // If there is an already stored gatt for the same device and it's not the same connection,
-        // it means that a new gatt connection opened for the same device, so close the old one and
+        // it means that a new gatt connection opened for the same device, so clear the old one and
         // save the new one
         if (storedGatt != null && storedGatt != gatt) {
             closeGatt(storedGatt);
         }
 
-        log(deviceAddress + " connected.");
-
-        Boolean isRefreshSucceed = refreshGatt(gatt);
-        if (!isRefreshSucceed) {
-            logError("Gatt refresh failed " + deviceAddress);
+        if (!isConnected.contains(deviceAddress)) {
+            isConnected.add(deviceAddress);
         }
 
-        log("Waiting 1600 ms for a possible Service Changed indication...");
-        new Timer().schedule(new TimerTask() {
-            @Override
-            public void run() {
-                boolean success;
-                int numOfDiscoverRequests = 0;
-                do {
-                    numOfDiscoverRequests++;
-                    success = gatt.discoverServices();
-                    log("Discover services - " + success);
-                } while (!success && numOfDiscoverRequests < 3);
-            }
+        log(deviceAddress + " connected.");
 
-        }, 1600);
+        final GattOperation refreshOp = new RefreshOperation()
+                .addOnCompletionListener(new OnCompletionListener<Void>() {
+                    @Override
+                    public void onCompletion(Void data) {
+                        log("Refresh finished successfully");
+                    }
+                })
+                .addOnErrorListener(new OnErrorListener() {
+                    @Override
+                    public void onError(String msg) {
+                        logError("refreshOperation - " + msg);
+                    }
+                });
+
+        final GattOperation discoverServicesOp = new DiscoverServicesOperation()
+                .addOnCompletionListener(new OnCompletionListener<List<BluetoothGattService>>() {
+                    @Override
+                    public void onCompletion(List<BluetoothGattService> data) {
+                        onDiscoverServicesCompleted(gatt, data);
+                    }
+                })
+                .addOnErrorListener(new OnErrorListener() {
+                    @Override
+                    public void onError(String msg) {
+                        logError("discoverServicesOperation - " + msg);
+                    }
+                });
+
+        GattExecutor executor = getExecutor(gatt);
+        executor.addOperation(refreshOp);
+        executor.addOperation(discoverServicesOp);
+        addExecutor(executor);
+
+//        log("Waiting 1600 ms for a possible Service Changed indication...");
+//        new Timer().schedule(new TimerTask() {
+//            @Override
+//            public void run() {
+//                boolean success;
+//                int numOfDiscoverRequests = 0;
+//                do {
+//                    numOfDiscoverRequests++;
+//                    success = gatt.discoverServices();
+//                    log("Discover services - " + success);
+//                } while (!success && numOfDiscoverRequests < 3);
+//            }
+//
+//        }, 1600);
     }
 
     private void handleDeviceDisconnection(BluetoothGatt gatt) {
-        handleDeviceDisconnectionAndReconnection(gatt, false);
-    }
-
-    private void handleDeviceDisconnectionWithAutoReconnect(BluetoothGatt gatt) {
-        handleDeviceDisconnectionAndReconnection(gatt, true);
-    }
-
-    private void handleDeviceDisconnectionAndReconnection(BluetoothGatt gatt, boolean autoReconnect) {
         BluetoothDevice device = gatt.getDevice();
         String deviceAddress = device.getAddress();
 
         BluetoothGatt storedGatt = gatts.get(deviceAddress);
         if (storedGatt == null || storedGatt != gatt) {
-            closeGatt(gatt);
+            closeGatt2(gatt);
             return;
         }
 
-        closeGatt(gatt);
-        removeFromLists(deviceAddress);
+        GattExecutor executor = getExecutor(storedGatt);
+        if (executor != null) {
+            executor.clear();
+        }
 
         log(deviceAddress + " disconnected.");
 
-        notifyOnDeviceDisconnected(deviceAddress);
-
-        // Trying to establish another connection, to make sure the device will auto reconnect when turned back on
-        if (autoReconnect && !restartBondRequested) {
-            log("Establishing autoReconnect connection");
-            establishConnection(device);
+        if (isConnected.contains(deviceAddress)) {
+            isConnected.remove(deviceAddress);
         }
+
+        if (isClosing || isBluetoothTurnedOff) {
+            closeGatt2(gatt);
+            removeFromLists(deviceAddress);
+
+            if (isClosing && gatts.isEmpty()) {
+                handleCloseAfterAllDevicesDisconnected();
+            }
+        }
+
+        notifyOnDeviceDisconnected(deviceAddress);
+    }
+
+    private void handleDeviceUnpaired(BluetoothGatt gatt) {
+        BluetoothDevice device = gatt.getDevice();
+        String deviceAddress = device.getAddress();
+
+        BluetoothGatt storedGatt = gatts.get(deviceAddress);
+        if (storedGatt == null) {
+            return;
+        }
+
+        GattExecutor executor = getExecutor(storedGatt);
+        if (executor != null) {
+            executor.clear();
+        }
+
+        if (isConnected.contains(deviceAddress)) {
+            isConnected.remove(deviceAddress);
+        }
+
+        closeGatt2(storedGatt);
+        removeFromLists(deviceAddress);
+
+        notifyOnDeviceDisconnected(deviceAddress);
+    }
+
+    private void handleCloseAfterAllDevicesDisconnected() {
+        establishConnectionSent.clear();
+        isClosing = false;
+        isClosed = true;
     }
 
     private void closeGatt(BluetoothGatt gatt) {
         gatt.disconnect();
+        gatt.close();
+    }
+
+    private void closeGatt2(BluetoothGatt gatt) {
+        removeExecutor(getExecutor(gatt));
         gatt.close();
     }
 
@@ -365,134 +426,80 @@ public class BluetoothManager {
         establishConnectionSent.remove(deviceAddress);
     }
 
-    public void setupNotification(@NonNull String deviceAddress, @NonNull UUID serviceUUID, @NonNull UUID characteristicUUID) {
-        BluetoothGatt gatt = gatts.get(deviceAddress);
+    public void setupNotification(@NonNull final String deviceAddress, @NonNull UUID serviceUUID, @NonNull final UUID characteristicUUID) {
+        final BluetoothGatt gatt = gatts.get(deviceAddress);
         if (gatt == null) {
             notifyOnError(deviceAddress, ERR_DEVICE_NOT_CONNECTED, "Device is not connected to set notification");
             return;
         }
-        setupNotification(gatt, serviceUUID, characteristicUUID);
+
+        GattOperation cccdSetNotificationOp = new SetNotificationOperation(serviceUUID, characteristicUUID)
+                .addOnCompletionListener(new OnCompletionListener<byte[]>() {
+                    @Override
+                    public void onCompletion(byte[] data) {
+                        notifyOnNotificationSubscribed(deviceAddress, characteristicUUID);
+                    }
+                })
+                .addOnErrorListener(new OnErrorListener() {
+                    @Override
+                    public void onError(String msg) {
+                        notifyOnError(deviceAddress, ERR_DEVICE_NOT_CONNECTED, msg);
+                    }
+                });
+
+
+        getExecutor(gatt)
+                .addOperation(cccdSetNotificationOp);
     }
 
-    private void setupNotification(BluetoothGatt gatt, UUID serviceUuid, UUID characteristicUuid) {
-        String deviceAddress = gatt.getDevice().getAddress();
-
-        BluetoothGattService service = gatt.getService(serviceUuid);
-        if (service == null) {
-            notifyOnError(deviceAddress, ERR_SERVICE_NOT_FOUND,
-                    "Service not found for notification - " + serviceUuid.toString());
-            return;
-        }
-
-        BluetoothGattCharacteristic characteristic = service.getCharacteristic(characteristicUuid);
-        if (characteristic == null) {
-            notifyOnError(deviceAddress, ERR_CHARACTERISTIC_NOT_FOUND,
-                    "Characteristic not found for notification - " + characteristicUuid.toString());
-            return;
-        }
-
-        if (!gatt.setCharacteristicNotification(characteristic, true)) {
-            notifyOnError(deviceAddress, ERR_CHARACTERISTIC_SET,
-                    "Failed to set characteristic notification - " + characteristicUuid.toString());
-            return;
-        }
-
-        BluetoothGattDescriptor descriptor = characteristic.getDescriptor(CCCD);
-        if (descriptor == null) {
-            notifyOnError(deviceAddress, ERR_DESCRIPTOR_SET,
-                    "Failed to get notification descriptor - " + characteristicUuid.toString());
-            return;
-        }
-
-        int characteristicProperties = characteristic.getProperties();
-        byte[] valueToSend = BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE;
-        if ((characteristicProperties & 0x10) == 16) {
-            valueToSend = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE;
-        } else if ((characteristicProperties & 0x20) == 32) {
-            valueToSend = BluetoothGattDescriptor.ENABLE_INDICATION_VALUE;
-        }
-        if (valueToSend.length == 0) {
-            notifyOnError(deviceAddress, ERR_DESCRIPTOR_SET,
-                    "Failed to set notification type - " + characteristicUuid.toString());
-            return;
-        }
-
-        log("Notification Description: " + Arrays.toString(valueToSend));
-        descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-        if (!gatt.writeDescriptor(descriptor)) {
-            notifyOnError(deviceAddress, ERR_DESCRIPTOR_SET,
-                    "Failed to write characteristic descriptor - " + characteristicUuid.toString());
-        }
-    }
-
-    public void readCharacteristic(@NonNull String deviceAddress, @NonNull UUID serviceUUID, @NonNull UUID characteristicUUID) {
-        BluetoothGatt gatt = gatts.get(deviceAddress);
+    public void readCharacteristic(@NonNull final String deviceAddress, @NonNull UUID serviceUUID, @NonNull final UUID characteristicUUID) {
+        final BluetoothGatt gatt = gatts.get(deviceAddress);
         if (gatt == null) {
             notifyOnError(deviceAddress, ERR_DEVICE_NOT_CONNECTED, "Device is not connected to read characteristic");
             return;
         }
-        readCharacteristic(gatt, serviceUUID, characteristicUUID);
+
+        GattOperation characteristicReadOp = new CharacteristicReadOperation(serviceUUID, characteristicUUID)
+                .addOnCompletionListener(new OnCompletionListener<byte[]>() {
+                    @Override
+                    public void onCompletion(byte[] data) {
+                        notifyOnCharacteristicRead(deviceAddress, characteristicUUID, data);
+                    }
+                })
+                .addOnErrorListener(new OnErrorListener() {
+                    @Override
+                    public void onError(String msg) {
+                        notifyOnError(deviceAddress, ERR_DEVICE_NOT_CONNECTED, msg);
+                    }
+                });
+
+        getExecutor(gatt)
+                .addOperation(characteristicReadOp);
     }
 
-    private void readCharacteristic(BluetoothGatt gatt, UUID serviceUuid, UUID characteristicUuid) {
-        String deviceAddress = gatt.getDevice().getAddress();
-
-        BluetoothGattService service = gatt.getService(serviceUuid);
-        if (service == null) {
-            notifyOnError(deviceAddress, ERR_SERVICE_NOT_FOUND,
-                    "Service not found for reading - " + serviceUuid.toString());
-            return;
-        }
-
-        BluetoothGattCharacteristic characteristic = service.getCharacteristic(characteristicUuid);
-        if (characteristic == null) {
-            notifyOnError(deviceAddress, ERR_CHARACTERISTIC_NOT_FOUND,
-                    "Characteristic not found for reading - " + characteristicUuid.toString());
-            return;
-        }
-
-        if (!gatt.readCharacteristic(characteristic)) {
-            notifyOnError(deviceAddress, ERR_CHARACTERISTIC_READ,
-                    "Failed to read characteristic - " + characteristicUuid.toString());
-        }
-    }
-
-    public void writeCharacteristic(@NonNull String deviceAddress, @NonNull UUID serviceUUID, @NonNull UUID characteristicUUID, @NonNull byte[] data) {
-        BluetoothGatt gatt = gatts.get(deviceAddress);
+    public void writeCharacteristic(@NonNull final String deviceAddress, @NonNull UUID serviceUUID, @NonNull final UUID characteristicUUID, @NonNull byte[] data) {
+        final BluetoothGatt gatt = gatts.get(deviceAddress);
         if (gatt == null) {
-            notifyOnError(deviceAddress, ERR_DEVICE_NOT_CONNECTED, "Device is not connected to write characteristic");
-            return;
-        }
-        writeCharacteristic(gatt, serviceUUID, characteristicUUID, data);
-    }
-
-    private void writeCharacteristic(BluetoothGatt gatt, UUID serviceUuid, UUID characteristicUuid, byte[] data) {
-        String deviceAddress = gatt.getDevice().getAddress();
-
-        BluetoothGattService service = gatt.getService(serviceUuid);
-        if (service == null) {
-            notifyOnError(deviceAddress, ERR_SERVICE_NOT_FOUND,
-                    "Service not found for writing - " + serviceUuid.toString());
+            notifyOnError(deviceAddress, ERR_DEVICE_NOT_CONNECTED, "Device is not connected to read characteristic");
             return;
         }
 
-        BluetoothGattCharacteristic characteristic = service.getCharacteristic(characteristicUuid);
-        if (characteristic == null) {
-            notifyOnError(deviceAddress, ERR_CHARACTERISTIC_NOT_FOUND,
-                    "Characteristic not found for writing - " + characteristicUuid.toString());
-            return;
-        }
+        GattOperation characteristicWriteOp = new CharacteristicWriteOperation(serviceUUID, characteristicUUID, data)
+                .addOnCompletionListener(new OnCompletionListener<byte[]>() {
+                    @Override
+                    public void onCompletion(byte[] data) {
+                        notifyOnCharacteristicWrite(deviceAddress, characteristicUUID, data);
+                    }
+                })
+                .addOnErrorListener(new OnErrorListener() {
+                    @Override
+                    public void onError(String msg) {
+                        notifyOnError(deviceAddress, ERR_DEVICE_NOT_CONNECTED, msg);
+                    }
+                });
 
-        if (!characteristic.setValue(data)) {
-            notifyOnError(deviceAddress, ERR_CHARACTERISTIC_SET,
-                    "Failed to set characteristic's value - " + characteristicUuid.toString());
-            return;
-        }
-
-        if (!gatt.writeCharacteristic(characteristic)) {
-            notifyOnError(deviceAddress, ERR_CHARACTERISTIC_WRITE,
-                    "Failed to write characteristic - " + characteristicUuid.toString());
-        }
+        getExecutor(gatt)
+                .addOperation(characteristicWriteOp);
     }
 
     private void disconnectDevices() {
@@ -506,22 +513,38 @@ public class BluetoothManager {
         if (gatt == null) {
             return;
         }
-        handleDeviceDisconnection(gatt);
+        gatt.disconnect();
     }
 
     @NonNull
     public Set<String> getConnectedDevices() {
-        return new HashSet<>(gatts.keySet());
+        return isConnected;
+//        return new HashSet<>(gatts.keySet());
+    }
+
+    public int numOfConnectedDevices() {
+        return gatts.size();
     }
 
     private Boolean isGattConnectionExists(String deviceAddress) {
         return gatts.containsKey(deviceAddress);
     }
 
+    private void handleBluetoothOff() {
+        establishConnectionSent.clear();
+        for (BluetoothGatt gatt: gatts.values()) {
+            handleDeviceDisconnection(gatt);
+        }
+    }
+
     private BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
         @SuppressLint("SwitchIntDef")
         @Override
         public void onReceive(Context context, Intent intent) {
+
+            if (isClosed) {
+                return;
+            }
 
             Boolean intentActionIsStateChanged = false;
             try {
@@ -535,18 +558,19 @@ public class BluetoothManager {
                     switch (state) {
                         case BluetoothAdapter.STATE_ON:
                             log("Bluetooth turned ON");
-                            establishConnections();
+                            isBluetoothTurnedOff = false;
                             notifyOnBluetoothTurnedOn();
+                            establishConnections();
                             break;
                         case BluetoothAdapter.STATE_OFF:
                             log("Bluetooth turned OFF");
+                            isBluetoothTurnedOff = true;
                             notifyOnBluetoothTurnedOff();
-                            establishConnectionSent.clear();
-                            disconnectDevices();
-                            if (bluetoothRestartRequested) {
-                                bluetoothRestartRequested = false;
-                                setBluetooth(true);
-                            }
+                            handleBluetoothOff();
+//                            if (bluetoothRestartRequested) {
+//                                bluetoothRestartRequested = false;
+//                                setBluetooth(true);
+//                            }
                             break;
                     }
                 }
@@ -568,6 +592,9 @@ public class BluetoothManager {
                 }
 
                 if (state == BluetoothDevice.BOND_BONDED && prevState == BluetoothDevice.BOND_BONDING) {
+                    if (restartBondRequested) {
+                        restartBondRequested = false;
+                    }
                     pairRequested = false;
                     log("Paired - " + device.toString());
                     establishConnection(device);
@@ -577,15 +604,10 @@ public class BluetoothManager {
                     unpairRequested = false;
                     log("Unpaired - " + device.toString());
 
-                    removeFromLists(device.getAddress());
-
                     if (restartBondRequested) {
-                        log("restartBondRequested");
-                        restartBondRequested = false;
-                        startPairProcess(device);
+                        createBond(device);
                     }
                 }
-
             }
         }
     };
@@ -716,77 +738,17 @@ public class BluetoothManager {
     }
 
     public void refreshBond(String deviceAddress) {
+
+        BluetoothGatt gatt = gatts.get(deviceAddress);
+        if (gatt == null) {
+            return;
+        }
+
         if (!restartBondRequested) {
             restartBondRequested = true;
 
-            BluetoothGatt gatt = gatts.get(deviceAddress);
-            if (gatt != null) {
-                BluetoothDevice device = gatt.getDevice();
-                startUnpairProcess(device);
-            }
+            removeBond(gatt.getDevice());
         }
-    }
-
-    private void startDiscoverServicesProcess(final BluetoothGatt gatt) {
-        log("Starting discover services process");
-
-        new Timer().schedule(new TimerTask() {
-            @Override
-            public void run() {
-                log("Service discovery timeout");
-                if (serviceDiscoveryRequested) {
-                    numOfServiceDiscoveryRequests++;
-                    if (numOfServiceDiscoveryRequests > 3) {
-                        serviceDiscoveryRequested = false;
-                        numOfServiceDiscoveryRequests = 0;
-                        notifyOnError(gatt.getDevice().getAddress(), ERR_TIMEOUT, "Service Discovery Timeout");
-                        return;
-                    }
-                    startDiscoverServicesProcess(gatt);
-                }
-            }
-        }, 5000);
-
-        discoverServices(gatt);
-    }
-
-    private void discoverServices(final BluetoothGatt gatt) {
-        new Handler(Looper.getMainLooper()).post(new Runnable() {
-            @Override
-            public void run() {
-                boolean success;
-                int numOfDiscoverRequests = 0;
-                do {
-                    numOfDiscoverRequests++;
-                    serviceDiscoveryRequested = true;
-                    success = gatt.discoverServices();
-                    log("Discover services - " + success);
-                } while (!success && numOfDiscoverRequests < 3);
-            }
-        });
-    }
-
-    private void startPairProcess(final BluetoothDevice device) {
-        log("Starting pair process");
-
-        new Timer().schedule(new TimerTask() {
-            @Override
-            public void run() {
-                log("Pairing timeout");
-                if (pairRequested) {
-                    numOfPairRequests++;
-                    if (numOfPairRequests > 3) {
-                        pairRequested = false;
-                        numOfPairRequests = 0;
-                        notifyOnError(device.getAddress(), ERR_TIMEOUT, "Pairing Timeout");
-                        return;
-                    }
-                    startPairProcess(device);
-                }
-            }
-        }, 5000);
-
-        createBond(device);
     }
 
     private void createBond(final BluetoothDevice device) {
@@ -817,29 +779,6 @@ public class BluetoothManager {
 
             }
         });
-    }
-
-    private void startUnpairProcess(final BluetoothDevice device) {
-        log("Starting unpair process");
-
-        new Timer().schedule(new TimerTask() {
-            @Override
-            public void run() {
-                log("Unpairing timeout");
-                if (unpairRequested) {
-                    numOfUnpairRequests++;
-                    if (numOfUnpairRequests > 3) {
-                        unpairRequested = false;
-                        numOfUnpairRequests = 0;
-                        notifyOnError(device.getAddress(), ERR_TIMEOUT, "Unpairing Timeout");
-                        return;
-                    }
-                    startUnpairProcess(device);
-                }
-            }
-        }, 5000);
-
-        removeBond(device);
     }
 
     private void removeBond(final BluetoothDevice device) {
@@ -874,10 +813,10 @@ public class BluetoothManager {
         });
     }
 
-    private void subscribeServiceChange(BluetoothGatt gatt) {
-        log("Subscribing to service change...");
-        setupNotification(gatt, GENERIC_ATTRIBUTE, SERVICE_CHANGED);
-    }
+//    private void subscribeServiceChange(BluetoothGatt gatt) {
+//        log("Subscribing to service change...");
+//        setupNotification(gatt, GENERIC_ATTRIBUTE, SERVICE_CHANGED);
+//    }
 
     public void restartBluetooth() {
         if (!bluetoothRestartRequested) {
@@ -896,6 +835,38 @@ public class BluetoothManager {
         }
         // No need to change bluetooth state
         return true;
+    }
+
+    private String getDeviceAddress(@NonNull BluetoothGatt gatt) {
+        return gatt.getDevice().getAddress();
+    }
+
+    private void addExecutor(GattExecutor executor) {
+        String deviceAddress = executor.getDeviceAddress();
+        if (executors.containsKey(deviceAddress)) {
+            log("Executor already exists...");
+            if (executors.get(deviceAddress) != executor) {
+                logError("Did you just create different executor?");
+            }
+        } else {
+            executors.put(deviceAddress, executor);
+        }
+    }
+
+    private void removeExecutor(GattExecutor executor) {
+        if (executor != null) {
+            executor.clear();
+            executors.remove(executor.getDeviceAddress());
+        }
+    }
+
+    private GattExecutor getExecutor(BluetoothGatt gatt) {
+        String deviceAddress = getDeviceAddress(gatt);
+        if (executors.containsKey(deviceAddress)) {
+            return executors.get(deviceAddress);
+        }
+        log("Creating new executor");
+        return new GattExecutor(gatt);
     }
 
 }

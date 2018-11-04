@@ -37,7 +37,6 @@ public class TapBluetoothManager {
 
     protected BluetoothManager bluetoothManager;
     private ListenerManager<TapBluetoothListener> tapBluetoothListeners = new ListenerManager<>();
-    private List<String> isWriting = new CopyOnWriteArrayList<>();
     private boolean debug = false;
 
     public TapBluetoothManager(@NonNull BluetoothManager bluetoothManager) {
@@ -53,6 +52,14 @@ public class TapBluetoothManager {
     public void disableDebug() {
         debug = false;
         bluetoothManager.disableDebug();
+    }
+
+    public boolean isClosing() {
+        return bluetoothManager.isClosing();
+    }
+
+    public int numOfConnectedTaps() {
+        return bluetoothManager.numOfConnectedDevices();
     }
 
     public void registerTapBluetoothListener(@NonNull TapBluetoothListener listener) {
@@ -81,11 +88,12 @@ public class TapBluetoothManager {
     }
 
     public void readName(@NonNull String tapAddress) {
+        log("readName");
         bluetoothManager.readCharacteristic(tapAddress, TAP, NAME);
     }
 
     public void writeName(@NonNull String tapAddress, @NonNull String name) {
-        addToIsWriting(tapAddress);
+        log("writeName");
         try {
             bluetoothManager.writeCharacteristic(tapAddress, TAP, NAME, name.getBytes(UTF8));
         } catch (UnsupportedEncodingException e) {
@@ -94,26 +102,32 @@ public class TapBluetoothManager {
     }
 
     public void readBattery(@NonNull String tapAddress) {
+        log("readBattery");
         bluetoothManager.readCharacteristic(tapAddress, BATTERY, BATTERY_LEVEL);
     }
 
     public void readSerialNumber(@NonNull String tapAddress) {
+        log("readSerialNumber");
         bluetoothManager.readCharacteristic(tapAddress, DEVICE_INFORMATION, SERIAL_NAME_STRING);
     }
 
     public void readHwVer(@NonNull String tapAddress) {
+        log("readHwVer");
         bluetoothManager.readCharacteristic(tapAddress, DEVICE_INFORMATION, HARDWARE_REVISION_STRING);
     }
 
     public void readFwVer(@NonNull String tapAddress) {
+        log("readFwVer");
         bluetoothManager.readCharacteristic(tapAddress, DEVICE_INFORMATION, FIRMWARE_REVISION_STRING);
     }
 
     public void setupTapNotification(@NonNull String tapAddress) {
+        log("setupTapNotification");
         bluetoothManager.setupNotification(tapAddress, TAP, TAP_DATA);
     }
 
     public void setupMouseNotification(@NonNull String tapAddress) {
+        log("setupMouseNotification");
         bluetoothManager.setupNotification(tapAddress, TAP, MOUSE_DATA);
     }
 
@@ -127,7 +141,6 @@ public class TapBluetoothManager {
 
     public void close() {
         bluetoothManager.close();
-        tapBluetoothListeners.removeAllListeners();
     }
 
     public void restartBluetooth() {
@@ -161,33 +174,24 @@ public class TapBluetoothManager {
 
         @Override
         public void onDeviceConnected(@NonNull String deviceAddress) {
-            if (isWriting.contains(deviceAddress)) {
-                removeFromIsWriting(deviceAddress);
-                return;
-            }
-
             log("Device Connected");
             notifyOnTapConnected(deviceAddress);
         }
 
         @Override
         public void onDeviceAlreadyConnected(@NonNull String deviceAddress) {
-            if (isWriting.contains(deviceAddress)) {
-                return;
-            }
-
             log("Device is Already Connected");
             notifyOnTapAlreadyConnected(deviceAddress);
         }
 
         @Override
         public void onDeviceDisconnected(@NonNull String deviceAddress) {
-            if (isWriting.contains(deviceAddress)) {
-                return;
-            }
-
             log("Device Disconnected");
             notifyOnTapDisconnected(deviceAddress);
+
+//            if (bluetoothManager.isClosing() && bluetoothManager.numOfConnectedDevices() == 0) {
+//                tapBluetoothListeners.removeAllListeners();
+//            }
         }
 
         @Override
@@ -261,16 +265,6 @@ public class TapBluetoothManager {
             notifyOnError(deviceAddress, code, description);
         }
     };
-
-    private void addToIsWriting(@NonNull String tapIdentifier) {
-        if (!isWriting.contains(tapIdentifier)) {
-            isWriting.add(tapIdentifier);
-        }
-    }
-
-    private void removeFromIsWriting(@NonNull String tapIdentifier) {
-        isWriting.remove(tapIdentifier);
-    }
 
     private void notifyOnBluetoothTurnedOn() {
         tapBluetoothListeners.notifyAll(new NotifyAction<TapBluetoothListener>() {
