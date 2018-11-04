@@ -3,9 +3,6 @@ package com.tapwithus.sdk;
 import android.support.annotation.NonNull;
 
 import com.tapwithus.sdk.bluetooth.MousePacket;
-import com.tapwithus.sdk.tap.Tap;
-
-import java.util.UUID;
 
 public interface TapListener {
     void onBluetoothTurnedOn();

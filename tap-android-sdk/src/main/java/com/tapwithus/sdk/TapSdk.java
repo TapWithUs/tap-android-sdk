@@ -50,7 +50,6 @@ public class TapSdk {
 
     protected TapCache cache = new TapCache();
     private boolean clearCacheOnTapDisconnection = true;
-    private boolean forceNotifyConnectionState = false;
     private boolean pauseResumeHandling = true;
 
     public TapSdk(TapBluetoothManager tapBluetoothManager) {
@@ -71,10 +70,6 @@ public class TapSdk {
 
     public void clearCacheOnTapDisconnection(boolean clearCacheOnTapDisconnection) {
         this.clearCacheOnTapDisconnection = clearCacheOnTapDisconnection;
-    }
-
-    public void forceNotifyConnectionState(boolean forceNotifyConnectionState) {
-        this.forceNotifyConnectionState = forceNotifyConnectionState;
     }
 
     public void enableAutoSetControllerModeOnConnection() {
