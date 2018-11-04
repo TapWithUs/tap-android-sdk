@@ -1,7 +1,10 @@
 package com.tapwithus.tapsdk;
 
-import android.support.v7.app.AppCompatActivity;
+import android.content.DialogInterface;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
+import android.support.v7.app.AlertDialog;
+import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.DividerItemDecoration;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -13,18 +16,18 @@ import com.tapwithus.sdk.TapListener;
 import com.tapwithus.sdk.TapSdk;
 import com.tapwithus.sdk.TapSdkFactory;
 import com.tapwithus.sdk.bluetooth.MousePacket;
+import com.tapwithus.sdk.tap.Tap;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.UUID;
+import java.util.Set;
 
 public class MainActivity extends AppCompatActivity {
 
-    private static final String CHARSET = "UTF-8";
-
-    private TapSdk tapSdk;
+    private TapSdk sdk;
     private RecyclerViewAdapter adapter;
+    private boolean startWithControllerMode = true;
+    private String lastConnectedTapAddress = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -33,8 +36,16 @@ public class MainActivity extends AppCompatActivity {
 
         log("onCreate");
 
-        tapSdk = TapSdkFactory.getDefault(this);
-        tapSdk.enableDebug();
+
+        sdk = TapSdkFactory.getDefault(this);
+        sdk.enableDebug();
+        if (!startWithControllerMode) {
+            sdk.disableAutoSetControllerModeOnConnection();
+        }
+        sdk.registerTapListener(tapListener);
+        if (sdk.isConnectionInProgress()) {
+            log("A Tap is connecting");
+        }
 
         initRecyclerView();
 
@@ -42,7 +53,12 @@ public class MainActivity extends AppCompatActivity {
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-//                tapSdk.setMouseNotification("D7:A9:E0:8C:17:6E");
+//                sdk.setMouseNotification("D7:A9:E0:8C:17:6E");
+//                String tapIdentifier = "D7:A9:E0:8C:17:6E";
+//                sdk.writeName(tapIdentifier, "YanivWithCase");
+
+//                sdk.restartBluetooth();
+                sdk.refreshBond(lastConnectedTapAddress);
             }
         });
     }
@@ -52,10 +68,10 @@ public class MainActivity extends AppCompatActivity {
         public void onClick(TapListItem item) {
             if (item.isInControllerMode) {
                 log("Switching to TEXT mode");
-                tapSdk.startMode(item.tapIdentifier, TapSdk.MODE_TEXT);
+                sdk.startMode(item.tapIdentifier, TapSdk.MODE_TEXT);
             } else {
                 log("Switching to CONTROLLER mode");
-                tapSdk.startMode(item.tapIdentifier, TapSdk.MODE_CONTROLLER);
+                sdk.startMode(item.tapIdentifier, TapSdk.MODE_CONTROLLER);
             }
         }
     };
@@ -64,24 +80,26 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
 
-        List<String> connectedTaps = tapSdk.getConnectedTaps();
+        log("onResume");
+
+        Set<String> connectedTaps = sdk.getConnectedTaps();
         List<TapListItem> listItems = new ArrayList<>();
         for (String tapIdentifier: connectedTaps) {
             TapListItem tapListItem = new TapListItem(tapIdentifier, itemOnClickListener);
-            tapListItem.isInControllerMode = tapSdk.isInMode(tapIdentifier, TapSdk.MODE_CONTROLLER);
+            tapListItem.isInControllerMode = sdk.isInMode(tapIdentifier, TapSdk.MODE_CONTROLLER);
             listItems.add(tapListItem);
         }
         adapter.updateList(listItems);
 
-        tapSdk.registerTapListener(tapListener);
-        tapSdk.resume();
+        sdk.resume();
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        tapSdk.pause();
-        tapSdk.unregisterTapListener(tapListener);
+
+        log("onPause");
+        sdk.pause();
     }
 
     @Override
@@ -89,7 +107,24 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy();
 
         log("onDestroy");
-        tapSdk.unregisterTapListener(tapListener);
+        sdk.unregisterTapListener(tapListener);
+    }
+
+
+    @Override
+    public void onBackPressed() {
+        new AlertDialog.Builder(this)
+                .setMessage("Are you sure you want to exit?")
+                .setCancelable(false)
+                .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+                        sdk.close();
+                        int pid = android.os.Process.myPid();
+                        android.os.Process.killProcess(pid);
+                    }
+                })
+                .setNegativeButton("No", null)
+                .show();
     }
 
     private void initRecyclerView() {
@@ -119,91 +154,85 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @Override
-        public void onTapConnected(String tapIdentifier) {
-            log("TAP connected " + tapIdentifier);
-            tapSdk.readName(tapIdentifier);
+        public void onTapStartConnecting(@NonNull String tapIdentifier) {
+            log("Tap started connecting - " + tapIdentifier);
         }
 
         @Override
-        public void onTapDisconnected(String tapIdentifier) {
+        public void onTapConnected(@NonNull String tapIdentifier) {
+            Tap tap = sdk.getCachedTap(tapIdentifier);
+            if (tap == null) {
+                log("Unable to get cached Tap");
+                return;
+            }
+
+            lastConnectedTapAddress = tapIdentifier;
+            log("TAP connected " + tap.toString());
+
+            adapter.removeItem(tapIdentifier);
+
+            TapListItem newItem = new TapListItem(tapIdentifier, itemOnClickListener);
+            newItem.tapName = tap.getName();
+            newItem.tapFwVer = tap.getFwVer();
+            newItem.isInControllerMode = sdk.isInMode(tapIdentifier, TapSdk.MODE_CONTROLLER);
+            adapter.addItem(newItem);
+        }
+
+        @Override
+        public void onTapDisconnected(@NonNull String tapIdentifier) {
             log("TAP disconnected " + tapIdentifier);
             adapter.removeItem(tapIdentifier);
         }
 
         @Override
-        public void onNameRead(String tapIdentifier, String name) {
-            log(tapIdentifier + " Name read " + name);
-
-            TapListItem newItem = new TapListItem(tapIdentifier, itemOnClickListener);
-            newItem.tapName = name;
-
-            int mode = tapSdk.getMode(tapIdentifier);
-            switch (mode) {
-                case TapSdk.MODE_TEXT:
-                    newItem.isInControllerMode = false;
-                    break;
-                case TapSdk.MODE_CONTROLLER:
-                    newItem.isInControllerMode = true;
-                    break;
+        public void onTapResumed(@NonNull String tapIdentifier) {
+            Tap tap = sdk.getCachedTap(tapIdentifier);
+            if (tap == null) {
+                log("Unable to get cached Tap");
+                return;
             }
 
-            adapter.addItem(newItem);
-
-            tapSdk.setupNotification(tapIdentifier, UUID.fromString("C3FF0001-1D8B-40FD-A56F-C7BD5D0F3370"), UUID.fromString("C3FF0008-1D8B-40FD-A56F-C7BD5D0F3370"));
+            log("TAP resumed " + tap);
+            adapter.updateFwVer(tapIdentifier, tap.getFwVer());
         }
 
         @Override
-        public void onNameWrite(String tapIdentifier, String name) {
-            log(tapIdentifier + " Name write " + name);
+        public void onTapChanged(@NonNull String tapIdentifier) {
+            Tap tap = sdk.getCachedTap(tapIdentifier);
+            if (tap == null) {
+                log("Unable to get cached Tap");
+                return;
+            }
+
+            log("TAP changed " + tap);
+            adapter.updateFwVer(tapIdentifier, tap.getFwVer());
         }
 
         @Override
-        public void onCharacteristicRead(String tapIdentifier, UUID characteristic, byte[] data) {
-            log(tapIdentifier + " " + characteristic.toString() + " Characteristic read " + Arrays.toString(data));
-        }
-
-        @Override
-        public void onCharacteristicWrite(String tapIdentifier, UUID characteristic, byte[] data) {
-            log(tapIdentifier + " " + characteristic.toString() + " Characteristic write " + Arrays.toString(data));
-        }
-
-        @Override
-        public void onNotificationSubscribed(String tapIdentifier, UUID characteristic) {
-            log("Notification subscribed " + characteristic.toString());
-
-            tapSdk.writeCharacteristic(
-                    tapIdentifier,
-                    UUID.fromString("C3FF0001-1D8B-40FD-A56F-C7BD5D0F3370"),
-                    UUID.fromString("C3FF0007-1D8B-40FD-A56F-C7BD5D0F3370"),
-                    new byte[] { 0x0, 0x0, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0 });
-        }
-
-        @Override
-        public void onNotificationReceived(String tapIdentifier, UUID characteristic, byte[] data) {
-
-        }
-
-        @Override
-        public void onControllerModeStarted(String tapIdentifier) {
+        public void onControllerModeStarted(@NonNull String tapIdentifier) {
             log("Controller mode started " + tapIdentifier);
             adapter.onControllerModeStarted(tapIdentifier);
         }
 
         @Override
-        public void onTextModeStarted(String tapIdentifier) {
+        public void onTextModeStarted(@NonNull String tapIdentifier) {
             log("Text mode started " + tapIdentifier);
             adapter.onTextModeStarted(tapIdentifier);
         }
 
         @Override
-        public void onTapInputReceived(String tapIdentifier, int data) {
-            log(tapIdentifier + " TAP input received " + String.valueOf(data));
+        public void onTapInputReceived(@NonNull String tapIdentifier, int data) {
             adapter.updateTapInput(tapIdentifier, data);
         }
 
         @Override
-        public void onMouseInputReceived(String tapIdentifier, MousePacket data) {
-            log(tapIdentifier + " MOUSE input received " + data.dx.getInt() + " " + data.dy.getInt() + " " + data.dt.getUnsignedLong());
+        public void onMouseInputReceived(@NonNull String tapIdentifier, @NonNull MousePacket data) {
+//            log(tapIdentifier + " MOUSE input received " + data.dx.getInt() + " " + data.dy.getInt() + " " + data.dt.getUnsignedLong());
+        }
+
+        @Override
+        public void onError(@NonNull String tapIdentifier, int code, @NonNull String description) {
+            log("Error - " + tapIdentifier + " - " + code + " - " + description);
         }
     };
 

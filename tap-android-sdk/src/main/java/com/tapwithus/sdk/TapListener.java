@@ -1,22 +1,20 @@
 package com.tapwithus.sdk;
 
-import com.tapwithus.sdk.bluetooth.MousePacket;
+import android.support.annotation.NonNull;
 
-import java.util.UUID;
+import com.tapwithus.sdk.bluetooth.MousePacket;
 
 public interface TapListener {
     void onBluetoothTurnedOn();
     void onBluetoothTurnedOff();
-    void onTapConnected(String tapIdentifier);
-    void onTapDisconnected(String tapIdentifier);
-    void onNameRead(String tapIdentifier, String name);
-    void onNameWrite(String tapIdentifier, String name);
-    void onCharacteristicRead(String tapIdentifier, UUID characteristic, byte[] data);
-    void onCharacteristicWrite(String tapIdentifier, UUID characteristic, byte[] data);
-    void onNotificationSubscribed(String tapIdentifier, UUID characteristic);
-    void onNotificationReceived(String tapIdentifier, UUID characteristic, byte[] data);
-    void onControllerModeStarted(String tapIdentifier);
-    void onTextModeStarted(String tapIdentifier);
-    void onTapInputReceived(String tapIdentifier, int data);
-    void onMouseInputReceived(String tapIdentifier, MousePacket data);
+    void onTapStartConnecting(@NonNull String tapIdentifier);
+    void onTapConnected(@NonNull String tapIdentifier);
+    void onTapDisconnected(@NonNull String tapIdentifier);
+    void onTapResumed(@NonNull String tapIdentifier);
+    void onTapChanged(@NonNull String tapIdentifier);
+    void onControllerModeStarted(@NonNull String tapIdentifier);
+    void onTextModeStarted(@NonNull String tapIdentifier);
+    void onTapInputReceived(@NonNull String tapIdentifier, int data);
+    void onMouseInputReceived(@NonNull String tapIdentifier, @NonNull MousePacket data);
+    void onError(@NonNull String tapIdentifier, int code, @NonNull String description);
 }

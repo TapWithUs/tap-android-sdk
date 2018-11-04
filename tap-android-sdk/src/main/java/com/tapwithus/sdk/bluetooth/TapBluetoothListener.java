@@ -1,21 +1,25 @@
 package com.tapwithus.sdk.bluetooth;
 
-import java.util.UUID;
+import android.support.annotation.NonNull;
 
 public interface TapBluetoothListener {
     void onBluetoothTurnedOn();
     void onBluetoothTurnedOff();
-    void onTapConnected(String tapAddress);
-    void onTapAlreadyConnected(String tapAddress);
-    void onTapDisconnected(String tapAddress);
-    void onNameRead(String tapAddress, String name);
-    void onNameWrite(String tapAddress, String name);
-    void onCharacteristicRead(String tapAddress, UUID characteristic, byte[] data);
-    void onCharacteristicWrite(String tapAddress, UUID characteristic, byte[] data);
-    void onNotificationSubscribed(String tapAddress, UUID characteristic);
-    void onNotificationReceived(String tapAddress, UUID characteristic, byte[] data);
-    void onControllerModeStarted(String tapAddress);
-    void onTextModeStarted(String tapAddress);
-    void onTapInputReceived(String tapAddress, int data);
-    void onMouseInputReceived(String tapAddress, MousePacket data);
+    void onTapStartConnecting(@NonNull String tapAddress);
+    void onTapConnected(@NonNull String tapAddress);
+    void onTapAlreadyConnected(@NonNull String tapAddress);
+    void onTapDisconnected(@NonNull String tapAddress);
+    void onNameRead(@NonNull String tapAddress, @NonNull String name);
+    void onNameWrite(@NonNull String tapAddress, @NonNull String name);
+    void onBatteryRead(@NonNull String tapAddress, int battery);
+    void onSerialNumberRead(@NonNull String tapAddress, @NonNull String serialNumber);
+    void onHwVerRead(@NonNull String tapAddress, @NonNull String hwVer);
+    void onFwVerRead(@NonNull String tapAddress, @NonNull String fwVer);
+    void onControllerModeStarted(@NonNull String tapAddress);
+    void onTextModeStarted(@NonNull String tapAddress);
+    void onTapInputSubscribed(@NonNull String tapAddress);
+    void onMouseInputSubscribed(@NonNull String tapAddress);
+    void onTapInputReceived(@NonNull String tapAddress, int data);
+    void onMouseInputReceived(@NonNull String tapAddress, @NonNull MousePacket data);
+    void onError(@NonNull String tapAddress, int code, @NonNull String description);
 }

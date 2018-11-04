@@ -4,14 +4,18 @@ import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
 import android.util.Log;
 
+import com.tapwithus.sdk.bluetooth.BluetoothManager;
+import com.tapwithus.sdk.bluetooth.TapBluetoothManager;
+
 public class TapSdkFactory {
 
     private static TapSdk sdk;
 
     public static TapSdk getDefault(Context context) {
         if (sdk == null) {
-            Log.e("AAA", "Created new TAP SDK instance");
-            sdk = new TapSdk(context.getApplicationContext(), BluetoothAdapter.getDefaultAdapter());
+            BluetoothManager bluetoothManager = new BluetoothManager(context.getApplicationContext(), BluetoothAdapter.getDefaultAdapter());
+            TapBluetoothManager tapBluetoothManager = new TapBluetoothManager(bluetoothManager);
+            sdk = new TapSdk(tapBluetoothManager);
         }
         return sdk;
     }

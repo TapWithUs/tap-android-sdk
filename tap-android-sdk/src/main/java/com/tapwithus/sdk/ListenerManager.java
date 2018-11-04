@@ -5,10 +5,11 @@ import android.support.annotation.NonNull;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class ListenerManager<ListenerType> {
 
-    private final List<ListenerType> listeners = new ArrayList<>();
+    private final List<ListenerType> listeners = new CopyOnWriteArrayList<>();
 
     public void registerListener(@NonNull ListenerType listener) {
         if (!listeners.contains(listener)) {
@@ -17,16 +18,14 @@ public class ListenerManager<ListenerType> {
     }
 
     public void unregisterListener(@NonNull ListenerType listener) {
-        for (Iterator<ListenerType> iterator = listeners.iterator(); iterator.hasNext();) {
-            ListenerType l = iterator.next();
-            if (l == listener) {
-                iterator.remove();
-            }
-        }
+        listeners.remove(listener);
     }
 
-    @NonNull
-    public List<ListenerType> getAllListeners() {
+    public boolean isAlreadyExists(@NonNull ListenerType listener) {
+        return listeners.contains(listener);
+    }
+
+    public @NonNull List<ListenerType> getAllListeners() {
         return new ArrayList<>(listeners);
     }
 

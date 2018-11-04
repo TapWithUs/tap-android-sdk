@@ -3,7 +3,7 @@
 What Is This?
 =============
 TAP Android SDK allows you to build an Android app that can receive inputs from TAP devices,
-In a way that each tap is being interpreted as an array of fingers that are tapped, or as a binary combination integer (explanation follows), Thus allowing the TAP device to act as a controller for your app!
+In a way that each tap is being interpreted as an array of fingers that are tapped, or as a binary combination integer (explanation follows), thus allowing the TAP device to act as a controller for your app!
 
 Getting started
 ===============
@@ -20,16 +20,21 @@ The entry point of TAP SDK is the `com.tapwithus.sdk.TapSdk` class.
 
 If your application might be using the default `TapSdk` instance, a `TapSdk` single instance can be retrieved simply by using the `TapSdkFactory` helper class by calling `TapSdkFactory.getDefault(context)`. This helper method will return a single instance of `TapSdk` relatively to the passed context lifecycle.
 
-If an alternative `TapSdk` instance is required, or if you might be using a dependency injection framework where custom scopes is implemented, call `new TapSdk(context.getApplicationContext(), BluetoothAdapter.getDefaultAdapter())` instead, passing the appropriate arguments.
+If an alternative `TapSdk` instance is required, or if you might be using a dependency injection framework where custom scopes is implemented, call the following commands instead, passing the appropriate arguments:
+```Java
+BluetoothManager bluetoothManager = new BluetoothManager(context.getApplicationContext(), BluetoothAdapter.getDefaultAdapter());
+TapBluetoothManager tapBluetoothManager = new TapBluetoothManager(bluetoothManager);
+TapSdk sdk = new TapSdk(tapBluetoothManager);
+```
 
 Key features
 ============
 ##### Controller Mode & Text Mode
-As stated in the official [Tap BLE API Documentation](https://www.tapwithus.com/api), once you turn ON the TAP device, by default, the TAP will be in Text Mode, meaning that the TAP functions as a bluetooth keyboard, every recognized tap will be mapped to a letter, and no input data will be sent to the SDK.
+As stated in the official [Tap BLE API Documentation](https://www.tapwithus.com/api), once you turn ON the TAP device, by default, the it will be booted into Text Mode, meaning that the TAP device functions as a bluetooth keyboard, every recognized tap will be mapped to a letter, and __no input data will be sent to the SDK__.
 
-When using the SDK, it is required to get input data for a specific TAP device. In order to achieve this goal, after a connection with the TAP been established, we need to switch the TAP device to Controller Mode. In addition, it is important we switch back to Text Mode once the application goes to background, so the regular TAP behaviour will be restroed.
+When using the SDK, it is required to get input data for a specific TAP device. In order to achieve this goal, after a connection with the TAP been established, we need to switch the TAP device to Controller Mode. In addition, it is important we switch back to Text Mode once the application goes to background, so the regular TAP behaviour will be restored.
 
-To simplify the process TAP SDK will perform the needed actions in order to correctly connect and switch between Modes automatically, __so you don't have to.__
+To simplify the process TAP SDK will perform the needed actions in order to correctly connect and switch between Modes _automatically_, __so you don't have to.__
 
 What now?
 =========
@@ -49,32 +54,54 @@ Registering TapListener
 public interface TapListener {
     void onBluetoothTurnedOn();
     void onBluetoothTurnedOff();
+    void onTapStartConnecting(String tapIdentifier);
     void onTapConnected(String tapIdentifier);
     void onTapDisconnected(String tapIdentifier);
-    void onNameRead(String tapIdentifier, String name);
-    void onNameWrite(String tapIdentifier, String name);
-    void onCharacteristicRead(String tapIdentifier, UUID characteristic, byte[] data);
-    void onCharacteristicWrite(String tapIdentifier, UUID characteristic, byte[] data);
+    void onTapResumed(String tapIdentifier);
+    void onTapChanged(String tapIdentifier);
     void onControllerModeStarted(String tapIdentifier);
     void onTextModeStarted(String tapIdentifier);
     void onTapInputReceived(String tapIdentifier, int data);
+    void onMouseInputReceived(String tapIdentifier, MousePacket data);
+    void onError(String tapIdentifier, int code, String description);
 }
 ```
-Just implement it and pass it to `TapSdk` class by calling `tapSdk.registerTapListener(tapListener)`.
+Just implement it and pass it to `TapSdk` class by calling `sdk.registerTapListener(tapListener)`.
 
 ___
 #### Important Note:  
-`void onTapInputReceived(String tapIdentifier, int data)` is a callback function which will be triggered every time a specific TAP device was being tapped, and which fingers were tapped. The returned data is an integer representing a 8-bit unsigned number, between 1 and 31. It's binary form represents the fingers that are tapped. The LSB is thumb finger, the MSB (bit number 5) is the pinky finger. For example: if combination equals 3 - it's binary form is 10100, Which means that the thumb and the middle fingers are tapped. For your convenience, you can convert the binary format into fingers boolean array by calling static funtion `TapSdk.toFingers(tapInput)` listed below.
+`onTapInputReceived` is a callback function which will be triggered every time a specific TAP device was being tapped, and which fingers were tapped. The returned data is an integer representing a 8-bit unsigned number, between 1 and 31. It's binary form represents the fingers that are tapped. The LSB is thumb finger, the MSB (bit number 5) is the pinky finger. For example: if combination equals 3 - it's binary form is 10100, Which means that the thumb and the middle fingers were tapped. For your convenience, you can convert the binary format into fingers boolean array by calling static function `TapSdk.toFingers(tapInput)` listed below.
 ___
+
+Tap Class
+=========
+Using `Tap` class you can get basic information of your TAP device.
+A `Tap` instance can be generated only from connected, cached TAP devices, by simply calling `sdk.getCachedTap(tapIdentifier)`.
+
+Debugging
+=========
+It is often desirable and useful to print out more `TapSdk` inner logs in LogCat. You can manually enable inner log prints by calling `sdk.enableDebug()`, and corresponding, you can disable inner log prints by calling `sdk.disableDebug()`
 
 TapSdk API
 ==========
-#### `void resume()` and `void pause()`
+#### `void resume()` & `void pause()`
 > As mentioned, to correctly switch between Modes, `TapSdk` needs to be aware of your application's lifecycle, in particular when your application goes to the background and return from it, so it is needed for you to call the corresponding methods when such events occur.
 &nbsp;  
 &nbsp;
-#### `ArrayList<String> getConnectedTaps()`
-> If you wish at any point in your application, you can receive a list of connected TAPs.
+#### `void clearCacheOnTapDisconnection(boolean clearCacheOnTapDisconnection)`
+> When TAP device is connecting, `TapSdk` will cache some of it's data for quicker reconnection. You can change the default `TapSdk`'s behaviour by calling this method with the desired, new configuration.
+&nbsp;
+&nbsp;
+#### `void enableAutoSetControllerModeOnConnection() & void disableAutoSetControllerModeOnConnection()`
+> As described in the 'Key features' section, the default `TapSdk` behaviour is to switch the connected TAP device to controller mode once it connected. Calling `disableAutoSetControllerModeOnConnection` method will disable this functionality, so each connected TAP device will remain in his initial Mode.
+&nbsp;
+&nbsp;
+#### `void enablePauseResumeHandling() & void disablePauseResumeHandling()`
+> One of `TapSdk`'s key features is the background handling. By calling `disablePauseResumeHandling` method you can disable this functionality, so going to background will not effect any TAP device, and it'll remain in the same Mode as it was before going to background..
+&nbsp;
+&nbsp;
+#### `Set<String> getConnectedTaps()`
+> If you wish at any point in your application, you can retrieve a set of connected TAPs.
 &nbsp;  
 &nbsp;
 #### `void registerTapListener(TapListener listener)`
@@ -85,36 +112,24 @@ TapSdk API
 > Unregister registered `TapListener`.
 &nbsp;  
 &nbsp;
-#### `void startTextMode(String tapIdentifier)`
-> If your application need to use the TAP device as regular bluetooth keyboard, you can manually switch to Text mode and passing the relevant TAP identifier.
-&nbsp;  
+#### `void startMode(String tapIdentifier, int mode)`
+> If your application needs to use the TAP device as a regular bluetooth keyboard, you can manually switch to Text mode by passing the relevant TAP identifier and `TapSdk.MODE_TEXT` as the second argument. Or you can manually switch to Controller mode, by passing the relevant TAP identifier and `TapSdk.MODE_CONTROLLER`.
 &nbsp;
-#### `void startControllerMode(String tapIdentifier)`
-> Manually switch to Controller mode, passing the relevant TAP identifier.
-&nbsp;  
 &nbsp;
-#### `boolean isControllerModeEnabled(String tapIdentifier)`
-> Check if Controller Mode is enabled for a specific TAP device.
-&nbsp;  
+#### `int getMode(String tapIdentifier)`
+> Retrieve the TAP's Mode. Can be `MODE_TEXT` or `MODE_CONTROLLER`.
 &nbsp;
-#### `void readName(String tapIdentifier)`
-> Read TAP name.
+&nbsp;
+#### `boolean isInMode(String tapIdentifier, int mode)`
+> Another helper method to check what Mode is enabled for a specific TAP device.
 &nbsp;  
 &nbsp;
 #### `void writeName(String tapIdentifier, String name)`
-> Write TAP name.
-&nbsp;  
-&nbsp;
-#### `void readCharacteristic(String tapAddress, UUID serviceUUID, UUID characteristicUUID)`
-> Read characteristic from TAP device using given service UUID and characteristic UUID.
-&nbsp;  
-&nbsp;
-#### `void writeCharacteristic(String tapAddress, UUID serviceUUID, UUID characteristicUUID, byte[] data)`
-> Write characteristic in TAP device using given service UUID and characteristic UUID.
+> Write TAP device's name.
 &nbsp;  
 &nbsp;
 #### `void close()`
-> Releasing assosiated inner bluetooth manager.
+> Releasing associated inner bluetooth manager.
 &nbsp;  
 &nbsp;
 #### `static boolean[] toFingers(int tapInput)`
@@ -123,21 +138,17 @@ TapSdk API
 boolean[] fingers = TapSdk.toFingers(tapInput);
 ```
 > While:  
-fingers[0] indicates if the thumb wqas tapped.  
-fingers[1] indicates if the index finger was tapped.  
-fingers[2] indicates if the middle finger was tapped.  
-fingers[3] indicates if the ring finger was tapped.  
-fingers[4] indicates if the pinky finger was tapped.
+fingers\[0\] indicates if the thumb was tapped.
+fingers\[1\] indicates if the index finger was tapped.
+fingers\[2\] indicates if the middle finger was tapped.
+fingers\[3\] indicates if the ring finger was tapped.
+fingers\[4\] indicates if the pinky finger was tapped.
 &nbsp;  
 &nbsp;
 
-Debugging
-=========
-It is often desirable and useful to print out more `TapSdk` inner logs in LogCat. You can manually enable inner log prints by calling `tapSdk.enableDebug()`, and corresponding, you can disable inner log prints by calling `tapSdk.disableDebug`
-
 Example app
 ===========
-The Android Studio project contains an example app where you can see how to use the features of `TapSdk`.
+The Android Studio project contains an example app where you can see how to use some of the features of `TapSdk`.
 
 Support
 ===========

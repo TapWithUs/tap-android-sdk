@@ -9,7 +9,7 @@ ext {
     libraryDescription = 'TAP official SDK'
 
     libraryName = 'TapSdk'
-    libraryVersion = '0.2.4'
+    libraryVersion = '0.3.0'
     siteUrl = 'https://github.com/TapWithUs/tap-android-sdk'
 
     publishedGroupId = 'com.tapwithus'
@@ -24,11 +24,11 @@ ext {
 }
 
 android {
-    compileSdkVersion 27
+    compileSdkVersion 28
 
     defaultConfig {
-        minSdkVersion 18
-        targetSdkVersion 27
+        minSdkVersion 21
+        targetSdkVersion 28
 
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
 
