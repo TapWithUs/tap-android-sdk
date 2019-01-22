@@ -27,5 +27,5 @@ dependencies {
 //    implementation 'com.tapwithus:tap-android-sdk:0.1.12'
     implementation 'com.android.support:support-annotations:27.1.1'
     implementation project(':tap-android-sdk')
-    provided files('unityLibs/classes.jar')
+    compileOnly files('unityLibs/classes.jar')
 }

@@ -636,6 +636,7 @@ public class TapSdk {
         rawModeRunnable = new Runnable() {
             @Override
             public void run() {
+                log("In raw mode loop");
                 for (String tapIdentifier: getTapsInMode(MODE_CONTROLLER)) {
                     startControllerMode(tapIdentifier);
                 }
@@ -643,7 +644,7 @@ public class TapSdk {
             }
         };
 
-//        rawModeHandler.postDelayed(rawModeRunnable, 0);
+        rawModeHandler.postDelayed(rawModeRunnable, 0);
     }
 
     private void stopRawModeLoop() {

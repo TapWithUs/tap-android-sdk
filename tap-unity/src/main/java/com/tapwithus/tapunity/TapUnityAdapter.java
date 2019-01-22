@@ -4,6 +4,7 @@ import android.content.Context;
 import android.support.annotation.NonNull;
 import android.util.Log;
 
+import com.tapwithus.sdk.FeatureVersionSupport;
 import com.tapwithus.sdk.TapListener;
 import com.tapwithus.sdk.TapSdk;
 import com.tapwithus.sdk.TapSdkFactory;
@@ -35,8 +36,10 @@ public class TapUnityAdapter {
     private static final String UNITY_GET_MODE_CALLBACK = "onModeReceived";
     private static final String UNITY_ERROR_CALLBACK = "onError";
 
-    private TapSdk tapSdk;
+    protected TapSdk tapSdk;
     private boolean debug = false;
+
+    protected TapUnityAdapter() { }
 
     public TapUnityAdapter(Context context) {
         tapSdk = TapSdkFactory.getDefault(context);
@@ -102,12 +105,12 @@ public class TapUnityAdapter {
                 tap.getBattery() + UNITY_ARGS_SEPARATOR +
                 tap.getSerialNumber() + UNITY_ARGS_SEPARATOR +
                 tap.getHwVer() + UNITY_ARGS_SEPARATOR +
-                tap.getFwVer();
+                FeatureVersionSupport.semVerToInt(tap.getFwVer());
 
         UnityPlayer.UnitySendMessage(UNITY_GAME_OBJECT, UNITY_GET_CACHED_TAP_CALLBACK, cachedTapArg);
     }
 
-    private TapListener tapListener = new TapListener() {
+    protected TapListener tapListener = new TapListener() {
 
         @Override
         public void onBluetoothTurnedOn() {
@@ -123,7 +126,7 @@ public class TapUnityAdapter {
 
         @Override
         public void onTapStartConnecting(@NonNull String tapIdentifier) {
-
+            log("TAP start connecting " + tapIdentifier);
         }
 
         @Override
