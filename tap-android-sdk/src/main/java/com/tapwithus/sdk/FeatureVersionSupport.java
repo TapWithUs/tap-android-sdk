@@ -33,7 +33,7 @@ public class FeatureVersionSupport {
         return semVerToInt(fwVer) >= featureMinVersion;
     }
 
-    private static int semVerToInt(String semVer) {
+    public static int semVerToInt(String semVer) {
         String[] semVerParts = semVer.split("\\.");
 
         String major;
@@ -68,7 +68,7 @@ public class FeatureVersionSupport {
         return Integer.parseInt(ver);
     }
 
-    private static String intToSemVer(int intVer) {
+    public static String intToSemVer(int intVer) {
         String patch = String.format("%2s", intVer % 100).trim();
         String minor = String.format("%2s", intVer / 100 % 100).trim();
         String major = String.format("%2s", intVer / 10000).trim();
