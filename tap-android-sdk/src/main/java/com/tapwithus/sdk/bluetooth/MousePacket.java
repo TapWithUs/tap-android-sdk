@@ -3,7 +3,7 @@ package com.tapwithus.sdk.bluetooth;
 public class MousePacket extends Packet {
 
     public MousePacket(byte[] data) {
-        super(data, 8);
+        super(data, 9);
     }
 
 //    public PacketValue dx = new PacketValue(0, 15);
@@ -13,4 +13,5 @@ public class MousePacket extends Packet {
     public PacketValue dx = new PacketValue(0, 16);
     public PacketValue dy = new PacketValue(16, 16);
     public PacketValue dt = new PacketValue(32, 32);
+    public PacketValue proximity = new PacketValue(64, 8);
 }
