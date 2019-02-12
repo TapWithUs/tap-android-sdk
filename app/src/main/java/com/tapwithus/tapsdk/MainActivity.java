@@ -227,7 +227,8 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onMouseInputReceived(@NonNull String tapIdentifier, @NonNull MousePacket data) {
-//            log(tapIdentifier + " MOUSE input received " + data.dx.getInt() + " " + data.dy.getInt() + " " + data.dt.getUnsignedLong());
+            log(tapIdentifier + " MOUSE input received " + data.dx.getInt() + " " + data.dy.getInt() + " " + data.dt.getUnsignedLong());
+            log(data.proximity.getInt() + " " + data.proximity.getBoolean());
         }
 
         @Override

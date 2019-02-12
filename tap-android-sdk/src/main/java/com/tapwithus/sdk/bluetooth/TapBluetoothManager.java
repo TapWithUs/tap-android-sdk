@@ -254,7 +254,7 @@ public class TapBluetoothManager {
                     notifyOnTapInputReceived(deviceAddress, data[0]);
                 }
             } else if (characteristic.equals(MOUSE_DATA)) {
-                data = Arrays.copyOfRange(data, 1, data.length - 1);
+                data = Arrays.copyOfRange(data, 1, data.length);
                 MousePacket mousePacket = new MousePacket(data);
                 notifyOnMouseInputReceived(deviceAddress, mousePacket);
             }
