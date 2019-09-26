@@ -11,7 +11,7 @@ To add TAP SDK library to your project:
 - Make sure you have JCenter in your Gradle repositories.
 - Add the following Gradle dependency to your build.gradle:
 ```Groovy
-  implementation 'com.tapwithus:tap-android-sdk:0.3.2'
+  implementation 'com.tapwithus:tap-android-sdk:0.3.3'
 ```
 
 Getting instance of TapSdk
@@ -30,9 +30,9 @@ TapSdk sdk = new TapSdk(tapBluetoothManager);
 Key features
 ============
 ##### Controller Mode & Text Mode
-As stated in the official [Tap BLE API Documentation](https://www.tapwithus.com/api), once you turn ON the TAP device, by default, the it will be booted into Text Mode, meaning that the TAP device functions as a bluetooth keyboard, every recognized tap will be mapped to a letter, and __no input data will be sent to the SDK__.
+As stated in the official [Tap BLE API Documentation](https://www.tapwithus.com/api), once you turn ON the TAP device, by default, it will be booted into Text Mode, meaning that the TAP device functions as a bluetooth keyboard, every recognized tap will be mapped to a letter, and __no input data will be sent to the SDK__.
 
-When using the SDK, it is required to get input data for a specific TAP device. In order to achieve this goal, after a connection with the TAP been established, we need to switch the TAP device to Controller Mode. In addition, it is important we switch back to Text Mode once the application goes to background, so the regular TAP behaviour will be restored.
+When using the SDK, it is required to get the input data for a specific TAP device. In order to achieve this goal, after a connection with the TAP been established, we need to switch the TAP device to Controller Mode. In addition, it is important we switch back to Text Mode once the application goes to background, so the regular TAP behaviour will be restored.
 
 To simplify the process TAP SDK will perform the needed actions in order to correctly connect and switch between Modes _automatically_, __so you don't have to.__
 
@@ -93,7 +93,7 @@ TapSdk API
 &nbsp;
 &nbsp;
 #### `void enableAutoSetControllerModeOnConnection() & void disableAutoSetControllerModeOnConnection()`
-> As described in the 'Key features' section, the default `TapSdk` behaviour is to switch the connected TAP device to controller mode once it connected. Calling `disableAutoSetControllerModeOnConnection` method will disable this functionality, so each connected TAP device will remain in his initial Mode.
+> As described in the 'Key features' section, the default `TapSdk` behaviour is to switch the connected TAP device to controller mode once it connected. Calling `disableAutoSetControllerModeOnConnection` method will disable this functionality, so each connected TAP device will remain in its initial Mode.
 &nbsp;
 &nbsp;
 #### `void enablePauseResumeHandling() & void disablePauseResumeHandling()`

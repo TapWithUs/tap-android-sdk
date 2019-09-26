@@ -4,6 +4,7 @@ import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
 import android.support.annotation.NonNull;
+import android.util.Log;
 
 import com.tapwithus.sdk.bluetooth.callbacks.OnCompletionListener;
 import com.tapwithus.sdk.bluetooth.callbacks.OnErrorListener;
@@ -13,9 +14,11 @@ import java.util.concurrent.LinkedBlockingDeque;
 
 public class GattExecutor implements OnCompletionListener<Object>, OnErrorListener {
 
+    private static final String TAG = "GattExecutor";
+
     private final BluetoothGatt gatt;
     private final String deviceAddress;
-    private Queue<GattOperation> operations = new LinkedBlockingDeque<>();
+    private static Queue<GattOperation> operations = new LinkedBlockingDeque<>();
     private GattOperation currentOperation;
 
     private boolean isRunning = false;
@@ -84,13 +87,14 @@ public class GattExecutor implements OnCompletionListener<Object>, OnErrorListen
 
     @Override
     public void onError(String msg) {
+        logError("GattExecutor onError - " + msg);
+
         currentOperation.removeOnErrorListener(this);
         isRunning = false;
-
-        // TODO What should I do here...?
     }
 
     public void clear() {
+        isRunning = false;
         operations.clear();
     }
 
@@ -100,14 +104,13 @@ public class GattExecutor implements OnCompletionListener<Object>, OnErrorListen
         }
 
         currentOperation = getNextOperation();
-        if (currentOperation != null) {
+        if (currentOperation != null && !currentOperation.isRunning()) {
             isRunning = true;
             currentOperation.execute(gatt);
         }
     }
 
     private GattOperation getNextOperation() {
-
         if (currentOperation != null && !currentOperation.isCompleted()) {
             return currentOperation;
         }
@@ -117,5 +120,9 @@ public class GattExecutor implements OnCompletionListener<Object>, OnErrorListen
         }
 
         return null;
+    }
+
+    private void logError(String message) {
+        Log.e(TAG, message);
     }
 }

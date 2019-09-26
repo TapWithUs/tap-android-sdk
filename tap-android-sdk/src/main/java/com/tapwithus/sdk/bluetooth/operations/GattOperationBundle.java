@@ -70,7 +70,9 @@ public class GattOperationBundle extends GattOperation<Void> implements OnComple
 
     @Override
     public void onCompletion(Object data) {
-        currentOperation.removeOnCompletionListener(this);
+        if (currentOperation != null) {
+            currentOperation.removeOnCompletionListener(this);
+        }
 
         // TODO Need to finish this method and this class
     }

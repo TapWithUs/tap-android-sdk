@@ -5,6 +5,7 @@ import android.support.annotation.NonNull;
 
 import com.tapwithus.sdk.bluetooth.ErrorStrings;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 public class RefreshOperation extends GattOperation<Void> {
@@ -20,20 +21,15 @@ public class RefreshOperation extends GattOperation<Void> {
 
     @Override
     public void onExecute(@NonNull BluetoothGatt gatt) {
-        Method localMethod;
         try {
-            localMethod = gatt.getClass().getMethod("refresh");
-            if (localMethod == null) {
-                postOnError(ErrorStrings.REFRESH_OP_INIT_FAIL);
-                return;
-            }
+            //noinspection JavaReflectionMemberAccess
+            Method localMethod = gatt.getClass().getMethod("refresh");
             boolean success = (boolean) localMethod.invoke(gatt);
             if (!success) {
                 postOnError(ErrorStrings.REFRESH_OP_INIT_FAIL);
             }
-
             gattCallback(GATT_SUCCESS);
-        } catch (Exception e) {
+        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
             String message = e.getMessage() == null ? "Unknown error" : e.getMessage();
             postOnError(ErrorStrings.REFRESH_OP_INIT_FAIL + ". " + message);
         }

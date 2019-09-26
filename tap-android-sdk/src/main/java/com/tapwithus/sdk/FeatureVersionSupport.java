@@ -11,26 +11,34 @@ public class FeatureVersionSupport {
 
     public static final int FEATURE_ENABLE_TEXT_MODE = 1;
     public static final int FEATURE_MOUSE_MODE = 2;
+    public static final int FEATURE_AIR_MOUSE = 3;
 
-    protected static Map<Integer, Integer> featureVersion = new HashMap<Integer, Integer>() {{
+    protected static Map<Integer, Integer> featureFwVer = new HashMap<Integer, Integer>() {{
         put(FEATURE_ENABLE_TEXT_MODE, 10000);
         put(FEATURE_MOUSE_MODE, 10500);
+        put(FEATURE_AIR_MOUSE, 20000);
+    }};
+
+    protected static Map<Integer, Integer> featureHwVer = new HashMap<Integer, Integer>() {{
+        put(FEATURE_ENABLE_TEXT_MODE, 30200);
+        put(FEATURE_MOUSE_MODE, 30200);
+        put(FEATURE_AIR_MOUSE, 30300);
     }};
 
     public static boolean isFeatureSupported(@NonNull Tap tap, int feature) {
-        int featureMinVersion = Integer.MAX_VALUE;
-        if (featureVersion.containsKey(feature)) {
-            featureMinVersion = featureVersion.get(feature);
-        }
-        return semVerToInt(tap.getFwVer()) >= featureMinVersion;
+        return isFeatureSupported(tap.getHwVer(), tap.getFwVer(), feature);
     }
 
-    public static boolean isFeatureSupported(@NonNull String fwVer, int feature) {
-        int featureMinVersion = Integer.MAX_VALUE;
-        if (featureVersion.containsKey(feature)) {
-            featureMinVersion = featureVersion.get(feature);
+    public static boolean isFeatureSupported(@NonNull String hwVer, @NonNull String fwVer, int feature) {
+        int featureMinHwVer = Integer.MAX_VALUE;
+        if (featureHwVer.containsKey(feature)) {
+            featureMinHwVer = featureFwVer.get(feature);
         }
-        return semVerToInt(fwVer) >= featureMinVersion;
+        int featureMinFwVer = Integer.MAX_VALUE;
+        if (featureFwVer.containsKey(feature)) {
+            featureMinFwVer = featureFwVer.get(feature);
+        }
+        return semVerToInt(hwVer) >= featureMinHwVer && semVerToInt(fwVer) >= featureMinFwVer;
     }
 
     public static int semVerToInt(String semVer) {

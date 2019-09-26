@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+@SuppressWarnings({"unused", "WeakerAccess"})
 public class Packet {
 
     private static final int BYTE_SIZE = 8;
@@ -72,26 +73,6 @@ public class Packet {
         return reverseBinaryString(s);
     }
 
-//    private String getLsbString(int index, int size) {
-//        StringBuilder sb = new StringBuilder();
-//
-//        String[] binaryByteStrings = chunk(getBinaryDataString());
-//
-//        int byteNumber = index / BYTE_SIZE;
-//        int startIndex = index - (BYTE_SIZE * byteNumber);
-//        while (size > 0) {
-//            int nSize = Math.min(BYTE_SIZE - startIndex, size);
-//            String sub = subBinaryByteString(binaryByteStrings[byteNumber], startIndex, nSize);
-//            sb.append(sub);
-//
-//            byteNumber++;
-//            startIndex = 0;
-//            size -= nSize;
-//        }
-//
-//        return reverseBinaryString(sb.toString());
-//    }
-
     private String getMsbString(int start, int size) {
         return binaryDataStringBuilder.substring(start, start + size);
     }
@@ -115,40 +96,9 @@ public class Packet {
         this.data = binaryStringToByteArray(binaryString);
     }
 
-//    private void updateLsbData(int startIndex, int size, String data) {
-//
-//        StringBuilder sb = new StringBuilder();
-//
-//        String[] dataChunks = chunk(data);
-//        for (String byteString: dataChunks) {
-//            sb.insert(0, byteString);
-//        }
-//
-//        int byteNumber = startIndex / BYTE_SIZE;
-//        int bitNumber = startIndex % BYTE_SIZE;
-//        int lsbBitOffset = BYTE_SIZE - bitNumber;
-//        int eIndex = byteNumber * BYTE_SIZE + lsbBitOffset;
-//        int sIndex = eIndex - size;
-//
-////        7654 3210 5432 1098
-////        0123 4567 8901 2345
-////        0000 0000 0000 0010
-//
-//        binaryDataStringBuilder.replace(sIndex, eIndex, sb.toString());
-//        this.data = binaryStringToByteArray(binaryDataStringBuilder.toString());
-//    }
-
     private void updateMsbData(int startIndex, int size, String data) {
         binaryDataStringBuilder.replace(startIndex, startIndex + size, data);
         this.data = binaryStringToByteArray(binaryDataStringBuilder.toString());
-    }
-
-    private String subBinaryByteString(String binaryByteString, int startIndex, int size) {
-
-        String reversedBinaryByteString = reverse(binaryByteString);
-        String subReveredBinaryByteString = substring(reversedBinaryByteString, startIndex, size);
-
-        return reverse(subReveredBinaryByteString);
     }
 
     private String substring(String s, int startIndex, int size) {
@@ -224,42 +174,6 @@ public class Packet {
         return new StringBuffer(string).reverse().toString();
     }
 
-    private String replaceRange(String source, int startIndex, int endIndex, String replacement) {
-        return new StringBuffer(source).replace(startIndex, endIndex, replacement).toString();
-    }
-
-
-//    public String b(int bitIndex, int size, String lsbBinaryString) {
-//        int binaryStringSize = lsbBinaryString.length();
-//        int bitsToCopy = bitsToCopy(bitIndex, size);
-//
-//        String remainingBits = "";
-//        if (binaryStringSize > BYTE_SIZE) {
-//            String remainingBinaryString = lsbBinaryString.substring(BYTE_SIZE, binaryStringSize);
-//            int remainingBitIndex = bitIndex + bitsToCopy;
-//            int remainingSize = size - bitsToCopy;
-//            remainingBits = b(remainingBitIndex, remainingSize, remainingBinaryString);
-//        }
-//
-//        subBitsOfLsbByte(lsbBinaryString, bitIndex, bitsToCopy);
-//
-//
-//        int byteNumber = byteNumber(bitIndex);
-//        int bitNumber = bitNumber(bitIndex);
-//        int lsbBitOffset = BYTE_SIZE - bitNumber;
-//
-//
-//        StringBuilder sb = new StringBuilder(binaryStringToSaveTo);
-//
-//        int eIndex = lsbBitOffset;
-//        int sIndex = eIndex - size;
-//
-//        sb.replace(sIndex, eIndex, binaryStringToSave);
-//
-//
-//
-//    }
-
     public String setL(String lsbBinaryString, int bitIndex, int size, String value) {
 
         String binaryString = lsbBinaryString;
@@ -271,12 +185,12 @@ public class Packet {
         }
 
         if (value.length() > size) {
-            value = value.substring(value.length() - size, value.length());
+            value = value.substring(value.length() - size);
         }
 
         if (value.length() < size) {
             value = addLeadingZeros(value);
-            value = value.substring(value.length() - size, value.length());
+            value = value.substring(value.length() - size);
         }
 
         int bitsToCopy = bitsToCopy(bitIndex, size);
@@ -289,7 +203,7 @@ public class Packet {
         int newBitIndex = bitIndex + bitsToCopy - BYTE_SIZE;
         int newSize = size - bitsToCopy;
         String newLsbBinaryString = lsbBinaryString.substring(BYTE_SIZE, binaryStringSize);
-        String newValue = value.substring(bitsToCopy, value.length());
+        String newValue = value.substring(bitsToCopy);
 
         String remainingBits = setL(newLsbBinaryString, newBitIndex, newSize, newValue);
 
@@ -305,14 +219,13 @@ public class Packet {
 
         if (value.length() < size) {
             value = addLeadingZeros(value);
-            value = value.substring(value.length() - size, value.length());
+            value = value.substring(value.length() - size);
         }
 
-        int sIndex = bitIndex;
-        int eIndex = sIndex + size;
+        int eIndex = bitIndex + size;
         int binaryStringSize = lsbBinaryString.length();
 
-        if (sIndex >= BYTE_SIZE || sIndex >= binaryStringSize) {
+        if (bitIndex >= BYTE_SIZE || bitIndex >= binaryStringSize) {
             return lsbBinaryString;
         }
 
@@ -324,11 +237,11 @@ public class Packet {
 
         // Notice that when converting from LSB to MSB, naturally the start and end indexes will be switched
         int msbSIndex = lsbBitToMsbBit(eIndex - 1);
-        int msbEIndex = lsbBitToMsbBit(sIndex) + 1;
+        int msbEIndex = lsbBitToMsbBit(bitIndex) + 1;
 
         int replacementSize = msbEIndex - msbSIndex;
         if (value.length() > replacementSize) {
-            value = value.substring(value.length() - replacementSize, value.length());
+            value = value.substring(value.length() - replacementSize);
         }
 
         return new StringBuilder(lsbBinaryString).replace(msbSIndex, msbEIndex, value).toString();
@@ -355,10 +268,7 @@ public class Packet {
 
         String remainingBits = getL(newLsbBinaryString, newBitIndex, newSize);
 
-        String lsbValue = addLeadingZeros(subBits + remainingBits);
-//        String s = new StringBuilder(lsbValue).reverse().toString();
-
-        return lsbValue;
+        return addLeadingZeros(subBits + remainingBits);
     }
 
     public String addLeadingZeros(String binaryString) {
@@ -367,10 +277,11 @@ public class Packet {
         if (zerosToAdd == BYTE_SIZE && binaryStringSize != 0) {
             zerosToAdd = 0;
         }
+        StringBuilder binaryStringBuilder = new StringBuilder(binaryString);
         for (; zerosToAdd > 0; zerosToAdd--) {
-            binaryString = '0' + binaryString;
+            binaryStringBuilder.insert(0, '0');
         }
-        return binaryString;
+        return binaryStringBuilder.toString();
     }
 
     public int bitsToCopy(int bitIndex, int size) {
@@ -382,11 +293,10 @@ public class Packet {
 
     public String subBitsOfLsbByte(String lsbBinaryString, int bitIndex, int size) {
 
-        int sIndex = bitIndex;
-        int eIndex = sIndex + size;
+        int eIndex = bitIndex + size;
         int binaryStringSize = lsbBinaryString.length();
 
-        if (sIndex >= BYTE_SIZE || sIndex >= binaryStringSize) {
+        if (bitIndex >= BYTE_SIZE || bitIndex >= binaryStringSize) {
             return "";
         }
 
@@ -398,23 +308,9 @@ public class Packet {
 
         // Notice that when converting from LSB to MSB, naturally the start and end indexes will be switched
         int msbSIndex = lsbBitToMsbBit(eIndex - 1);
-        int msbEIndex = lsbBitToMsbBit(sIndex) + 1;
+        int msbEIndex = lsbBitToMsbBit(bitIndex) + 1;
 
         return lsbBinaryString.substring(msbSIndex, msbEIndex);
-    }
-
-    public String getFirstNBitsLsb(String lsbBinaryString, int n) {
-        int sizeToReturn = n;
-        int size = lsbBinaryString.length();
-
-        if (sizeToReturn > BYTE_SIZE) {
-            sizeToReturn = Math.min(BYTE_SIZE, size);
-        } else if (sizeToReturn > size) {
-            sizeToReturn = size;
-        }
-
-        int startIndex = BYTE_SIZE - sizeToReturn;
-        return lsbBinaryString.substring(startIndex, BYTE_SIZE);
     }
 
     private int lsbBitToMsbBit(int bitIndex) {
@@ -434,7 +330,6 @@ public class Packet {
 
         private int startIndex;
         private int size;
-        private boolean unsigned;
 
         public PacketValue(int startBit, int size) {
             this.startIndex = startBit;
@@ -443,7 +338,6 @@ public class Packet {
 
         public String getString() {
             String binaryString = Packet.this.getString(startIndex, size);
-//            binaryString = reverseBinaryString(binaryString);
             String reversedData = new String(binaryStringToByteArray(binaryString)).trim();
             return reverse(reversedData);
         }
@@ -489,7 +383,6 @@ public class Packet {
             StringBuilder sb = new StringBuilder();
             for (byte b: dataBytes) {
                 sb.append(byteToBinaryString(b));
-//                sb.insert(0, byteToBinaryString(b));
             }
 
             // Add leading zeros
@@ -513,34 +406,5 @@ public class Packet {
                     .format("%" + size + "s", Integer.toBinaryString(intValue))
                     .replace(' ', '0');
         }
-
-//        private boolean isNumerical(String s) {
-//            return s != null && s.matches("[-+]?\\d*\\.?\\d+");
-//        }
-
-//        private String reverseBinaryString(String binaryString) {
-//
-//            String[] chunks = chunk(binaryString);
-//
-//            StringBuilder sb = new StringBuilder();
-//            for (String byteString: chunks) {
-//
-//                sb.insert(0, reverse(byteString));
-//            }
-//
-//            return sb.toString();
-//        }
-
-//        private String reverseBinaryString(String binaryString) {
-//
-//            String[] chunks = chunk(binaryString);
-//
-//            StringBuilder sb = new StringBuilder();
-//            for (String byteString: chunks) {
-//                sb.insert(0, byteString);
-//            }
-//
-//            return sb.toString();
-//        }
     }
 }

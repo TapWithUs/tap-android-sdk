@@ -1,14 +1,12 @@
 package com.tapwithus.tapunity;
 
-import android.content.Context;
 import android.support.annotation.NonNull;
 import android.util.Log;
 
 import com.tapwithus.sdk.FeatureVersionSupport;
 import com.tapwithus.sdk.TapListener;
 import com.tapwithus.sdk.TapSdk;
-import com.tapwithus.sdk.TapSdkFactory;
-import com.tapwithus.sdk.bluetooth.MousePacket;
+import com.tapwithus.sdk.mouse.MousePacket;
 import com.tapwithus.sdk.tap.Tap;
 import com.unity3d.player.UnityPlayer;
 
@@ -41,8 +39,8 @@ public class TapUnityAdapter {
 
     protected TapUnityAdapter() { }
 
-    public TapUnityAdapter(Context context) {
-        tapSdk = TapSdkFactory.getDefault(context);
+    public TapUnityAdapter(TapSdk sdk) {
+        tapSdk = sdk;
         tapSdk.registerTapListener(tapListener);
     }
 
@@ -177,7 +175,7 @@ public class TapUnityAdapter {
         public void onMouseInputReceived(@NonNull String tapIdentifier, @NonNull MousePacket data) {
             log(tapIdentifier + " mouse input received " + data.dx.getInt() + ", " + data.dy.getInt());
 
-            String args = tapIdentifier + UNITY_ARGS_SEPARATOR + data.dx.getInt() + UNITY_ARGS_SEPARATOR + data.dy.getInt();
+            String args = tapIdentifier + UNITY_ARGS_SEPARATOR + data.dx.getInt() + UNITY_ARGS_SEPARATOR + data.dy.getInt() + UNITY_ARGS_SEPARATOR + data.proximity.getInt();
             UnityPlayer.UnitySendMessage(UNITY_GAME_OBJECT, UNITY_MOUSE_INPUT_CALLBACK, args);
         }
 

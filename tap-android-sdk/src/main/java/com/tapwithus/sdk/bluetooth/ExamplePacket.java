@@ -1,6 +1,7 @@
 package com.tapwithus.sdk.bluetooth;
 
 public class ExamplePacket extends Packet {
+
     public ExamplePacket(byte[] data) {
         super(data, 20);
     }
