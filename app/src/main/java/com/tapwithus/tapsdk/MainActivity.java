@@ -15,7 +15,8 @@ import android.widget.Button;
 import com.tapwithus.sdk.TapListener;
 import com.tapwithus.sdk.TapSdk;
 import com.tapwithus.sdk.TapSdkFactory;
-import com.tapwithus.sdk.bluetooth.MousePacket;
+import com.tapwithus.sdk.airmouse.AirMousePacket;
+import com.tapwithus.sdk.mouse.MousePacket;
 import com.tapwithus.sdk.tap.Tap;
 
 import java.util.ArrayList;
@@ -26,7 +27,7 @@ public class MainActivity extends AppCompatActivity {
 
     private TapSdk sdk;
     private RecyclerViewAdapter adapter;
-    private boolean startWithControllerMode = true;
+    private boolean startWithControllerMode = false;
     private String lastConnectedTapAddress = "";
 
     @Override
@@ -35,7 +36,6 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         log("onCreate");
-
 
         sdk = TapSdkFactory.getDefault(this);
         sdk.enableDebug();
@@ -58,7 +58,12 @@ public class MainActivity extends AppCompatActivity {
 //                sdk.writeName(tapIdentifier, "YanivWithCase");
 
 //                sdk.restartBluetooth();
-                sdk.refreshBond(lastConnectedTapAddress);
+//                sdk.refreshBond(lastConnectedTapAddress);
+                if (sdk.isTapIgnored(lastConnectedTapAddress)) {
+                    sdk.unignoreTap(lastConnectedTapAddress);
+                } else {
+                    sdk.ignoreTap(lastConnectedTapAddress);
+                }
             }
         });
     }
@@ -160,6 +165,7 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onTapConnected(@NonNull String tapIdentifier) {
+            log("TAP connected " + tapIdentifier);
             Tap tap = sdk.getCachedTap(tapIdentifier);
             if (tap == null) {
                 log("Unable to get cached Tap");
@@ -167,7 +173,7 @@ public class MainActivity extends AppCompatActivity {
             }
 
             lastConnectedTapAddress = tapIdentifier;
-            log("TAP connected " + tap.toString());
+            log(tap.toString());
 
             adapter.removeItem(tapIdentifier);
 
@@ -186,18 +192,20 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onTapResumed(@NonNull String tapIdentifier) {
+            log("TAP resumed " + tapIdentifier);
             Tap tap = sdk.getCachedTap(tapIdentifier);
             if (tap == null) {
                 log("Unable to get cached Tap");
                 return;
             }
 
-            log("TAP resumed " + tap);
+            log(tap.toString());
             adapter.updateFwVer(tapIdentifier, tap.getFwVer());
         }
 
         @Override
         public void onTapChanged(@NonNull String tapIdentifier) {
+            log("TAP changed " + tapIdentifier);
             Tap tap = sdk.getCachedTap(tapIdentifier);
             if (tap == null) {
                 log("Unable to get cached Tap");
@@ -227,8 +235,12 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onMouseInputReceived(@NonNull String tapIdentifier, @NonNull MousePacket data) {
-            log(tapIdentifier + " MOUSE input received " + data.dx.getInt() + " " + data.dy.getInt() + " " + data.dt.getUnsignedLong());
-            log(data.proximity.getInt() + " " + data.proximity.getBoolean());
+//            log(tapIdentifier + " mouse input received " + data.dx.getInt() + " " + data.dy.getInt() + " " + data.dt.getUnsignedLong() + " " + data.proximity.getInt());
+        }
+
+        @Override
+        public void onAirMouseInputReceived(@NonNull String tapIdentifier, @NonNull AirMousePacket data) {
+            log(tapIdentifier + " air mouse input received " + data.gesture.getInt());
         }
 
         @Override

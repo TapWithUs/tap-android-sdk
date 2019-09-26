@@ -16,4 +16,11 @@ public class ErrorStrings {
     public static final String OP_BUNDLE_EMPTY_EXEC = "Cannot execute empty operation in bundle";
     public static final String UNPAIR_OP_INIT_FAIL = "Remove bond (pairing) with the remote device failed";
     public static final String REFRESH_OP_INIT_FAIL = "Failed clearing the internal cache of the remote device";
+
+    public static final String BLUETOOTH_OFF = "Bluetooth is turned OFF";
+    public static final String BLUETOOTH_NOT_SUPPORTED = "Bluetooth is not supported on this hardware platform";
+    public static final String PAIRED_DEVICES = "Unable to retrieve paired devices";
+    public static final String SET_NOTIFICATION = "Device is not connected to set notification";
+    public static final String READ_CHAR = "Device is not connected to read characteristic";
+    public static final String WRITE_CHAR = "Device is not connected to write characteristic";
 }

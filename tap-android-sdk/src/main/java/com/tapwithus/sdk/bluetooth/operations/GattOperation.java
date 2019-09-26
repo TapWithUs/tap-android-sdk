@@ -15,9 +15,11 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public abstract class GattOperation<T> {
 
     public static final int GATT_SUCCESS = BluetoothGatt.GATT_SUCCESS;
+    public static final int OP_TIMEOUT = 5000;
 
     private boolean isRunning = false;
     private boolean isCompleted = false;
+    private boolean isTimedout = false;
 
     private long preDelay = 0;
     private long postDelay = 0;
@@ -37,6 +39,10 @@ public abstract class GattOperation<T> {
         return isCompleted;
     }
 
+    /**
+     * @param preDelay must be greater than zero
+     * @return this
+     */
     public GattOperation<T> setPreDelay(long preDelay) {
         if (preDelay > 0) {
             this.preDelay = preDelay;
@@ -44,6 +50,10 @@ public abstract class GattOperation<T> {
         return this;
     }
 
+    /**
+     * @param postDelay must be greater than zero
+     * @return this
+     */
     public GattOperation<T> setPostDelay(long postDelay) {
         if (postDelay > 0) {
             this.postDelay = postDelay;
@@ -78,8 +88,10 @@ public abstract class GattOperation<T> {
     public void execute(@NonNull final BluetoothGatt gatt) {
         isRunning = true;
         isCompleted = false;
+        isTimedout = false;
 
         if (preDelay == 0) {
+            setTimeout();
             onExecute(gatt);
             return;
         }
@@ -87,6 +99,7 @@ public abstract class GattOperation<T> {
         delay(preDelay, new OnCompletionListener<Void>() {
             @Override
             public void onCompletion(Void data) {
+                setTimeout();
                 onExecute(gatt);
             }
         });
@@ -101,6 +114,10 @@ public abstract class GattOperation<T> {
     }
 
     protected void postOnCompletion(final T data) {
+        if (isTimedout) {
+            return;
+        }
+
         if (postDelay == 0) {
             doPostOnCompletion(data);
             return;
@@ -130,6 +147,18 @@ public abstract class GattOperation<T> {
         for (Iterator<OnCompletionListener<T>> iterator = cCallbacks.iterator(); iterator.hasNext();) {
             iterator.next().onCompletion(data);
         }
+    }
+
+    private void setTimeout() {
+        delay(OP_TIMEOUT, new OnCompletionListener<Void>() {
+            @Override
+            public void onCompletion(Void data) {
+                if (!isCompleted) {
+                    isTimedout = true;
+                    postOnError("Operation timeout");
+                }
+            }
+        });
     }
 
     private void delay(long delay, final OnCompletionListener<Void> onFinish) {

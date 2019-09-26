@@ -63,6 +63,12 @@ public class TapCache {
         saveToCache(tapCh);
     }
 
+    public void onAirMouseInputSubscribed(@NonNull String identifier) {
+        TapCh tapCh = getFromCache(identifier);
+        tapCh.airMouseNotification = true;
+        saveToCache(tapCh);
+    }
+
     public @Nullable Tap getCached(@NonNull String identifier) {
         if (isCached(identifier)) {
             TapCh tapCh = getFromCache(identifier);
@@ -81,6 +87,7 @@ public class TapCache {
             case FwVer: return tapCh.fwVer != null;
             case TapNotification: return tapCh.tapNotification;
             case MouseNotification: return tapCh.mouseNotification;
+            case AirMouseNotification: return tapCh.airMouseNotification;
         }
         return false;
     }
@@ -109,8 +116,14 @@ public class TapCache {
             return false;
         }
 
-        if (FeatureVersionSupport.isFeatureSupported(tapCh.fwVer, FeatureVersionSupport.FEATURE_MOUSE_MODE)) {
+        if (FeatureVersionSupport.isFeatureSupported(tapCh.hwVer, tapCh.fwVer, FeatureVersionSupport.FEATURE_MOUSE_MODE)) {
             if (tapCh.mouseNotification == BOOLEAN_NULL_VALUE) {
+                return false;
+            }
+        }
+
+        if (FeatureVersionSupport.isFeatureSupported(tapCh.hwVer, tapCh.fwVer, FeatureVersionSupport.FEATURE_AIR_MOUSE)) {
+            if (tapCh.airMouseNotification == BOOLEAN_NULL_VALUE) {
                 return false;
             }
         }
@@ -142,6 +155,7 @@ public class TapCache {
         String fwVer = null;
         boolean tapNotification = BOOLEAN_NULL_VALUE;
         boolean mouseNotification = BOOLEAN_NULL_VALUE;
+        boolean airMouseNotification = BOOLEAN_NULL_VALUE;
 
         TapCh(@NonNull String identifier) {
             this.identifier = identifier;
@@ -156,8 +170,18 @@ public class TapCache {
             this.fwVer = other.fwVer;
             this.tapNotification = other.tapNotification;
             this.mouseNotification = other.mouseNotification;
+            this.airMouseNotification = other.airMouseNotification;
         }
     }
 
-    public enum DataKey { Name, Battery, SerialNumber, HwVer, FwVer, TapNotification, MouseNotification }
+    public enum DataKey {
+        Name,
+        Battery,
+        SerialNumber,
+        HwVer,
+        FwVer,
+        TapNotification,
+        MouseNotification,
+        AirMouseNotification
+    }
 }

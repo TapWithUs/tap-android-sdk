@@ -2,6 +2,9 @@ package com.tapwithus.sdk.bluetooth;
 
 import android.support.annotation.NonNull;
 
+import com.tapwithus.sdk.airmouse.AirMousePacket;
+import com.tapwithus.sdk.mouse.MousePacket;
+
 public interface TapBluetoothListener {
     void onBluetoothTurnedOn();
     void onBluetoothTurnedOff();
@@ -19,7 +22,9 @@ public interface TapBluetoothListener {
     void onTextModeStarted(@NonNull String tapAddress);
     void onTapInputSubscribed(@NonNull String tapAddress);
     void onMouseInputSubscribed(@NonNull String tapAddress);
+    void onAirMouseInputSubscribed(@NonNull String tapAddress);
     void onTapInputReceived(@NonNull String tapAddress, int data);
     void onMouseInputReceived(@NonNull String tapAddress, @NonNull MousePacket data);
+    void onAirMouseInputReceived(@NonNull String tapAddress, @NonNull AirMousePacket data);
     void onError(@NonNull String tapAddress, int code, @NonNull String description);
 }

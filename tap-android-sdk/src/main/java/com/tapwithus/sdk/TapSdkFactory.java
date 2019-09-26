@@ -2,7 +2,6 @@ package com.tapwithus.sdk;
 
 import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
-import android.util.Log;
 
 import com.tapwithus.sdk.bluetooth.BluetoothManager;
 import com.tapwithus.sdk.bluetooth.TapBluetoothManager;

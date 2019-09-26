@@ -5,18 +5,18 @@ import android.util.Log;
 
 import com.tapwithus.sdk.ListenerManager;
 import com.tapwithus.sdk.NotifyAction;
+import com.tapwithus.sdk.airmouse.AirMousePacket;
+import com.tapwithus.sdk.mouse.MousePacket;
 
-import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.CopyOnWriteArrayList;
 
+@SuppressWarnings({"WeakerAccess", "unused"})
 public class TapBluetoothManager {
 
     private static final String TAG = "TapBluetoothManager";
-    private static final String UTF8 = "UTF-8";
     private static final byte[] CONTROLLER_MODE_DATA = new byte[] { 0x3, 0xc, 0x0, 0x1 };
     private static final byte[] TEXT_MODE_DATA = new byte[] { 0x3, 0xc, 0x0, 0x0 };
 
@@ -32,8 +32,7 @@ public class TapBluetoothManager {
     protected static final UUID RX = UUID.fromString("6E400002-B5A3-F393-E0A9-E50E24DCCA9E");
     protected static final UUID NAME = UUID.fromString("C3FF0003-1D8B-40FD-A56F-C7BD5D0F3370");
     protected static final UUID MOUSE_DATA = UUID.fromString("C3FF0006-1D8B-40FD-A56F-C7BD5D0F3370");
-
-    public static final int ERR_ENCODE = 51;
+    protected static final UUID AIR_MOUSE_DATA = UUID.fromString("C3FF000A-1D8B-40FD-A56F-C7BD5D0F3370");
 
     protected BluetoothManager bluetoothManager;
     private ListenerManager<TapBluetoothListener> tapBluetoothListeners = new ListenerManager<>();
@@ -70,6 +69,22 @@ public class TapBluetoothManager {
         tapBluetoothListeners.unregisterListener(listener);
     }
 
+    public void ignoreTap(@NonNull String tapAddress) {
+        bluetoothManager.ignoreDevice(tapAddress);
+    }
+
+    public void unignoreTap(@NonNull String tapAddress) {
+        bluetoothManager.unignoreDevice(tapAddress);
+    }
+
+    public Set<String> getIgnoredTaps() {
+        return bluetoothManager.getIgnoredDevices();
+    }
+
+    public boolean isTapIgnored(@NonNull String tapAddress) {
+        return bluetoothManager.isDeviceIgnored(tapAddress);
+    }
+
     @NonNull
     public Set<String> getConnectedTaps() {
         return bluetoothManager.getConnectedDevices();
@@ -88,47 +103,48 @@ public class TapBluetoothManager {
     }
 
     public void readName(@NonNull String tapAddress) {
-        log("readName");
+        log("Reading name");
         bluetoothManager.readCharacteristic(tapAddress, TAP, NAME);
     }
 
     public void writeName(@NonNull String tapAddress, @NonNull String name) {
-        log("writeName");
-        try {
-            bluetoothManager.writeCharacteristic(tapAddress, TAP, NAME, name.getBytes(UTF8));
-        } catch (UnsupportedEncodingException e) {
-            notifyOnError(tapAddress, ERR_ENCODE, "Unable to encode name");
-        }
+        log("Writing name");
+        bluetoothManager.writeCharacteristic(tapAddress, TAP, NAME, name.getBytes(StandardCharsets.UTF_8));
     }
 
     public void readBattery(@NonNull String tapAddress) {
-        log("readBattery");
+        log("Reading battery");
         bluetoothManager.readCharacteristic(tapAddress, BATTERY, BATTERY_LEVEL);
     }
 
     public void readSerialNumber(@NonNull String tapAddress) {
-        log("readSerialNumber");
+        log("Reading serial number");
         bluetoothManager.readCharacteristic(tapAddress, DEVICE_INFORMATION, SERIAL_NAME_STRING);
     }
 
     public void readHwVer(@NonNull String tapAddress) {
-        log("readHwVer");
+        log("Reading hw ver");
         bluetoothManager.readCharacteristic(tapAddress, DEVICE_INFORMATION, HARDWARE_REVISION_STRING);
     }
 
     public void readFwVer(@NonNull String tapAddress) {
-        log("readFwVer");
+        log("Reading fw ver");
         bluetoothManager.readCharacteristic(tapAddress, DEVICE_INFORMATION, FIRMWARE_REVISION_STRING);
     }
 
     public void setupTapNotification(@NonNull String tapAddress) {
-        log("setupTapNotification");
+        log("Setting up tap notifications");
         bluetoothManager.setupNotification(tapAddress, TAP, TAP_DATA);
     }
 
     public void setupMouseNotification(@NonNull String tapAddress) {
-        log("setupMouseNotification");
+        log("Setting up mouse notifications");
         bluetoothManager.setupNotification(tapAddress, TAP, MOUSE_DATA);
+    }
+
+    public void setupAirMouseNotification(@NonNull String tapAddress) {
+        log("Setting up air mouse notifications");
+        bluetoothManager.setupNotification(tapAddress, TAP, AIR_MOUSE_DATA);
     }
 
     public boolean isConnectionInProgress() {
@@ -141,10 +157,6 @@ public class TapBluetoothManager {
 
     public void close() {
         bluetoothManager.close();
-    }
-
-    public void restartBluetooth() {
-        bluetoothManager.restartBluetooth();
     }
 
     public void refreshBond(@NonNull String tapAddress) {
@@ -198,11 +210,7 @@ public class TapBluetoothManager {
         public void onCharacteristicRead(@NonNull String deviceAddress, @NonNull UUID characteristic, @NonNull byte[] data) {
             log("Characteristic Read");
             if (characteristic.equals(NAME)) {
-                try {
-                    notifyOnNameRead(deviceAddress, new String(data, UTF8));
-                } catch (UnsupportedEncodingException e) {
-                    notifyOnError(deviceAddress, ERR_ENCODE, "Unable to encode name");
-                }
+                notifyOnNameRead(deviceAddress, new String(data, StandardCharsets.UTF_8));
             } else if (characteristic.equals(BATTERY_LEVEL)) {
                 notifyOnBatteryRead(deviceAddress, data[0] & 0xFF);
             } else if (characteristic.equals(SERIAL_NAME_STRING)) {
@@ -225,23 +233,22 @@ public class TapBluetoothManager {
                     notifyOnTextModeStarted(deviceAddress);
                 }
             } else if (characteristic.equals(NAME)) {
-                try {
-                    log("Name Changed");
-                    notifyOnNameWrite(deviceAddress, new String(data, UTF8));
-                } catch (UnsupportedEncodingException e) {
-                    notifyOnError(deviceAddress, ERR_ENCODE, "Unable to encode name");
-                }
+                log("Name Changed");
+                notifyOnNameWrite(deviceAddress, new String(data, StandardCharsets.UTF_8));
             }
         }
 
         @Override
         public void onNotificationSubscribed(@NonNull String deviceAddress, @NonNull UUID characteristic) {
-            log("Notification Subscribed");
-
             if (characteristic.equals(TAP_DATA)) {
+                log("Tap notification subscribed");
                 notifyOnTapInputSubscribed(deviceAddress);
             } else if (characteristic.equals(MOUSE_DATA)) {
+                log("Mouse notification subscribed");
                 notifyOnMouseInputSubscribed(deviceAddress);
+            } else if (characteristic.equals(AIR_MOUSE_DATA)) {
+                log("Air mouse notification subscribed");
+                notifyOnAirMouseDataSubscribed(deviceAddress);
             }
         }
 
@@ -257,6 +264,9 @@ public class TapBluetoothManager {
                 data = Arrays.copyOfRange(data, 1, data.length);
                 MousePacket mousePacket = new MousePacket(data);
                 notifyOnMouseInputReceived(deviceAddress, mousePacket);
+            } else if (characteristic.equals(AIR_MOUSE_DATA)) {
+                AirMousePacket airMousePacket = new AirMousePacket(data);
+                notifyOnAirMouseInputReceived(deviceAddress, airMousePacket);
             }
         }
 
@@ -410,6 +420,15 @@ public class TapBluetoothManager {
         });
     }
 
+    private void notifyOnAirMouseDataSubscribed(@NonNull final String tapAddress) {
+        tapBluetoothListeners.notifyAll(new NotifyAction<TapBluetoothListener>() {
+            @Override
+            public void onNotify(TapBluetoothListener listener) {
+                listener.onAirMouseInputSubscribed(tapAddress);
+            }
+        });
+    }
+
     private void notifyOnTapInputReceived(@NonNull final String tapAddress, final int data) {
         tapBluetoothListeners.notifyAll(new NotifyAction<TapBluetoothListener>() {
             @Override
@@ -424,6 +443,15 @@ public class TapBluetoothManager {
             @Override
             public void onNotify(TapBluetoothListener listener) {
                 listener.onMouseInputReceived(tapAddress, data);
+            }
+        });
+    }
+
+    private void notifyOnAirMouseInputReceived(@NonNull final String tapAddress, @NonNull final AirMousePacket data) {
+        tapBluetoothListeners.notifyAll(new NotifyAction<TapBluetoothListener>() {
+            @Override
+            public void onNotify(TapBluetoothListener listener) {
+                listener.onAirMouseInputReceived(tapAddress, data);
             }
         });
     }
