@@ -32,7 +32,7 @@ public class FeatureVersionSupport {
     public static boolean isFeatureSupported(@NonNull String hwVer, @NonNull String fwVer, int feature) {
         int featureMinHwVer = Integer.MAX_VALUE;
         if (featureHwVer.containsKey(feature)) {
-            featureMinHwVer = featureFwVer.get(feature);
+            featureMinHwVer = featureHwVer.get(feature);
         }
         int featureMinFwVer = Integer.MAX_VALUE;
         if (featureFwVer.containsKey(feature)) {

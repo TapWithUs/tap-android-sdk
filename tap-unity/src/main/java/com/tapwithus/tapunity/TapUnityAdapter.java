@@ -1,11 +1,14 @@
 package com.tapwithus.tapunity;
 
+import android.content.Context;
 import android.support.annotation.NonNull;
 import android.util.Log;
 
 import com.tapwithus.sdk.FeatureVersionSupport;
 import com.tapwithus.sdk.TapListener;
 import com.tapwithus.sdk.TapSdk;
+import com.tapwithus.sdk.TapSdkFactory;
+import com.tapwithus.sdk.airmouse.AirMousePacket;
 import com.tapwithus.sdk.mouse.MousePacket;
 import com.tapwithus.sdk.tap.Tap;
 import com.unity3d.player.UnityPlayer;
@@ -30,6 +33,7 @@ public class TapUnityAdapter {
     private static final String UNITY_TEXT_MODE_CALLBACK = "onTextModeStarted";
     private static final String UNITY_TAP_INPUT_CALLBACK = "onTapInputReceived";
     private static final String UNITY_MOUSE_INPUT_CALLBACK = "onMouseInputReceived";
+    private static final String UNITY_AIR_MOUSE_INPUT_CALLBACK = "onAirMouseInputReceived";
     private static final String UNITY_CONNECTED_TAPS_CALLBACK = "onConnectedTapsReceived";
     private static final String UNITY_GET_MODE_CALLBACK = "onModeReceived";
     private static final String UNITY_ERROR_CALLBACK = "onError";
@@ -39,8 +43,8 @@ public class TapUnityAdapter {
 
     protected TapUnityAdapter() { }
 
-    public TapUnityAdapter(TapSdk sdk) {
-        tapSdk = sdk;
+    public TapUnityAdapter(Context context) {
+        tapSdk = TapSdkFactory.getDefault(context);
         tapSdk.registerTapListener(tapListener);
     }
 
@@ -165,7 +169,7 @@ public class TapUnityAdapter {
 
         @Override
         public void onTapInputReceived(@NonNull String tapIdentifier, int data) {
-            log(tapIdentifier + " TAP input received " + String.valueOf(data));
+            log(tapIdentifier + " TAP input received " + data);
 
             String args = tapIdentifier + UNITY_ARGS_SEPARATOR + data;
             UnityPlayer.UnitySendMessage(UNITY_GAME_OBJECT, UNITY_TAP_INPUT_CALLBACK, args);
@@ -177,6 +181,14 @@ public class TapUnityAdapter {
 
             String args = tapIdentifier + UNITY_ARGS_SEPARATOR + data.dx.getInt() + UNITY_ARGS_SEPARATOR + data.dy.getInt() + UNITY_ARGS_SEPARATOR + data.proximity.getInt();
             UnityPlayer.UnitySendMessage(UNITY_GAME_OBJECT, UNITY_MOUSE_INPUT_CALLBACK, args);
+        }
+
+        @Override
+        public void onAirMouseInputReceived(@NonNull String tapIdentifier, @NonNull AirMousePacket data) {
+            log(tapIdentifier + " air mouse input received " + data.gesture.getInt());
+
+            String args = tapIdentifier + UNITY_ARGS_SEPARATOR + data.gesture.getInt();
+            UnityPlayer.UnitySendMessage(UNITY_GAME_OBJECT, UNITY_AIR_MOUSE_INPUT_CALLBACK, args);
         }
 
         @Override
