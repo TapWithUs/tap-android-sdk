@@ -6,6 +6,7 @@ import android.util.Log;
 import com.tapwithus.sdk.FeatureVersionSupport;
 import com.tapwithus.sdk.TapListener;
 import com.tapwithus.sdk.TapSdk;
+import com.tapwithus.sdk.airmouse.AirMousePacket;
 import com.tapwithus.sdk.mouse.MousePacket;
 import com.tapwithus.sdk.tap.Tap;
 import com.unity3d.player.UnityPlayer;
@@ -177,6 +178,16 @@ public class TapUnityAdapter {
 
             String args = tapIdentifier + UNITY_ARGS_SEPARATOR + data.dx.getInt() + UNITY_ARGS_SEPARATOR + data.dy.getInt() + UNITY_ARGS_SEPARATOR + data.proximity.getInt();
             UnityPlayer.UnitySendMessage(UNITY_GAME_OBJECT, UNITY_MOUSE_INPUT_CALLBACK, args);
+        }
+
+        @Override
+        public void onAirMouseInputReceived(@NonNull String tapIdentifier, @NonNull AirMousePacket data) {
+            // TODO check if this is ok
+            log(tapIdentifier + " air mouse input received " + data.gesture.getString() + ", " + data.gesture.getString());
+
+            // TODO no idea what to do for Unity here
+//            String args = tapIdentifier + UNITY_ARGS_SEPARATOR + data.dx.getInt() + UNITY_ARGS_SEPARATOR + data.dy.getInt() + UNITY_ARGS_SEPARATOR + data.proximity.getInt();
+//            UnityPlayer.UnitySendMessage(UNITY_GAME_OBJECT, UNITY_MOUSE_INPUT_CALLBACK, args);
         }
 
         @Override

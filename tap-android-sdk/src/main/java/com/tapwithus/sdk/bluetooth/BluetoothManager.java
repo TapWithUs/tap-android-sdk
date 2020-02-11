@@ -130,6 +130,8 @@ public class BluetoothManager {
 
     public void refreshConnections() {
         isClosed = false;
+        establishConnectionSent.clear();
+        gatts.clear();
         establishConnections();
     }
 
@@ -177,10 +179,21 @@ public class BluetoothManager {
 
         for (BluetoothDevice bondedDevice : bondedDevices) {
             String deviceAddress = bondedDevice.getAddress();
+//            log("We have a bonded device: " + deviceAddress);
             if (!ignoredDevices.contains(deviceAddress) && !establishConnectionSent.contains(deviceAddress)) {
                 establishConnectionSent.add(deviceAddress);
+//                log("Attempting connection to it!");
                 establishConnection(bondedDevice);
             }
+//            else {
+//                log("But we will NOT bother connecting!!");
+//                if (ignoredDevices.contains(deviceAddress)) {
+//                    log("Because it is in the ignored devices");
+//                }
+//                if(establishConnectionSent.contains(deviceAddress)) {
+//                    log("Because it is already in the establishConnections list");
+//                }
+//            }
         }
     }
 
@@ -191,6 +204,7 @@ public class BluetoothManager {
 
         // check if gatt connection already exists
         if (gatts.containsKey(device.getAddress())) {
+//            log("Not connecting because we have it in gatts already");
             return;
         }
 
@@ -683,6 +697,21 @@ public class BluetoothManager {
                 if (state == BluetoothDevice.BOND_NONE && prevState == BluetoothDevice.BOND_BONDED) {
                     log("Unpaired - " + device.toString());
 
+                    BluetoothGatt storedGatt = gatts.get(device.toString());
+                    if (storedGatt == null) {
+                        log("while trying to handle device unpaired, unable to retrieve stored gatt.");
+                    } else {
+                        GattExecutor executor = getExecutor(storedGatt);
+                        if (executor == null) {
+                            log("while trying to handle device unpaired, unable to retrieve executor. Skipping executor clear");
+                        } else {
+                            executor.clear();
+                        }
+                        closeGatt(storedGatt);
+                    }
+                    connectedDevices.remove(device.toString());
+                    removeFromLists(device.toString());
+
                     if (restartBondRequested) {
                         createBond(device);
                     }
@@ -741,6 +770,7 @@ public class BluetoothManager {
                 log("Unpairing device - " + device.getAddress());
                 Method localMethod;
                 try {
+                    // TODO - this probably doesn't work anymore on version of Android over 24
                     localMethod = device.getClass().getMethod("removeBond");
 
                     boolean success;

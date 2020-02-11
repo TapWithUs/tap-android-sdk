@@ -17,6 +17,8 @@ public class FeatureVersionSupport {
         put(FEATURE_ENABLE_TEXT_MODE, 10000);
         put(FEATURE_MOUSE_MODE, 10500);
         put(FEATURE_AIR_MOUSE, 20000);
+        // just for a test put this up to ver5
+//        put(FEATURE_AIR_MOUSE, 50000);
     }};
 
     protected static Map<Integer, Integer> featureHwVer = new HashMap<Integer, Integer>() {{
@@ -32,7 +34,7 @@ public class FeatureVersionSupport {
     public static boolean isFeatureSupported(@NonNull String hwVer, @NonNull String fwVer, int feature) {
         int featureMinHwVer = Integer.MAX_VALUE;
         if (featureHwVer.containsKey(feature)) {
-            featureMinHwVer = featureFwVer.get(feature);
+            featureMinHwVer = featureHwVer.get(feature);
         }
         int featureMinFwVer = Integer.MAX_VALUE;
         if (featureFwVer.containsKey(feature)) {
