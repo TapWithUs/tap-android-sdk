@@ -190,25 +190,21 @@ public class TapSdk {
     }
 
     public void setMouseHIDEnabledInRawModeForAllTaps(boolean enable) {
-        // BUG!
-        return;
-//        Set<String> taps = getConnectedTaps();
-//        for (String tapIdentifier : taps) {
-//            setMouseHIDEnabledInRawMode(tapIdentifier, enable);
-//        }
+        Set<String> taps = getConnectedTaps();
+        for (String tapIdentifier : taps) {
+            setMouseHIDEnabledInRawMode(tapIdentifier, enable);
+        }
     }
 
     public void setMouseHIDEnabledInRawMode(String tapIdentifier, boolean enable) {
-        // BUG!
-        return;
-//        if (enable && !HIDMouseInRawModeSubscribers.contains(tapIdentifier)) {
-//            HIDMouseInRawModeSubscribers.add(tapIdentifier);
-//        } else if (!enable && HIDMouseInRawModeSubscribers.contains(tapIdentifier)) {
-//            HIDMouseInRawModeSubscribers.remove(tapIdentifier);
-//        }
-//        if (getTapsInMode(MODE_CONTROLLER).contains(tapIdentifier)) {
-//            startControllerMode(tapIdentifier);
-//        }
+        if (enable && !HIDMouseInRawModeSubscribers.contains(tapIdentifier)) {
+            HIDMouseInRawModeSubscribers.add(tapIdentifier);
+        } else if (!enable && HIDMouseInRawModeSubscribers.contains(tapIdentifier)) {
+            HIDMouseInRawModeSubscribers.remove(tapIdentifier);
+        }
+        if (getTapsInMode(MODE_CONTROLLER).contains(tapIdentifier)) {
+            startControllerMode(tapIdentifier);
+        }
     }
 
     public boolean isAnyTapInAirMouseState() {
@@ -226,40 +222,32 @@ public class TapSdk {
     }
 
     public void readAllTapsState() {
-        // BUG!
-        return;
-//        Set<String> taps = getConnectedTaps();
-//        for (String tapIdentifier : taps) {
-//            tapBluetoothManager.readTapState(tapIdentifier);
-//        }
+        Set<String> taps = getConnectedTaps();
+        for (String tapIdentifier : taps) {
+            tapBluetoothManager.readTapState(tapIdentifier);
+        }
     }
 
     public void readTapState(String tapIdentifier)
     {
-        // BUG!
-        return;
-//        if (isFeatureSupported(tapIdentifier, FeatureVersionSupport.FEATURE_AIR_MOUSE)) {
-//            tapBluetoothManager.readTapState(tapIdentifier);
-//        }
+        if (isFeatureSupported(tapIdentifier, FeatureVersionSupport.FEATURE_AIR_MOUSE)) {
+            tapBluetoothManager.readTapState(tapIdentifier);
+        }
 
     }
 
     public boolean isAnyTapSupportsAirMouse() {
-        // BUG!
-        return false;
-//        boolean supported = false;
-//        Set<String> taps = getConnectedTaps();
-//        for (String tapIdentifier : taps) {
-//            supported = supported || isAirMouseSupported(tapIdentifier);
-//        }
-//
-//        return supported;
+        boolean supported = false;
+        Set<String> taps = getConnectedTaps();
+        for (String tapIdentifier : taps) {
+            supported = supported || isAirMouseSupported(tapIdentifier);
+        }
+
+        return supported;
     }
 
     public boolean isAirMouseSupported(String tapIdentifier) {
-        // BUG!
-        return false;
-//        return (isFeatureSupported(tapIdentifier, FeatureVersionSupport.FEATURE_AIR_MOUSE));
+        return (isFeatureSupported(tapIdentifier, FeatureVersionSupport.FEATURE_AIR_MOUSE));
     }
 
     public boolean isMouseHIDEnabledInRawMode(String tapIdentifier) {
@@ -743,10 +731,9 @@ public class TapSdk {
         } else if (!cache.has(tapIdentifier, TapCache.DataKey.MouseNotification)) {
             tapBluetoothManager.setupMouseNotification(tapIdentifier);
         } else if (!cache.has(tapIdentifier, TapCache.DataKey.AirMouseNotification)) {
-            // BUG!
-//            if (isFeatureSupported(tapIdentifier,FeatureVersionSupport.FEATURE_AIR_MOUSE)) {
-//                tapBluetoothManager.setupAirMouseNotification(tapIdentifier);
-//            }
+            if (isFeatureSupported(tapIdentifier,FeatureVersionSupport.FEATURE_AIR_MOUSE)) {
+                tapBluetoothManager.setupAirMouseNotification(tapIdentifier);
+            }
         } else {
             logError("Cache already has all required fields");
         }

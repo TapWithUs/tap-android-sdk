@@ -114,15 +114,11 @@ public class TapBluetoothManager {
     }
 
     public void readTapState(@NonNull String tapAddress) {
-        // BUG!
-        return;
-//        bluetoothManager.readCharacteristic(tapAddress, TAP, AIR_MOUSE_DATA);
+        bluetoothManager.readCharacteristic(tapAddress, TAP, AIR_MOUSE_DATA);
     }
 
     public void requestReadTapState(@NonNull String tapAddress) {
-        // BUG!
-        return;
-//        bluetoothManager.writeCharacteristic(tapAddress, TAP, AIR_MOUSE_DATA, READ_TAP_STATE_DATA);
+        bluetoothManager.writeCharacteristic(tapAddress, TAP, AIR_MOUSE_DATA, READ_TAP_STATE_DATA);
     }
 
     public void readName(@NonNull String tapAddress) {
