@@ -22,7 +22,7 @@ public class SetNotificationOperation extends DescriptorWriteOperation {
 
         BluetoothGattCharacteristic c = extractCharacteristic(gatt);
         if (c == null) {
-            postOnError(ErrorStrings.NO_CHARACTERISTIC);
+            postOnError(ErrorStrings.NO_CHARACTERISTIC + ": " + this.characteristic.toString());
             return;
         }
 
