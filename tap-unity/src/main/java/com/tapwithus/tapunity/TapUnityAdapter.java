@@ -1,11 +1,13 @@
 package com.tapwithus.tapunity;
 
+import android.content.Context;
 import android.support.annotation.NonNull;
 import android.util.Log;
 
 import com.tapwithus.sdk.FeatureVersionSupport;
 import com.tapwithus.sdk.TapListener;
 import com.tapwithus.sdk.TapSdk;
+import com.tapwithus.sdk.TapSdkFactory;
 import com.tapwithus.sdk.airmouse.AirMousePacket;
 import com.tapwithus.sdk.mouse.MousePacket;
 import com.tapwithus.sdk.tap.Tap;
@@ -31,6 +33,8 @@ public class TapUnityAdapter {
     private static final String UNITY_TEXT_MODE_CALLBACK = "onTextModeStarted";
     private static final String UNITY_TAP_INPUT_CALLBACK = "onTapInputReceived";
     private static final String UNITY_MOUSE_INPUT_CALLBACK = "onMouseInputReceived";
+    private static final String UNITY_AIRMOUSE_INPUT_CALLBACK = "onAirGestureInputReceived";
+    private static final String UNITY_TAP_CHANGED_STATE_CALLBACK = "onTapChangedState";
     private static final String UNITY_CONNECTED_TAPS_CALLBACK = "onConnectedTapsReceived";
     private static final String UNITY_GET_MODE_CALLBACK = "onModeReceived";
     private static final String UNITY_ERROR_CALLBACK = "onError";
@@ -40,8 +44,10 @@ public class TapUnityAdapter {
 
     protected TapUnityAdapter() { }
 
-    public TapUnityAdapter(TapSdk sdk) {
-        tapSdk = sdk;
+    public TapUnityAdapter(Context context) {
+//        tapSdk = sdk;
+//        tapSdk.registerTapListener(tapListener);
+        tapSdk = TapSdkFactory.getDefault(context);
         tapSdk.registerTapListener(tapListener);
     }
 
@@ -68,6 +74,19 @@ public class TapUnityAdapter {
     public void destroy() {
         tapSdk.unregisterTapListener(tapListener);
         tapSdk.close();
+    }
+
+    // Air Mouse
+    public void setMouseHIDEnabledInRawModeForAllTaps(boolean enable) {
+        tapSdk.setMouseHIDEnabledInRawModeForAllTaps(enable);
+    }
+
+    public boolean isAnyTapInAirMouseState() {
+        return tapSdk.isAnyTapInAirMouseState();
+    }
+
+    public boolean isAnyTapSupportsAirMouse() {
+        return tapSdk.isAnyTapSupportsAirMouse();
     }
 
     public void startControllerMode(@NonNull String tapIdentifier) {
@@ -173,21 +192,26 @@ public class TapUnityAdapter {
         }
 
         @Override
+        public void onAirMouseInputReceived(@NonNull String tapIdentifier, @NonNull AirMousePacket data) {
+            log(tapIdentifier + " TAP AirMouse input received " + data.gesture);
+            String args = tapIdentifier + UNITY_ARGS_SEPARATOR + data.gesture.getInt();
+            UnityPlayer.UnitySendMessage(UNITY_GAME_OBJECT, UNITY_AIRMOUSE_INPUT_CALLBACK, args);
+
+        }
+
+        @Override
+        public void onTapChangedState(@NonNull String tapIdentifier, @NonNull int state) {
+            log(tapIdentifier + " TAP changed state " + state);
+            String args = tapIdentifier + UNITY_ARGS_SEPARATOR + state;
+            UnityPlayer.UnitySendMessage(UNITY_GAME_OBJECT, UNITY_TAP_CHANGED_STATE_CALLBACK, args);
+        }
+
+        @Override
         public void onMouseInputReceived(@NonNull String tapIdentifier, @NonNull MousePacket data) {
             log(tapIdentifier + " mouse input received " + data.dx.getInt() + ", " + data.dy.getInt());
 
             String args = tapIdentifier + UNITY_ARGS_SEPARATOR + data.dx.getInt() + UNITY_ARGS_SEPARATOR + data.dy.getInt() + UNITY_ARGS_SEPARATOR + data.proximity.getInt();
             UnityPlayer.UnitySendMessage(UNITY_GAME_OBJECT, UNITY_MOUSE_INPUT_CALLBACK, args);
-        }
-
-        @Override
-        public void onAirMouseInputReceived(@NonNull String tapIdentifier, @NonNull AirMousePacket data) {
-            // TODO check if this is ok
-            log(tapIdentifier + " air mouse input received " + data.gesture.getString() + ", " + data.gesture.getString());
-
-            // TODO no idea what to do for Unity here
-//            String args = tapIdentifier + UNITY_ARGS_SEPARATOR + data.dx.getInt() + UNITY_ARGS_SEPARATOR + data.dy.getInt() + UNITY_ARGS_SEPARATOR + data.proximity.getInt();
-//            UnityPlayer.UnitySendMessage(UNITY_GAME_OBJECT, UNITY_MOUSE_INPUT_CALLBACK, args);
         }
 
         @Override

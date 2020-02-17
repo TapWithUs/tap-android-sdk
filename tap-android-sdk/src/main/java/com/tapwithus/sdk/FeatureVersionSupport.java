@@ -13,6 +13,7 @@ public class FeatureVersionSupport {
     public static final int FEATURE_MOUSE_MODE = 2;
     public static final int FEATURE_AIR_MOUSE = 3;
 
+
     protected static Map<Integer, Integer> featureFwVer = new HashMap<Integer, Integer>() {{
         put(FEATURE_ENABLE_TEXT_MODE, 10000);
         put(FEATURE_MOUSE_MODE, 10500);

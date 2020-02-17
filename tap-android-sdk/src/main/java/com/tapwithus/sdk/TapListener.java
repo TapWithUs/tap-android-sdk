@@ -18,5 +18,6 @@ public interface TapListener {
     void onTapInputReceived(@NonNull String tapIdentifier, int data);
     void onMouseInputReceived(@NonNull String tapIdentifier, @NonNull MousePacket data);
     void onAirMouseInputReceived(@NonNull String tapIdentifier, @NonNull AirMousePacket data);
+    void onTapChangedState(@NonNull String tapIdentifier, @NonNull int state);
     void onError(@NonNull String tapIdentifier, int code, @NonNull String description);
 }

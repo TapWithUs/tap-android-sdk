@@ -59,6 +59,7 @@ public class MainActivity extends AppCompatActivity {
 
 //                sdk.restartBluetooth();
 //                sdk.refreshBond(lastConnectedTapAddress);
+
                 if (sdk.isTapIgnored(lastConnectedTapAddress)) {
                     sdk.unignoreTap(lastConnectedTapAddress);
                 } else {
@@ -71,15 +72,103 @@ public class MainActivity extends AppCompatActivity {
     private TapListItemOnClickListener itemOnClickListener = new TapListItemOnClickListener() {
         @Override
         public void onClick(TapListItem item) {
-            if (item.isInControllerMode) {
-                log("Switching to TEXT mode");
-                sdk.startMode(item.tapIdentifier, TapSdk.MODE_TEXT);
-            } else {
-                log("Switching to CONTROLLER mode");
-                sdk.startMode(item.tapIdentifier, TapSdk.MODE_CONTROLLER);
-            }
+            final String tapIdentifier = item.tapIdentifier;
+//            askModeDialog(new DialogInterface.OnClickListener() {
+//                @Override
+//                public void onClick(DialogInterface dialog, int which) {
+//                    // do something like...
+//                    log("Switching to TEXT mode");
+//                    sdk.startMode(tapIdentifier, TapSdk.MODE_TEXT);
+//                }
+//            },
+//                    new DialogInterface.OnClickListener() {
+//                        @Override
+//                        public void onClick(DialogInterface dialog, int which) {
+//                            // do something like...
+//                            log("Switching to CONTROLLER mode with MOUSEHID");
+//                            sdk.setMouseHIDEnabledInRawMode(tapIdentifier, true);
+//                            sdk.startMode(tapIdentifier, TapSdk.MODE_CONTROLLER);
+//                        }
+//                    },
+//
+//                    new DialogInterface.OnClickListener() {
+//                        @Override
+//                        public void onClick(DialogInterface dialog, int which) {
+//                            // do something like...
+//                            log("Switching to CONTROLLER mode without MOUSEHID");
+//                            sdk.setMouseHIDEnabledInRawMode(tapIdentifier, false);
+//                            sdk.startMode(tapIdentifier, TapSdk.MODE_CONTROLLER);
+//                        }
+//                    }
+//            );
+        askModeDialog(item.tapIdentifier);
+
+
+//            if (item.isInControllerMode) {
+//                log("Switching to TEXT mode");
+//                sdk.startMode(item.tapIdentifier, TapSdk.MODE_TEXT);
+//            } else {
+//                log("Switching to CONTROLLER mode");
+//                sdk.setMouseHIDEnabledInRawMode(item.tapIdentifier, true);
+//                sdk.startMode(item.tapIdentifier, TapSdk.MODE_CONTROLLER);
+//            }
         }
     };
+
+    private void askModeDialog(final String tapIdentifier) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Change TAP Mode");
+
+        String[] options = {"Text Mode", "Controller Mode w/ Mouse HID", "Controller Mode w/o Mouse HID"};
+        builder.setItems(options, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                switch (which) {
+                    case 0: // TextMode
+                        log("Switching to TEXT mode");
+                        sdk.startMode(tapIdentifier, TapSdk.MODE_TEXT);
+                        break;
+                    case 1: // Controller Mode With Mouse HID
+                        log("Switching to CONTROLLER mode with MOUSEHID");
+                        sdk.setMouseHIDEnabledInRawMode(tapIdentifier, true);
+                        sdk.startMode(tapIdentifier, TapSdk.MODE_CONTROLLER);
+                        break;
+                    case 2: // Controller Mode Without Mouse HID
+                        log("Switching to CONTROLLER mode without MOUSEHID");
+                        sdk.setMouseHIDEnabledInRawMode(tapIdentifier, false);
+                        sdk.startMode(tapIdentifier, TapSdk.MODE_CONTROLLER);
+                        break;
+                }
+            }
+        });
+
+        builder.setNegativeButton("Cancel", null);
+        AlertDialog dialog = builder.create();
+        dialog.show();
+
+    }
+
+    private void askModeDialog(DialogInterface.OnClickListener textModeListener, DialogInterface.OnClickListener controllerWithMouseHIDListener, DialogInterface.OnClickListener controllerWithoutMouseHIDListener) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Change TAP Mode");
+//        builder.setMessage("Would you like to continue learning how to use Android alerts?");
+        // add the buttons
+        if (textModeListener != null) {
+            builder.setNeutralButton("Text", textModeListener);
+        }
+        if (controllerWithMouseHIDListener != null) {
+            builder.setNeutralButton("Con w/", controllerWithMouseHIDListener);
+        }
+        if (controllerWithoutMouseHIDListener != null) {
+            builder.setNeutralButton("Con w/o", controllerWithoutMouseHIDListener);
+        }
+        builder.setNegativeButton("Cancel", null);
+
+        // create and show the alert dialog
+        AlertDialog dialog = builder.create();
+        dialog.show();
+
+    }
 
     @Override
     protected void onResume() {
@@ -241,6 +330,11 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onAirMouseInputReceived(@NonNull String tapIdentifier, @NonNull AirMousePacket data) {
             log(tapIdentifier + " air mouse input received " + data.gesture.getInt());
+        }
+
+        @Override
+        public void onTapChangedState(@NonNull String tapIdentifier, @NonNull int state) {
+            log(tapIdentifier + " changed state: " + state);
         }
 
         @Override

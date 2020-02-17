@@ -16,8 +16,9 @@ public class AirMousePacket extends Packet {
     public static final int AIR_MOUSE_GESTURE_RIGHT_TWO_FINGERS = 9;
 
     public AirMousePacket(byte[] data) {
-        super(data, 1);
+        super(data, 2);
     }
 
     public PacketValue gesture = new PacketValue(0, 8);
+    public PacketValue state = new PacketValue(8,8);
 }

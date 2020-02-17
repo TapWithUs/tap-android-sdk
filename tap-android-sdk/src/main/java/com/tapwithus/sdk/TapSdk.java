@@ -37,6 +37,8 @@ public class TapSdk {
     protected TapBluetoothManager tapBluetoothManager;
     private ListenerManager<TapListener> tapListeners = new ListenerManager<>();
     private Map<String, Integer> modeSubscribers = new ConcurrentHashMap<>();
+    private Set<String> HIDMouseInRawModeSubscribers = new HashSet<>();
+    private Set<String> tapsInAirMouseState = new HashSet<>();
     private List<String> startModeNotificationSubscribers = new CopyOnWriteArrayList<>();
     private List<String> notifyOnConnectedAfterControllerModeStarted = new CopyOnWriteArrayList<>();
     private List<String> notifyOnResumedAfterControllerModeStarted = new CopyOnWriteArrayList<>();
@@ -187,6 +189,73 @@ public class TapSdk {
         tapListeners.unregisterListener(listener);
     }
 
+    public void setMouseHIDEnabledInRawModeForAllTaps(boolean enable) {
+        Set<String> taps = getConnectedTaps();
+        for (String tapIdentifier : taps) {
+            setMouseHIDEnabledInRawMode(tapIdentifier, enable);
+        }
+    }
+
+    public void setMouseHIDEnabledInRawMode(String tapIdentifier, boolean enable) {
+        if (enable && !HIDMouseInRawModeSubscribers.contains(tapIdentifier)) {
+            HIDMouseInRawModeSubscribers.add(tapIdentifier);
+        } else if (!enable && HIDMouseInRawModeSubscribers.contains(tapIdentifier)) {
+            HIDMouseInRawModeSubscribers.remove(tapIdentifier);
+        }
+        if (getTapsInMode(MODE_CONTROLLER).contains(tapIdentifier)) {
+            startControllerMode(tapIdentifier);
+        }
+    }
+
+    public boolean isAnyTapInAirMouseState() {
+        Set<String> taps = getConnectedTaps();
+        boolean result = false;
+        for (String tapIdentifier : taps) {
+            result = result || isTapInAirMouseState(tapIdentifier);
+        }
+        return result;
+    }
+
+    public boolean isTapInAirMouseState(String tapIdentifier)
+    {
+        return tapsInAirMouseState.contains(tapIdentifier);
+    }
+
+    // Deprecated.
+//    public void readAllTapsState() {
+//        Set<String> taps = getConnectedTaps();
+//        for (String tapIdentifier : taps) {
+//            tapBluetoothManager.readTapState(tapIdentifier);
+//        }
+//    }
+//
+//    public void readTapState(String tapIdentifier)
+//    {
+//
+//        if (cache.isCached(tapIdentifier) && isFeatureSupported(tapIdentifier, FeatureVersionSupport.FEATURE_AIR_MOUSE)) {
+//            tapBluetoothManager.readTapState(tapIdentifier);
+//        }
+//
+//    }
+
+    public boolean isAnyTapSupportsAirMouse() {
+        boolean supported = false;
+        Set<String> taps = getConnectedTaps();
+        for (String tapIdentifier : taps) {
+            supported = supported || isAirMouseSupported(tapIdentifier);
+        }
+
+        return supported;
+    }
+
+    public boolean isAirMouseSupported(String tapIdentifier) {
+        return (isFeatureSupported(tapIdentifier, FeatureVersionSupport.FEATURE_AIR_MOUSE));
+    }
+
+    public boolean isMouseHIDEnabledInRawMode(String tapIdentifier) {
+        return HIDMouseInRawModeSubscribers.contains(tapIdentifier);
+    }
+
     public void startMode(String tapIdentifier, int mode) {
         if (!isModeValid(mode)) {
             notifyOnError(tapIdentifier, ERR_SUBSCRIBE_MODE, "Invalid mode passed");
@@ -211,7 +280,7 @@ public class TapSdk {
     private void startControllerMode(@NonNull String tapIdentifier) {
         log("Starting Controller mode - " + tapIdentifier);
         modeSubscribers.put(tapIdentifier, MODE_CONTROLLER);
-        tapBluetoothManager.startControllerMode(tapIdentifier);
+        tapBluetoothManager.startControllerMode(tapIdentifier, HIDMouseInRawModeSubscribers.contains(tapIdentifier));
     }
 
     private void startTextMode(@NonNull String tapIdentifier) {
@@ -409,6 +478,7 @@ public class TapSdk {
         @Override
         public void onAirMouseInputSubscribed(@NonNull String tapAddress) {
             cache.onAirMouseInputSubscribed(tapAddress);
+            tapBluetoothManager.requestReadTapState(tapAddress);
             handleEmission(tapAddress);
         }
 
@@ -425,6 +495,16 @@ public class TapSdk {
         @Override
         public void onAirMouseInputReceived(@NonNull String tapAddress, @NonNull AirMousePacket data) {
             notifyOnAirMouseInputReceived(tapAddress, data);
+        }
+
+        @Override
+        public void onTapChangedState(@NonNull String tapIdentifier, @NonNull int state) {
+            if (state == 1) {
+                tapsInAirMouseState.add(tapIdentifier);
+            } else {
+                tapsInAirMouseState.remove(tapIdentifier);
+            }
+            notifyOnTapChangedState(tapIdentifier, state);
         }
 
         @Override
@@ -551,6 +631,15 @@ public class TapSdk {
         });
     }
 
+    private void notifyOnTapChangedState(@NonNull final String tapIdentifier, @NonNull final int state) {
+        tapListeners.notifyAll(new NotifyAction<TapListener>() {
+            @Override
+            public void onNotify(TapListener listener) {
+                listener.onTapChangedState(tapIdentifier, state);
+            }
+        });
+    }
+
     private void notifyOnError(final String tapIdentifier, final int code, final String description) {
         tapListeners.notifyAll(new NotifyAction<TapListener>() {
             @Override
@@ -597,7 +686,7 @@ public class TapSdk {
             cache.clear(tapIdentifier);
         }
         modeSubscribers.remove(tapIdentifier);
-
+        HIDMouseInRawModeSubscribers.remove(tapIdentifier);
         if (!isClosing) {
             notifyOnTapDisconnected(tapIdentifier);
         }
@@ -642,6 +731,7 @@ public class TapSdk {
             tapBluetoothManager.setupMouseNotification(tapIdentifier);
         } else if (!cache.has(tapIdentifier, TapCache.DataKey.AirMouseNotification)) {
             tapBluetoothManager.setupAirMouseNotification(tapIdentifier);
+
         } else {
             logError("Cache already has all required fields");
         }
@@ -695,4 +785,6 @@ public class TapSdk {
     private boolean isFeatureSupported(@NonNull Tap tap, int feature) {
         return FeatureVersionSupport.isFeatureSupported(tap, feature);
     }
+
+
 }
