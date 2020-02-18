@@ -7,6 +7,7 @@ import android.support.annotation.Nullable;
 import android.util.Log;
 
 import com.tapwithus.sdk.airmouse.AirMousePacket;
+import com.tapwithus.sdk.mode.TapInputMode;
 import com.tapwithus.sdk.mouse.MousePacket;
 import com.tapwithus.sdk.bluetooth.TapBluetoothListener;
 import com.tapwithus.sdk.bluetooth.TapBluetoothManager;
@@ -24,9 +25,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 @SuppressWarnings({"unused", "WeakerAccess", "ConstantConditions"})
 public class TapSdk {
 
-    private static final int NUM_OF_MODES = 2;
-    public static final int MODE_TEXT = 1;
-    public static final int MODE_CONTROLLER = 2;
+
 
     private static final int RAW_MODE_LOOP_DELAY = 10000;
 
@@ -36,17 +35,18 @@ public class TapSdk {
 
     protected TapBluetoothManager tapBluetoothManager;
     private ListenerManager<TapListener> tapListeners = new ListenerManager<>();
-    private Map<String, Integer> modeSubscribers = new ConcurrentHashMap<>();
-    private Set<String> HIDMouseInRawModeSubscribers = new HashSet<>();
+    private Map<String, TapInputMode> modeSubscribers = new ConcurrentHashMap<>();
+//    private Set<String> HIDMouseInRawModeSubscribers = new HashSet<>();
     private Set<String> tapsInAirMouseState = new HashSet<>();
-    private List<String> startModeNotificationSubscribers = new CopyOnWriteArrayList<>();
-    private List<String> notifyOnConnectedAfterControllerModeStarted = new CopyOnWriteArrayList<>();
-    private List<String> notifyOnResumedAfterControllerModeStarted = new CopyOnWriteArrayList<>();
+//    private List<String> startModeNotificationSubscribers = new CopyOnWriteArrayList<>();
+//    private List<String> notifyOnConnectedAfterControllerModeStarted = new CopyOnWriteArrayList<>();
+//    private List<String> notifyOnResumedAfterControllerModeStarted = new CopyOnWriteArrayList<>();
     private boolean debug = false;
     private boolean isClosing = false;
     private boolean isClosed = false;
     private boolean isPaused = false;
-    private boolean autoSetControllerModeOnConnection = true;
+    private TapInputMode autoSetModeOnConnection = TapInputMode.controller();
+//    private boolean autoSetControllerModeOnConnection = true;
 
     private Handler rawModeHandler;
     private Runnable rawModeRunnable;
@@ -75,13 +75,14 @@ public class TapSdk {
         this.clearCacheOnTapDisconnection = clearCacheOnTapDisconnection;
     }
 
-    public void enableAutoSetControllerModeOnConnection() {
-        autoSetControllerModeOnConnection = true;
-    }
-
-    public void disableAutoSetControllerModeOnConnection() {
-        autoSetControllerModeOnConnection = false;
-    }
+//    public void enableAutoSetControllerModeOnConnection() {
+//
+//        autoSetControllerModeOnConnection = true;
+//    }
+//
+//    public void disableAutoSetControllerModeOnConnection() {
+//        autoSetControllerModeOnConnection = false;
+//    }
 
     public void enablePauseResumeHandling() {
         pauseResumeHandling = true;
@@ -116,20 +117,30 @@ public class TapSdk {
 
         Set<String> actuallyConnectTaps = getConnectedTaps();
 
-        for (String tapIdentifier: getTapsInMode(MODE_CONTROLLER)) {
-            if (actuallyConnectTaps.contains(tapIdentifier)) {
-                notifyOnResumedAfterControllerModeStarted.add(tapIdentifier);
-                startControllerMode(tapIdentifier);
+
+        for (Map.Entry<String, TapInputMode> entry : modeSubscribers.entrySet()) {
+            if (actuallyConnectTaps.contains(entry.getKey())) {
+                startMode(entry.getKey(), entry.getValue());
             }
         }
 
-        for (String tapIdentifier: getTapsInMode(MODE_TEXT)) {
-            if (actuallyConnectTaps.contains(tapIdentifier)) {
-                if (!isConnectionInProgress(tapIdentifier)) {
-                    notifyOnTapResumed(tapIdentifier);
-                }
-            }
-        }
+//        for (String tapIdentifier: getTapsInMode(MODE_CONTROLLER)) {
+//            if (actuallyConnectTaps.contains(tapIdentifier)) {
+////                notifyOnResumedAfterControllerModeStarted.add(tapIdentifier);
+//                startControllerMode(tapIdentifier);
+//            }
+//        }
+//
+//        for (String tapIdentifier: getTapsInMode(MODE_TEXT)) {
+//            if (actuallyConnectTaps.contains(tapIdentifier)) {
+//                startTextMode(tapIdentifier);
+////                if (!isConnectionInProgress(tapIdentifier)) {
+////                    notifyOnTapResumed(tapIdentifier);
+////                }
+//            }
+//        }
+
+
 
         // Check if a TAP was disconnected while the app was in background
         Set<String> mSubscribers = new HashSet<>(modeSubscribers.keySet());
@@ -163,10 +174,16 @@ public class TapSdk {
 
         stopRawModeLoop();
 
-        List<String> controllerModeSubscribers = getTapsInMode(MODE_CONTROLLER);
-        for (String tapIdentifier: controllerModeSubscribers) {
-            tapBluetoothManager.startTextMode(tapIdentifier);
+        Set<String> connectedTaps = getConnectedTaps();
+        TapInputMode textMode = TapInputMode.text();
+        for (String tapIdentifier : connectedTaps) {
+
+            tapBluetoothManager.startMode(tapIdentifier, textMode.getBytes());
         }
+//        List<String> controllerModeSubscribers = getTapsInMode(MODE_CONTROLLER);
+//        for (String tapIdentifier: controllerModeSubscribers) {
+//            tapBluetoothManager.startTextMode(tapIdentifier);
+//        }
     }
 
     @NonNull
@@ -189,23 +206,23 @@ public class TapSdk {
         tapListeners.unregisterListener(listener);
     }
 
-    public void setMouseHIDEnabledInRawModeForAllTaps(boolean enable) {
-        Set<String> taps = getConnectedTaps();
-        for (String tapIdentifier : taps) {
-            setMouseHIDEnabledInRawMode(tapIdentifier, enable);
-        }
-    }
-
-    public void setMouseHIDEnabledInRawMode(String tapIdentifier, boolean enable) {
-        if (enable && !HIDMouseInRawModeSubscribers.contains(tapIdentifier)) {
-            HIDMouseInRawModeSubscribers.add(tapIdentifier);
-        } else if (!enable && HIDMouseInRawModeSubscribers.contains(tapIdentifier)) {
-            HIDMouseInRawModeSubscribers.remove(tapIdentifier);
-        }
-        if (getTapsInMode(MODE_CONTROLLER).contains(tapIdentifier)) {
-            startControllerMode(tapIdentifier);
-        }
-    }
+//    public void setMouseHIDEnabledInRawModeForAllTaps(boolean enable) {
+//        Set<String> taps = getConnectedTaps();
+//        for (String tapIdentifier : taps) {
+//            setMouseHIDEnabledInRawMode(tapIdentifier, enable);
+//        }
+//    }
+//
+//    public void setMouseHIDEnabledInRawMode(String tapIdentifier, boolean enable) {
+//        if (enable && !HIDMouseInRawModeSubscribers.contains(tapIdentifier)) {
+//            HIDMouseInRawModeSubscribers.add(tapIdentifier);
+//        } else if (!enable && HIDMouseInRawModeSubscribers.contains(tapIdentifier)) {
+//            HIDMouseInRawModeSubscribers.remove(tapIdentifier);
+//        }
+//        if (getTapsInMode(MODE_CONTROLLER).contains(tapIdentifier)) {
+//            startControllerMode(tapIdentifier);
+//        }
+//    }
 
     public boolean isAnyTapInAirMouseState() {
         Set<String> taps = getConnectedTaps();
@@ -252,80 +269,118 @@ public class TapSdk {
         return (isFeatureSupported(tapIdentifier, FeatureVersionSupport.FEATURE_AIR_MOUSE));
     }
 
-    public boolean isMouseHIDEnabledInRawMode(String tapIdentifier) {
-        return HIDMouseInRawModeSubscribers.contains(tapIdentifier);
+//    public boolean isMouseHIDEnabledInRawMode(String tapIdentifier) {
+//        return HIDMouseInRawModeSubscribers.contains(tapIdentifier);
+//    }
+
+    public void setDefaultMode(TapInputMode mode, Boolean applyImmediate) {
+        if (!mode.isValid()) {
+            return;
+        }
+        autoSetModeOnConnection = mode;
+        if (applyImmediate) {
+            Set<String> taps = getConnectedTaps();
+            for (String tapIdentifier : taps) {
+                startMode(tapIdentifier, mode);
+
+            }
+        }
     }
 
-    public void startMode(String tapIdentifier, int mode) {
-        if (!isModeValid(mode)) {
+    public void startMode(String tapIdentifier, TapInputMode mode) {
+        if (!mode.isValid()) {
             notifyOnError(tapIdentifier, ERR_SUBSCRIBE_MODE, "Invalid mode passed");
             return;
         }
 
-        startModeNotificationSubscribers.add(tapIdentifier);
-        switch (mode) {
-            case MODE_TEXT:
-                startTextMode(tapIdentifier);
-                break;
-            case MODE_CONTROLLER:
-                startControllerMode(tapIdentifier);
-                break;
-        }
+        modeSubscribers.put(tapIdentifier, mode);
+        tapBluetoothManager.startMode(tapIdentifier, mode.getBytes());
+//        startModeNotificationSubscribers.add(tapIdentifier);
+//        switch (mode) {
+//            case MODE_TEXT:
+//                startTextMode(tapIdentifier);
+//                break;
+//            case MODE_CONTROLLER:
+//                startControllerMode(tapIdentifier);
+//                break;
+//            case MODE_CONTROLLER_WITH_MOUSEHID:
+//                startControllerWithMouseHIDMode(tapIdentifier);
+//        }
     }
 
     public void refreshBond(@NonNull String tapIdentifier) {
         tapBluetoothManager.refreshBond(tapIdentifier);
     }
 
-    private void startControllerMode(@NonNull String tapIdentifier) {
+    public void startControllerMode(@NonNull String tapIdentifier) {
         log("Starting Controller mode - " + tapIdentifier);
-        modeSubscribers.put(tapIdentifier, MODE_CONTROLLER);
-        tapBluetoothManager.startControllerMode(tapIdentifier, HIDMouseInRawModeSubscribers.contains(tapIdentifier));
+        startMode(tapIdentifier, TapInputMode.controller());
+
+//        modeSubscribers.put(tapIdentifier, MODE_CONTROLLER);
+//        tapBluetoothManager.startControllerMode(tapIdentifier);
     }
 
-    private void startTextMode(@NonNull String tapIdentifier) {
+    public  void startTextMode(@NonNull String tapIdentifier) {
         if (!isFeatureSupported(tapIdentifier, FeatureVersionSupport.FEATURE_ENABLE_TEXT_MODE)) {
             logError("FEATURE_ENABLE_TEXT_MODE not supported - " + tapIdentifier);
-            startModeNotificationSubscribers.remove(tapIdentifier);
+//            startModeNotificationSubscribers.remove(tapIdentifier);
             return;
         }
 
-        if (!modeSubscribers.containsKey(tapIdentifier) || modeSubscribers.get(tapIdentifier) != MODE_TEXT) {
-            log("Starting Text mode - " + tapIdentifier);
-            modeSubscribers.put(tapIdentifier, MODE_TEXT);
-            tapBluetoothManager.startTextMode(tapIdentifier);
+        log("Starting Text mode - " + tapIdentifier);
+        startMode(tapIdentifier, TapInputMode.text());
+//        modeSubscribers.put(tapIdentifier, MODE_TEXT);
+//        tapBluetoothManager.startTextMod e(tapIdentifier);
+
+//        if (!modeSubscribers.containsKey(tapIdentifier) || modeSubscribers.get(tapIdentifier) != MODE_TEXT) {
+//            log("Starting Text mode - " + tapIdentifier);
+//            modeSubscribers.put(tapIdentifier, MODE_TEXT);
+//            tapBluetoothManager.startTextMode(tapIdentifier);
+//        }
+    }
+
+    public void startControllerWithMouseHIDMode(@NonNull String tapIdentifier) {
+        log("Starting Controller with MouseHID mode - " + tapIdentifier);
+        if (!isFeatureSupported(tapIdentifier, FeatureVersionSupport.FEATURE_CONTROLLER_WITH_MOUSEHID)) {
+            logError("FEATURE_CONTROLLER_WITH_MOUSEHID not supported - " + tapIdentifier + ", Falling back to Controller mode");
+            startControllerMode(tapIdentifier);
+            return;
         }
+        log("Starting Controller with Mouse HID mode - " + tapIdentifier);
+        startMode(tapIdentifier, TapInputMode.controllerWithMouseHID());
+//        modeSubscribers.put(tapIdentifier, MODE_CONTROLLER_WITH_MOUSEHID);
+//        tapBluetoothManager.startControllerModeWithMouseHID(tapIdentifier);
     }
 
-    private boolean isModeValid(int mode) {
-        return mode >= 1 && mode >> NUM_OF_MODES <= 0;
-    }
+//    private boolean isModeValid(int mode) {
+//        return mode >= 1 && mode >> NUM_OF_MODES <= 0;
+//    }
 
-    public int getMode(String tapIdentifier) {
-        return modeSubscribers.containsKey(tapIdentifier) ? modeSubscribers.get(tapIdentifier) : 0;
-    }
+//    public int getMode(String tapIdentifier) {
+//        return modeSubscribers.containsKey(tapIdentifier) ? modeSubscribers.get(tapIdentifier) : 0;
+//    }
 
-    public List<String> getTapsInMode(int mode) {
-        List<String> taps = new ArrayList<>();
+//    public List<String> getTapsInMode(int mode) {
+//        List<String> taps = new ArrayList<>();
+//
+//        if (isModeValid(mode)) {
+//            for (Map.Entry<String, Integer> entry : modeSubscribers.entrySet()) {
+//                String tapIdentifier = entry.getKey();
+//                if (isInMode(tapIdentifier, mode)) {
+//                    taps.add(tapIdentifier);
+//                }
+//            }
+//        }
+//
+//        return taps;
+//    }
 
-        if (isModeValid(mode)) {
-            for (Map.Entry<String, Integer> entry : modeSubscribers.entrySet()) {
-                String tapIdentifier = entry.getKey();
-                if (isInMode(tapIdentifier, mode)) {
-                    taps.add(tapIdentifier);
-                }
-            }
-        }
-
-        return taps;
-    }
-
-    public boolean isInMode(String tapIdentifier, int mode) {
-        if (!modeSubscribers.containsKey(tapIdentifier)) {
-            return false;
-        }
-        return (modeSubscribers.get(tapIdentifier) & mode) == mode;
-    }
+//    public boolean isInMode(String tapIdentifier, int mode) {
+//        if (!modeSubscribers.containsKey(tapIdentifier)) {
+//            return false;
+//        }
+//        return (modeSubscribers.get(tapIdentifier) & mode) == mode;
+//    }
 
     public void writeName(@NonNull String tapIdentifier, @NonNull String name) {
         tapBluetoothManager.writeName(tapIdentifier, name);
@@ -439,29 +494,34 @@ public class TapSdk {
             handleEmission(tapAddress);
         }
 
-        @Override
-        public void onControllerModeStarted(@NonNull String tapAddress) {
-            if (notifyOnConnectedAfterControllerModeStarted.contains(tapAddress)) {
-                notifyOnConnectedAfterControllerModeStarted.remove(tapAddress);
-                notifyOnTapConnected(tapAddress);
-            } else if (notifyOnResumedAfterControllerModeStarted.contains(tapAddress)) {
-                notifyOnResumedAfterControllerModeStarted.remove(tapAddress);
-                notifyOnTapResumed(tapAddress);
-            } else {
-                notifyOnControllerModeStarted(tapAddress);
-            }
+//        @Override
+//        public void onControllerModeStarted(@NonNull String tapAddress) {
+////            if (notifyOnConnectedAfterControllerModeStarted.contains(tapAddress)) {
+////                notifyOnConnectedAfterControllerModeStarted.remove(tapAddress);
+////                notifyOnTapConnected(tapAddress);
+////            } else if (notifyOnResumedAfterControllerModeStarted.contains(tapAddress)) {
+////                notifyOnResumedAfterControllerModeStarted.remove(tapAddress);
+////                notifyOnTapResumed(tapAddress);
+////            } else {
+////                notifyOnControllerModeStarted(tapAddress);
+////            }
+//
+//        }
 
-        }
+//        @Override
+//        public void onTextModeStarted(@NonNull String tapAddress) {
+////            if (notifyOnConnectedAfterControllerModeStarted.contains(tapAddress)) {
+////                notifyOnConnectedAfterControllerModeStarted.remove(tapAddress);
+////                notifyOnTapConnected(tapAddress);
+////            } else {
+////                notifyOnTextModeStarted(tapAddress);
+////            }
+//        }
 
-        @Override
-        public void onTextModeStarted(@NonNull String tapAddress) {
-            if (notifyOnConnectedAfterControllerModeStarted.contains(tapAddress)) {
-                notifyOnConnectedAfterControllerModeStarted.remove(tapAddress);
-                notifyOnTapConnected(tapAddress);
-            } else {
-                notifyOnTextModeStarted(tapAddress);
-            }
-        }
+//        @Override
+//        public void onControllerWithMouseHIDModeStarted(@NonNull String tapAddress) {
+//
+//        }
 
         @Override
         public void onTapInputSubscribed(@NonNull String tapAddress) {
@@ -475,10 +535,17 @@ public class TapSdk {
             handleEmission(tapAddress);
         }
 
+
         @Override
         public void onAirMouseInputSubscribed(@NonNull String tapAddress) {
             cache.onAirMouseInputSubscribed(tapAddress);
             tapBluetoothManager.requestReadTapState(tapAddress);
+            handleEmission(tapAddress);
+        }
+
+        @Override
+        public void onRawSensorInputSubscribed(@NonNull String tapAddress) {
+            cache.onRawSensorInputSubscribed(tapAddress);
             handleEmission(tapAddress);
         }
 
@@ -495,6 +562,11 @@ public class TapSdk {
         @Override
         public void onAirMouseInputReceived(@NonNull String tapAddress, @NonNull AirMousePacket data) {
             notifyOnAirMouseInputReceived(tapAddress, data);
+        }
+
+        @Override
+        public void onRawSensorInputReceived(@NonNull String tapAddress) {
+            notifyOnRawSensorInputReceived(tapAddress, 3);
         }
 
         @Override
@@ -577,31 +649,31 @@ public class TapSdk {
     }
 
     private void notifyOnControllerModeStarted(@NonNull final String tapIdentifier) {
-        if (!startModeNotificationSubscribers.contains(tapIdentifier)) {
-            return;
-        }
-        startModeNotificationSubscribers.remove(tapIdentifier);
-
-        tapListeners.notifyAll(new NotifyAction<TapListener>() {
-            @Override
-            public void onNotify(TapListener listener) {
-                listener.onControllerModeStarted(tapIdentifier);
-            }
-        });
+//        if (!startModeNotificationSubscribers.contains(tapIdentifier)) {
+//            return;
+//        }
+//        startModeNotificationSubscribers.remove(tapIdentifier);
+//
+//        tapListeners.notifyAll(new NotifyAction<TapListener>() {
+//            @Override
+//            public void onNotify(TapListener listener) {
+//                listener.onControllerModeStarted(tapIdentifier);
+//            }
+//        });
     }
 
     private void notifyOnTextModeStarted(@NonNull final String tapIdentifier) {
-        if (!startModeNotificationSubscribers.contains(tapIdentifier)) {
-            return;
-        }
-        startModeNotificationSubscribers.remove(tapIdentifier);
-
-        tapListeners.notifyAll(new NotifyAction<TapListener>() {
-            @Override
-            public void onNotify(TapListener listener) {
-                listener.onTextModeStarted(tapIdentifier);
-            }
-        });
+//        if (!startModeNotificationSubscribers.contains(tapIdentifier)) {
+//            return;
+//        }
+//        startModeNotificationSubscribers.remove(tapIdentifier);
+//
+//        tapListeners.notifyAll(new NotifyAction<TapListener>() {
+//            @Override
+//            public void onNotify(TapListener listener) {
+//                listener.onTextModeStarted(tapIdentifier);
+//            }
+//        });
     }
 
     private void notifyOnTapInputReceived(@NonNull final String tapIdentifier, final int data) {
@@ -627,6 +699,15 @@ public class TapSdk {
             @Override
             public void onNotify(TapListener listener) {
                 listener.onAirMouseInputReceived(tapIdentifier, data);
+            }
+        });
+    }
+
+    private void notifyOnRawSensorInputReceived(@NonNull final String tapIdentifier, @NonNull final int data) {
+        tapListeners.notifyAll(new NotifyAction<TapListener>() {
+            @Override
+            public void onNotify(TapListener listener) {
+                listener.onRawSensorInputReceived(tapIdentifier, data);
             }
         });
     }
@@ -664,16 +745,19 @@ public class TapSdk {
             return;
         }
 
-        List<String> textModeSubscribers = getTapsInMode(MODE_TEXT);
-        if (textModeSubscribers.contains(tapIdentifier) || !autoSetControllerModeOnConnection) {
-            modeSubscribers.put(tapIdentifier, MODE_TEXT);
-            if (!isConnectionInProgress(tapIdentifier)) {
-                notifyOnTapConnected(tapIdentifier);
-            }
-        } else {
-            notifyOnConnectedAfterControllerModeStarted.add(tapIdentifier);
-            startControllerMode(tapIdentifier);
-        }
+        startMode(tapIdentifier, autoSetModeOnConnection);
+        notifyOnTapConnected(tapIdentifier);
+//            List<String> textModeSubscribers = getTapsInMode(MODE_TEXT);
+//            if (textModeSubscribers.contains(tapIdentifier) || !autoSetControllerModeOnConnection) {
+//                modeSubscribers.put(tapIdentifier, MODE_TEXT);
+//                if (!isConnectionInProgress(tapIdentifier)) {
+//                    notifyOnTapConnected(tapIdentifier);
+//                }
+//            } else {
+//                notifyOnConnectedAfterControllerModeStarted.add(tapIdentifier);
+//                startControllerMode(tapIdentifier);
+//            }
+//        }
     }
 
     private void handleTapDisconnection(@NonNull String tapIdentifier) {
@@ -686,7 +770,7 @@ public class TapSdk {
             cache.clear(tapIdentifier);
         }
         modeSubscribers.remove(tapIdentifier);
-        HIDMouseInRawModeSubscribers.remove(tapIdentifier);
+//        HIDMouseInRawModeSubscribers.remove(tapIdentifier);
         if (!isClosing) {
             notifyOnTapDisconnected(tapIdentifier);
         }
@@ -731,7 +815,8 @@ public class TapSdk {
             tapBluetoothManager.setupMouseNotification(tapIdentifier);
         } else if (!cache.has(tapIdentifier, TapCache.DataKey.AirMouseNotification)) {
             tapBluetoothManager.setupAirMouseNotification(tapIdentifier);
-
+        } else if (!cache.has(tapIdentifier, TapCache.DataKey.RawSensorNotification)) {
+            tapBluetoothManager.setupRawSensorNotification(tapIdentifier);
         } else {
             logError("Cache already has all required fields");
         }
@@ -754,8 +839,9 @@ public class TapSdk {
             @Override
             public void run() {
                 log("In raw mode loop");
-                for (String tapIdentifier: getTapsInMode(MODE_CONTROLLER)) {
-                    startControllerMode(tapIdentifier);
+                for (String tapIdentifier: modeSubscribers.keySet()) {
+                    tapBluetoothManager.startMode(tapIdentifier, modeSubscribers.get(tapIdentifier).getBytes());
+//                    startControllerMode(tapIdentifier);
                 }
                 rawModeHandler.postDelayed(this, RAW_MODE_LOOP_DELAY);
             }

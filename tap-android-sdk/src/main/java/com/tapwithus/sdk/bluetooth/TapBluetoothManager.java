@@ -17,9 +17,7 @@ import java.util.UUID;
 public class TapBluetoothManager {
 
     private static final String TAG = "TapBluetoothManager";
-    private static final byte[] CONTROLLER_MODE_DATA = new byte[] { 0x3, 0xc, 0x0, 0x1 };
-    private static final byte[] CONTROLLER_MODE_WITH_MOUSEHID_DATA = new byte[] { 0x3, 0xc, 0x0, 0x4};
-    private static final byte[] TEXT_MODE_DATA = new byte[] { 0x3, 0xc, 0x0, 0x0 };
+
     private static final byte[] READ_TAP_STATE_DATA = new byte[] { 0xd };
 
     protected static final UUID TAP = UUID.fromString("C3FF0001-1D8B-40FD-A56F-C7BD5D0F3370");
@@ -32,6 +30,7 @@ public class TapBluetoothManager {
     protected static final UUID TAP_DATA = UUID.fromString("C3FF0005-1D8B-40FD-A56F-C7BD5D0F3370");
     protected static final UUID NUS = UUID.fromString("6E400001-B5A3-F393-E0A9-E50E24DCCA9E");
     protected static final UUID RX = UUID.fromString("6E400002-B5A3-F393-E0A9-E50E24DCCA9E");
+    protected static final UUID TX = UUID.fromString("6E400003-B5A3-F393-E0A9-E50E24DCCA9E");
     protected static final UUID NAME = UUID.fromString("C3FF0003-1D8B-40FD-A56F-C7BD5D0F3370");
     protected static final UUID MOUSE_DATA = UUID.fromString("C3FF0006-1D8B-40FD-A56F-C7BD5D0F3370");
     protected static final UUID AIR_MOUSE_DATA = UUID.fromString("C3FF000A-1D8B-40FD-A56F-C7BD5D0F3370");
@@ -99,18 +98,22 @@ public class TapBluetoothManager {
         bluetoothManager.refreshConnections();
     }
 
-    public void startControllerMode(@NonNull String tapAddress, boolean withMouseHID) {
-        if (withMouseHID) {
-            bluetoothManager.writeCharacteristic(tapAddress, NUS, RX, CONTROLLER_MODE_WITH_MOUSEHID_DATA);
-        } else {
-            bluetoothManager.writeCharacteristic(tapAddress, NUS, RX, CONTROLLER_MODE_DATA);
-        }
-
+    public void startMode(@NonNull String tapAddress, byte[] data) {
+        bluetoothManager.writeCharacteristic(tapAddress, NUS, RX, data);
     }
 
-    public void startTextMode(@NonNull String tapAddress) {
-        bluetoothManager.writeCharacteristic(tapAddress, NUS, RX, TEXT_MODE_DATA);
-    }
+//    public void startControllerMode(@NonNull String tapAddress) {
+//        bluetoothManager.writeCharacteristic(tapAddress, NUS, RX, CONTROLLER_MODE_DATA);
+//    }
+//
+//    public void startTextMode(@NonNull String tapAddress) {
+//        bluetoothManager.writeCharacteristic(tapAddress, NUS, RX, TEXT_MODE_DATA);
+//    }
+//
+//    public void startControllerModeWithMouseHID(@NonNull String tapAddress) {
+//        bluetoothManager.writeCharacteristic(tapAddress, NUS, RX, CONTROLLER_MODE_WITH_MOUSEHID_DATA);
+//    }
+
     // Deprecated
 //    public void readTapState(@NonNull String tapAddress) {
 //        log("Reading tap state");
@@ -166,6 +169,11 @@ public class TapBluetoothManager {
         log("Setting up air mouse notifications");
         bluetoothManager.setupNotification(tapAddress, TAP, AIR_MOUSE_DATA);
 
+    }
+
+    public void setupRawSensorNotification(@NonNull String tapAddress) {
+        log("Settings up raw sensor notifications");
+        bluetoothManager.setupNotification(tapAddress, NUS, TX);
     }
 
     public boolean isConnectionInProgress() {
@@ -242,20 +250,26 @@ public class TapBluetoothManager {
                 notifyOnFwVerRead(deviceAddress, new String((data)));
             } else if (characteristic.equals(AIR_MOUSE_DATA)) {
                 onNotificationReceived(deviceAddress, characteristic, data);
+            } else if (characteristic.equals(TX)) {
+                onNotificationReceived(deviceAddress, characteristic, data);
             }
         }
 
         @Override
         public void onCharacteristicWrite(@NonNull String deviceAddress, @NonNull UUID characteristic, @NonNull byte[] data) {
-            if (characteristic.equals(RX)) {
-                if (Arrays.equals(data, CONTROLLER_MODE_DATA)) {
-                    log("Controller Mode Started");
-                    notifyOnControllerModeStarted(deviceAddress);
-                } else if (Arrays.equals(data, TEXT_MODE_DATA)) {
-                    log("Text Mode Started");
-                    notifyOnTextModeStarted(deviceAddress);
-                }
-            } else if (characteristic.equals(NAME)) {
+//            if (characteristic.equals(RX)) {
+//                if (Arrays.equals(data, CONTROLLER_MODE_DATA)) {
+//                    log("Controller Mode Started: " + deviceAddress);
+////                    notifyOnControllerModeStarted(deviceAddress);
+//                } else if (Arrays.equals(data, TEXT_MODE_DATA)) {
+//                    log("Text Mode Started: " + deviceAddress);
+////                    notifyOnTextModeStarted(deviceAddress);
+//                } else if (Arrays.equals(data, CONTROLLER_MODE_WITH_MOUSEHID_DATA)) {
+//                    log("Controller with Mouse HID Mode Started: " + deviceAddress);
+////                    notifyOnControllerWithMouseHIDModeStarted(deviceAddress);
+//                }
+//            } else
+            if (characteristic.equals(NAME)) {
                 log("Name Changed");
                 notifyOnNameWrite(deviceAddress, new String(data, StandardCharsets.UTF_8));
             }
@@ -273,8 +287,12 @@ public class TapBluetoothManager {
                 log("Air mouse notification subscribed");
 //                requestReadTapState(deviceAddress);
                 notifyOnAirMouseDataSubscribed(deviceAddress);
+            } else if (characteristic.equals(TX)) {
+                log("Raw sensor notification subscribed");
+                notifyOnRawSensorDataSubscribed(deviceAddress);
             }
         }
+
 
         @Override
         public void onNotificationReceived(@NonNull String deviceAddress, @NonNull UUID characteristic, @NonNull byte[] data) {
@@ -295,7 +313,8 @@ public class TapBluetoothManager {
                 } else {
                     notifyOnAirMouseInputReceived(deviceAddress, airMousePacket);
                 }
-
+            } else if (characteristic.equals(TX)) {
+                notifyOnRawSensorInputReceived(deviceAddress, 3);
             }
         }
 
@@ -413,23 +432,32 @@ public class TapBluetoothManager {
         });
     }
 
-    private void notifyOnControllerModeStarted(@NonNull final String tapAddress) {
-        tapBluetoothListeners.notifyAll(new NotifyAction<TapBluetoothListener>() {
-            @Override
-            public void onNotify(TapBluetoothListener listener) {
-                listener.onControllerModeStarted(tapAddress);
-            }
-        });
-    }
-
-    private void notifyOnTextModeStarted(@NonNull final String tapAddress) {
-        tapBluetoothListeners.notifyAll(new NotifyAction<TapBluetoothListener>() {
-            @Override
-            public void onNotify(TapBluetoothListener listener) {
-                listener.onTextModeStarted(tapAddress);
-            }
-        });
-    }
+//    private void notifyOnControllerModeStarted(@NonNull final String tapAddress) {
+//        tapBluetoothListeners.notifyAll(new NotifyAction<TapBluetoothListener>() {
+//            @Override
+//            public void onNotify(TapBluetoothListener listener) {
+//                listener.onControllerModeStarted(tapAddress);
+//            }
+//        });
+//    }
+//
+//    private void notifyOnControllerWithMouseHIDModeStarted(@NonNull final String tapAddress) {
+//        tapBluetoothListeners.notifyAll(new NotifyAction<TapBluetoothListener>() {
+//            @Override
+//            public void onNotify(TapBluetoothListener listener) {
+//                listener.onControllerWithMouseHIDModeStarted(tapAddress);
+//            }
+//        });
+//    }
+//
+//    private void notifyOnTextModeStarted(@NonNull final String tapAddress) {
+//        tapBluetoothListeners.notifyAll(new NotifyAction<TapBluetoothListener>() {
+//            @Override
+//            public void onNotify(TapBluetoothListener listener) {
+//                listener.onTextModeStarted(tapAddress);
+//            }
+//        });
+//    }
 
     private void notifyOnTapInputSubscribed(@NonNull final String tapAddress) {
         tapBluetoothListeners.notifyAll(new NotifyAction<TapBluetoothListener>() {
@@ -458,6 +486,15 @@ public class TapBluetoothManager {
         });
     }
 
+    private void notifyOnRawSensorDataSubscribed(@NonNull final String tapAddress) {
+        tapBluetoothListeners.notifyAll(new NotifyAction<TapBluetoothListener>() {
+            @Override
+            public void onNotify(TapBluetoothListener listener) {
+                listener.onRawSensorInputSubscribed(tapAddress);
+            }
+        });
+    }
+
     private void notifyOnTapInputReceived(@NonNull final String tapAddress, final int data) {
         tapBluetoothListeners.notifyAll(new NotifyAction<TapBluetoothListener>() {
             @Override
@@ -481,6 +518,15 @@ public class TapBluetoothManager {
             @Override
             public void onNotify(TapBluetoothListener listener) {
                 listener.onAirMouseInputReceived(tapAddress, data);
+            }
+        });
+    }
+
+    private void notifyOnRawSensorInputReceived(@NonNull final String tapAddress, @NonNull final int data) {
+        tapBluetoothListeners.notifyAll(new NotifyAction<TapBluetoothListener>() {
+            @Override
+            public void onNotify(TapBluetoothListener listener) {
+                listener.onRawSensorInputReceived(tapAddress);
             }
         });
     }

@@ -12,12 +12,15 @@ public class FeatureVersionSupport {
     public static final int FEATURE_ENABLE_TEXT_MODE = 1;
     public static final int FEATURE_MOUSE_MODE = 2;
     public static final int FEATURE_AIR_MOUSE = 3;
-
+    public static final int FEATURE_RAW_SENSOR = 4;
+    public static final int FEATURE_CONTROLLER_WITH_MOUSEHID = 5;
 
     protected static Map<Integer, Integer> featureFwVer = new HashMap<Integer, Integer>() {{
         put(FEATURE_ENABLE_TEXT_MODE, 10000);
         put(FEATURE_MOUSE_MODE, 10500);
         put(FEATURE_AIR_MOUSE, 20000);
+        put(FEATURE_RAW_SENSOR, 20303);
+        put(FEATURE_CONTROLLER_WITH_MOUSEHID, 20303);
         // just for a test put this up to ver5
 //        put(FEATURE_AIR_MOUSE, 50000);
     }};
@@ -26,6 +29,8 @@ public class FeatureVersionSupport {
         put(FEATURE_ENABLE_TEXT_MODE, 30200);
         put(FEATURE_MOUSE_MODE, 30200);
         put(FEATURE_AIR_MOUSE, 30300);
+        put(FEATURE_RAW_SENSOR, 30200);
+        put(FEATURE_CONTROLLER_WITH_MOUSEHID, 30200);
     }};
 
     public static boolean isFeatureSupported(@NonNull Tap tap, int feature) {

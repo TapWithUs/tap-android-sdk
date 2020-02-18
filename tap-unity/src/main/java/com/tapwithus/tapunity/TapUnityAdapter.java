@@ -9,6 +9,7 @@ import com.tapwithus.sdk.TapListener;
 import com.tapwithus.sdk.TapSdk;
 import com.tapwithus.sdk.TapSdkFactory;
 import com.tapwithus.sdk.airmouse.AirMousePacket;
+import com.tapwithus.sdk.mode.TapInputMode;
 import com.tapwithus.sdk.mouse.MousePacket;
 import com.tapwithus.sdk.tap.Tap;
 import com.unity3d.player.UnityPlayer;
@@ -77,9 +78,9 @@ public class TapUnityAdapter {
     }
 
     // Air Mouse
-    public void setMouseHIDEnabledInRawModeForAllTaps(boolean enable) {
-        tapSdk.setMouseHIDEnabledInRawModeForAllTaps(enable);
-    }
+//    public void setMouseHIDEnabledInRawModeForAllTaps(boolean enable) {
+//        tapSdk.setMouseHIDEnabledInRawModeForAllTaps(enable);
+//    }
 
     public boolean isAnyTapInAirMouseState() {
         return tapSdk.isAnyTapInAirMouseState();
@@ -90,11 +91,18 @@ public class TapUnityAdapter {
     }
 
     public void startControllerMode(@NonNull String tapIdentifier) {
-        tapSdk.startMode(tapIdentifier, TapSdk.MODE_CONTROLLER);
+        tapSdk.startMode(tapIdentifier, TapInputMode.controller());
+//        tapSdk.startMode(tapIdentifier, TapSdk.MODE_CONTROLLER);
     }
 
     public void startTextMode(@NonNull String tapIdentifier) {
-        tapSdk.startMode(tapIdentifier, TapSdk.MODE_TEXT);
+        tapSdk.startMode(tapIdentifier, TapInputMode.text());
+//        tapSdk.startMode(tapIdentifier, TapSdk.MODE_TEXT);
+    }
+
+    public void startControllerWithMouseHIDMode(@NonNull String tapIdentifier) {
+        tapSdk.startMode(tapIdentifier, TapInputMode.controller());
+//        tapSdk.startMode(tapIdentifier, TapSdk.MODE_CONTROLLER_WITH_MOUSEHID);
     }
 
     public void getConnectedTaps() {
@@ -105,11 +113,11 @@ public class TapUnityAdapter {
         UnityPlayer.UnitySendMessage(UNITY_GAME_OBJECT, UNITY_CONNECTED_TAPS_CALLBACK, connectedTapsArg);
     }
 
-    public void getMode(@NonNull String tapIdentifier) {
-        int mode = tapSdk.getMode(tapIdentifier);
-        String modeArg = tapIdentifier + UNITY_ARGS_SEPARATOR + mode;
-        UnityPlayer.UnitySendMessage(UNITY_GAME_OBJECT, UNITY_GET_MODE_CALLBACK, modeArg);
-    }
+//    public void getMode(@NonNull String tapIdentifier) {
+//        int mode = tapSdk.getMode(tapIdentifier);
+//        String modeArg = tapIdentifier + UNITY_ARGS_SEPARATOR + mode;
+//        UnityPlayer.UnitySendMessage(UNITY_GAME_OBJECT, UNITY_GET_MODE_CALLBACK, modeArg);
+//    }
 
     public void getCachedTap(@NonNull String tapIdentifier) {
         Tap tap = tapSdk.getCachedTap(tapIdentifier);
@@ -171,17 +179,17 @@ public class TapUnityAdapter {
             UnityPlayer.UnitySendMessage(UNITY_GAME_OBJECT, UNITY_TAP_CHANGED_CALLBACK, tapIdentifier);
         }
 
-        @Override
-        public void onControllerModeStarted(@NonNull String tapIdentifier) {
-            log("Controller mode started " + tapIdentifier);
-            UnityPlayer.UnitySendMessage(UNITY_GAME_OBJECT, UNITY_CONTROLLER_MODE_CALLBACK, tapIdentifier);
-        }
-
-        @Override
-        public void onTextModeStarted(@NonNull String tapIdentifier) {
-            log("Text mode started " + tapIdentifier);
-            UnityPlayer.UnitySendMessage(UNITY_GAME_OBJECT, UNITY_TEXT_MODE_CALLBACK, tapIdentifier);
-        }
+//        @Override
+//        public void onControllerModeStarted(@NonNull String tapIdentifier) {
+//            log("Controller mode started " + tapIdentifier);
+//            UnityPlayer.UnitySendMessage(UNITY_GAME_OBJECT, UNITY_CONTROLLER_MODE_CALLBACK, tapIdentifier);
+//        }
+//
+//        @Override
+//        public void onTextModeStarted(@NonNull String tapIdentifier) {
+//            log("Text mode started " + tapIdentifier);
+//            UnityPlayer.UnitySendMessage(UNITY_GAME_OBJECT, UNITY_TEXT_MODE_CALLBACK, tapIdentifier);
+//        }
 
         @Override
         public void onTapInputReceived(@NonNull String tapIdentifier, int data) {
@@ -204,6 +212,11 @@ public class TapUnityAdapter {
             log(tapIdentifier + " TAP changed state " + state);
             String args = tapIdentifier + UNITY_ARGS_SEPARATOR + state;
             UnityPlayer.UnitySendMessage(UNITY_GAME_OBJECT, UNITY_TAP_CHANGED_STATE_CALLBACK, args);
+        }
+
+        @Override
+        public void onRawSensorInputReceived(@NonNull String tapIdentifier, @NonNull int data) {
+
         }
 
         @Override

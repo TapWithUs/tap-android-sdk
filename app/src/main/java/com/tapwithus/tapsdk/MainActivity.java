@@ -16,6 +16,7 @@ import com.tapwithus.sdk.TapListener;
 import com.tapwithus.sdk.TapSdk;
 import com.tapwithus.sdk.TapSdkFactory;
 import com.tapwithus.sdk.airmouse.AirMousePacket;
+import com.tapwithus.sdk.mode.TapInputMode;
 import com.tapwithus.sdk.mouse.MousePacket;
 import com.tapwithus.sdk.tap.Tap;
 
@@ -40,7 +41,7 @@ public class MainActivity extends AppCompatActivity {
         sdk = TapSdkFactory.getDefault(this);
         sdk.enableDebug();
         if (!startWithControllerMode) {
-            sdk.disableAutoSetControllerModeOnConnection();
+            sdk.setDefaultMode(TapInputMode.text(), true);
         }
         sdk.registerTapListener(tapListener);
         if (sdk.isConnectionInProgress()) {
@@ -119,24 +120,28 @@ public class MainActivity extends AppCompatActivity {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Change TAP Mode");
 
-        String[] options = {"Text Mode", "Controller Mode w/ Mouse HID", "Controller Mode w/o Mouse HID"};
+        String[] options = {"Text Mode", "Controller", "Controller with Mouse HID"};
         builder.setItems(options, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 switch (which) {
                     case 0: // TextMode
                         log("Switching to TEXT mode");
-                        sdk.startMode(tapIdentifier, TapSdk.MODE_TEXT);
+                        sdk.startTextMode(tapIdentifier);
+//                        sdk.startMode(tapIdentifier, TapSdk.MODE_TEXT);
                         break;
+                        
                     case 1: // Controller Mode With Mouse HID
                         log("Switching to CONTROLLER mode with MOUSEHID");
-                        sdk.setMouseHIDEnabledInRawMode(tapIdentifier, true);
-                        sdk.startMode(tapIdentifier, TapSdk.MODE_CONTROLLER);
+//                        sdk.setMouseHIDEnabledInRawMode(tapIdentifier, true);
+//                        sdk.startMode(tapIdentifier, TapSdk.MODE_CONTROLLER_WITH_MOUSEHID);
+                        sdk.startControllerWithMouseHIDMode(tapIdentifier);
                         break;
                     case 2: // Controller Mode Without Mouse HID
                         log("Switching to CONTROLLER mode without MOUSEHID");
-                        sdk.setMouseHIDEnabledInRawMode(tapIdentifier, false);
-                        sdk.startMode(tapIdentifier, TapSdk.MODE_CONTROLLER);
+//                        sdk.setMouseHIDEnabledInRawMode(tapIdentifier, false);
+//                        sdk.startMode(tapIdentifier, TapSdk.MODE_CONTROLLER);
+                        sdk.startControllerMode(tapIdentifier);
                         break;
                 }
             }
@@ -180,7 +185,7 @@ public class MainActivity extends AppCompatActivity {
         List<TapListItem> listItems = new ArrayList<>();
         for (String tapIdentifier: connectedTaps) {
             TapListItem tapListItem = new TapListItem(tapIdentifier, itemOnClickListener);
-            tapListItem.isInControllerMode = sdk.isInMode(tapIdentifier, TapSdk.MODE_CONTROLLER);
+//            tapListItem.isInControllerMode = sdk.isInMode(tapIdentifier, TapSdk.MODE_CONTROLLER);
             listItems.add(tapListItem);
         }
         adapter.updateList(listItems);
@@ -269,7 +274,7 @@ public class MainActivity extends AppCompatActivity {
             TapListItem newItem = new TapListItem(tapIdentifier, itemOnClickListener);
             newItem.tapName = tap.getName();
             newItem.tapFwVer = tap.getFwVer();
-            newItem.isInControllerMode = sdk.isInMode(tapIdentifier, TapSdk.MODE_CONTROLLER);
+//            newItem.isInControllerMode = sdk.isInMode(tapIdentifier, TapSdk.MODE_CONTROLLER);
             adapter.addItem(newItem);
         }
 
@@ -305,17 +310,17 @@ public class MainActivity extends AppCompatActivity {
             adapter.updateFwVer(tapIdentifier, tap.getFwVer());
         }
 
-        @Override
-        public void onControllerModeStarted(@NonNull String tapIdentifier) {
-            log("Controller mode started " + tapIdentifier);
-            adapter.onControllerModeStarted(tapIdentifier);
-        }
-
-        @Override
-        public void onTextModeStarted(@NonNull String tapIdentifier) {
-            log("Text mode started " + tapIdentifier);
-            adapter.onTextModeStarted(tapIdentifier);
-        }
+//        @Override
+//        public void onControllerModeStarted(@NonNull String tapIdentifier) {
+//            log("Controller mode started " + tapIdentifier);
+//            adapter.onControllerModeStarted(tapIdentifier);
+//        }
+//
+//        @Override
+//        public void onTextModeStarted(@NonNull String tapIdentifier) {
+//            log("Text mode started " + tapIdentifier);
+//            adapter.onTextModeStarted(tapIdentifier);
+//        }
 
         @Override
         public void onTapInputReceived(@NonNull String tapIdentifier, int data) {
@@ -330,6 +335,11 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onAirMouseInputReceived(@NonNull String tapIdentifier, @NonNull AirMousePacket data) {
             log(tapIdentifier + " air mouse input received " + data.gesture.getInt());
+        }
+
+        @Override
+        public void onRawSensorInputReceived(@NonNull String tapIdentifier, @NonNull int data) {
+            log(tapIdentifier + " raw sensor input received");
         }
 
         @Override

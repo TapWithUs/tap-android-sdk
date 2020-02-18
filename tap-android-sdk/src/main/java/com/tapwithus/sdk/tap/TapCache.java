@@ -69,6 +69,12 @@ public class TapCache {
         saveToCache(tapCh);
     }
 
+    public void onRawSensorInputSubscribed(@NonNull String identifier) {
+        TapCh tapCh = getFromCache(identifier);
+        tapCh.rawSensorNotification = true;
+        saveToCache(tapCh);
+    }
+
     public @Nullable Tap getCached(@NonNull String identifier) {
         if (isCached(identifier)) {
             TapCh tapCh = getFromCache(identifier);
@@ -88,6 +94,7 @@ public class TapCache {
             case TapNotification: return tapCh.tapNotification;
             case MouseNotification: return tapCh.mouseNotification;
             case AirMouseNotification: return tapCh.airMouseNotification;
+            case RawSensorNotification: return tapCh.rawSensorNotification;
         }
         return false;
     }
@@ -128,6 +135,12 @@ public class TapCache {
             }
         }
 
+        if (FeatureVersionSupport.isFeatureSupported(tapCh.hwVer, tapCh.fwVer, FeatureVersionSupport.FEATURE_RAW_SENSOR)) {
+            if (tapCh.rawSensorNotification == BOOLEAN_NULL_VALUE) {
+                return false;
+            }
+        }
+
         return true;
     }
 
@@ -156,6 +169,7 @@ public class TapCache {
         boolean tapNotification = BOOLEAN_NULL_VALUE;
         boolean mouseNotification = BOOLEAN_NULL_VALUE;
         boolean airMouseNotification = BOOLEAN_NULL_VALUE;
+        boolean rawSensorNotification = BOOLEAN_NULL_VALUE;
 
         TapCh(@NonNull String identifier) {
             this.identifier = identifier;
@@ -171,6 +185,7 @@ public class TapCache {
             this.tapNotification = other.tapNotification;
             this.mouseNotification = other.mouseNotification;
             this.airMouseNotification = other.airMouseNotification;
+            this.rawSensorNotification = other.rawSensorNotification;
         }
     }
 
@@ -182,6 +197,7 @@ public class TapCache {
         FwVer,
         TapNotification,
         MouseNotification,
-        AirMouseNotification
+        AirMouseNotification,
+        RawSensorNotification
     }
 }
