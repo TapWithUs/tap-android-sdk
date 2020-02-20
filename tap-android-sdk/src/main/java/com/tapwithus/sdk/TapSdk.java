@@ -5,9 +5,11 @@ import android.os.Looper;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.util.Log;
-
+import java.util.*;
 import com.tapwithus.sdk.airmouse.AirMousePacket;
 import com.tapwithus.sdk.mode.TapInputMode;
+import com.tapwithus.sdk.mode.RawSensorDataParser;
+import com.tapwithus.sdk.mode.RawSensorData;
 import com.tapwithus.sdk.mouse.MousePacket;
 import com.tapwithus.sdk.bluetooth.TapBluetoothListener;
 import com.tapwithus.sdk.bluetooth.TapBluetoothManager;
@@ -32,6 +34,7 @@ public class TapSdk {
     private static final String TAG = "TapSdk";
 
     public static final int ERR_SUBSCRIBE_MODE = 101;
+    public static final int ERR_HAPTIC = 102;
 
     protected TapBluetoothManager tapBluetoothManager;
     private ListenerManager<TapListener> tapListeners = new ListenerManager<>();
@@ -224,7 +227,7 @@ public class TapSdk {
 //        }
 //    }
 
-    public boolean isAnyTapInAirMouseState() {
+    public boolean isAnyTapInAirGestureState() {
         Set<String> taps = getConnectedTaps();
         boolean result = false;
         for (String tapIdentifier : taps) {
@@ -233,29 +236,41 @@ public class TapSdk {
         return result;
     }
 
+    private int[] generateDurations(int[] durations) {
+        int[] newDurations = new int[18];
+
+        int minLength = Math.min(durations.length, newDurations.length);
+
+        for (int i = 0; i < minLength; i++) {
+            int v = durations[i];
+            if (v < 10) {
+                v = 10;
+            }
+            if (v > 2500) {
+                v = 2500;
+            }
+            v /= 10;
+            newDurations[i] = v;
+        }
+
+        return newDurations;
+    }
+
+    public void vibrate(@NonNull String tapIdentifier, int[] durations) {
+        if (!isFeatureSupported(tapIdentifier, FeatureVersionSupport.FEATURE_HAPTIC)) {
+            notifyOnError(tapIdentifier, ERR_HAPTIC, "FEATURE_HAPTIC not supported");
+            return;
+        }
+        tapBluetoothManager.sendHapticPacket(tapIdentifier, generateDurations(durations));
+    }
+
     public boolean isTapInAirMouseState(String tapIdentifier)
     {
         return tapsInAirMouseState.contains(tapIdentifier);
     }
 
-    // Deprecated.
-//    public void readAllTapsState() {
-//        Set<String> taps = getConnectedTaps();
-//        for (String tapIdentifier : taps) {
-//            tapBluetoothManager.readTapState(tapIdentifier);
-//        }
-//    }
-//
-//    public void readTapState(String tapIdentifier)
-//    {
-//
-//        if (cache.isCached(tapIdentifier) && isFeatureSupported(tapIdentifier, FeatureVersionSupport.FEATURE_AIR_MOUSE)) {
-//            tapBluetoothManager.readTapState(tapIdentifier);
-//        }
-//
-//    }
 
-    public boolean isAnyTapSupportsAirMouse() {
+    public boolean isAnyTapSupportsAirGesture() {
         boolean supported = false;
         Set<String> taps = getConnectedTaps();
         for (String tapIdentifier : taps) {
@@ -287,7 +302,7 @@ public class TapSdk {
         }
     }
 
-    public void startMode(String tapIdentifier, TapInputMode mode) {
+    private void startMode(String tapIdentifier, TapInputMode mode) {
         if (!mode.isValid()) {
             notifyOnError(tapIdentifier, ERR_SUBSCRIBE_MODE, "Invalid mode passed");
             return;
@@ -340,7 +355,7 @@ public class TapSdk {
     }
 
     public void startControllerWithMouseHIDMode(@NonNull String tapIdentifier) {
-        log("Starting Controller with MouseHID mode - " + tapIdentifier);
+
         if (!isFeatureSupported(tapIdentifier, FeatureVersionSupport.FEATURE_CONTROLLER_WITH_MOUSEHID)) {
             logError("FEATURE_CONTROLLER_WITH_MOUSEHID not supported - " + tapIdentifier + ", Falling back to Controller mode");
             startControllerMode(tapIdentifier);
@@ -352,6 +367,16 @@ public class TapSdk {
 //        tapBluetoothManager.startControllerModeWithMouseHID(tapIdentifier);
     }
 
+    public void startRawSensorMode(@NonNull String tapIdentifier, byte deviceAccelerometerSensitivity, byte imuGyroSensitivity, byte imuAccelerometerSensitivity) {
+
+        if (!isFeatureSupported(tapIdentifier, FeatureVersionSupport.FEATURE_RAW_SENSOR)) {
+            logError("FEATURE_RAW_SENSOR not supported - " + tapIdentifier);
+            return;
+        }
+        log("Starting Raw Sensor mode - " + tapIdentifier);
+        startMode(tapIdentifier, TapInputMode.rawSensorData(deviceAccelerometerSensitivity, imuGyroSensitivity, imuAccelerometerSensitivity));
+
+    }
 //    private boolean isModeValid(int mode) {
 //        return mode >= 1 && mode >> NUM_OF_MODES <= 0;
 //    }
@@ -414,6 +439,13 @@ public class TapSdk {
 
         handleCloseReset();
     }
+
+//    private RawSensorDataParserListener rawSensorListener = new RawSensorDataParserListener() {
+//        @Override
+//        public void onRawSensorDataReceived(@NonNull String tapIdentifier, RawSensorData rsData) {
+//            notifyOnRawSensorDataReceieved(tapIdentifier, rsData);
+//        }
+//    };
 
     @SuppressWarnings("FieldCanBeLocal")
     private TapBluetoothListener tapBluetoothListener = new TapBluetoothListener() {
@@ -494,6 +526,24 @@ public class TapSdk {
             handleEmission(tapAddress);
         }
 
+        @Override
+        public void onRawSensorDataReceieved(@NonNull String tapAddress, byte[] data) {
+            if (isPaused || isClosing) {
+                return;
+            }
+            if (modeSubscribers.containsKey(tapAddress)) {
+                TapInputMode mode = modeSubscribers.get(tapAddress);
+                ArrayList<RawSensorData> rsData = RawSensorDataParser.parseWhole(tapAddress, data, mode.getDeviceAccelerometerSensitivity(), mode.getImuGyroSensitivity(), mode.getImuAccelerometerSensitivity());
+
+
+                Iterator<RawSensorData> it = rsData.iterator();
+                while (it.hasNext())
+                    notifyOnRawSensorDataReceieved(tapAddress, it.next());
+
+
+            }
+        }
+
 //        @Override
 //        public void onControllerModeStarted(@NonNull String tapAddress) {
 ////            if (notifyOnConnectedAfterControllerModeStarted.contains(tapAddress)) {
@@ -551,6 +601,18 @@ public class TapSdk {
 
         @Override
         public void onTapInputReceived(@NonNull String tapAddress, int data) {
+            if (isTapInAirMouseState(tapAddress)) {
+                if (data == 2) {
+                    AirMousePacket packet = new AirMousePacket(new byte[] { AirMousePacket.AIR_MOUSE_GESTURE_INDEX_TO_THUMB_TOUCH, 0});
+                    notifyOnAirMouseInputReceived(tapAddress, packet);
+                    return;
+                } else if (data == 4) {
+                    AirMousePacket packet = new AirMousePacket(new byte[] { AirMousePacket.AIR_MOUSE_GESTURE_MIDDLE_TO_THUMB_TOUCH, 0});
+                    notifyOnAirMouseInputReceived(tapAddress, packet);
+                    return;
+                }
+                return;
+            }
             notifyOnTapInputReceived(tapAddress, data);
         }
 
@@ -562,11 +624,6 @@ public class TapSdk {
         @Override
         public void onAirMouseInputReceived(@NonNull String tapAddress, @NonNull AirMousePacket data) {
             notifyOnAirMouseInputReceived(tapAddress, data);
-        }
-
-        @Override
-        public void onRawSensorInputReceived(@NonNull String tapAddress) {
-            notifyOnRawSensorInputReceived(tapAddress, 3);
         }
 
         @Override
@@ -584,6 +641,8 @@ public class TapSdk {
             notifyOnError(tapAddress, code, description);
         }
     };
+
+
 
     private void notifyOnBluetoothTurnedOn() {
         tapListeners.notifyAll(new NotifyAction<TapListener>() {
@@ -685,6 +744,15 @@ public class TapSdk {
         });
     }
 
+    private void notifyOnRawSensorDataReceieved(@NonNull final String tapIdentifier, final RawSensorData rsData) {
+        tapListeners.notifyAll(new NotifyAction<TapListener>() {
+            @Override
+            public void onNotify(TapListener listener) {
+                listener.onRawSensorInputReceived(tapIdentifier, rsData);
+            }
+        });
+    }
+
     private void notifyOnMouseInputReceived(@NonNull final String tapIdentifier, @NonNull final MousePacket data) {
         tapListeners.notifyAll(new NotifyAction<TapListener>() {
             @Override
@@ -703,14 +771,14 @@ public class TapSdk {
         });
     }
 
-    private void notifyOnRawSensorInputReceived(@NonNull final String tapIdentifier, @NonNull final int data) {
-        tapListeners.notifyAll(new NotifyAction<TapListener>() {
-            @Override
-            public void onNotify(TapListener listener) {
-                listener.onRawSensorInputReceived(tapIdentifier, data);
-            }
-        });
-    }
+//    private void notifyOnRawSensorInputReceived(@NonNull final String tapIdentifier, @NonNull final int data) {
+//        tapListeners.notifyAll(new NotifyAction<TapListener>() {
+//            @Override
+//            public void onNotify(TapListener listener) {
+//                listener.onRawSensorInputReceived(tapIdentifier, data);
+//            }
+//        });
+//    }
 
     private void notifyOnTapChangedState(@NonNull final String tapIdentifier, @NonNull final int state) {
         tapListeners.notifyAll(new NotifyAction<TapListener>() {

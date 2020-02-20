@@ -1,0 +1,8 @@
+package com.tapwithus.sdk.mode;
+
+import android.support.annotation.NonNull;
+
+public interface RawSensorDataParserListener {
+    void onRawSensorDataReceived(@NonNull String tapIdentifier, RawSensorData data);
+
+}

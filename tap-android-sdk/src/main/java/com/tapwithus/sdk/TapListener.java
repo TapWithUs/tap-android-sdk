@@ -4,7 +4,7 @@ import android.support.annotation.NonNull;
 
 import com.tapwithus.sdk.airmouse.AirMousePacket;
 import com.tapwithus.sdk.mouse.MousePacket;
-
+import com.tapwithus.sdk.mode.RawSensorData;
 public interface TapListener {
     void onBluetoothTurnedOn();
     void onBluetoothTurnedOff();
@@ -13,13 +13,10 @@ public interface TapListener {
     void onTapDisconnected(@NonNull String tapIdentifier);
     void onTapResumed(@NonNull String tapIdentifier);
     void onTapChanged(@NonNull String tapIdentifier);
-//    void onControllerModeStarted(@NonNull String tapIdentifier);
-//    void onTextModeStarted(@NonNull String tapIdentifier);
-//    void onControllerWithMouseHIDModeStarted(@NonNull String tapIdentifier);
     void onTapInputReceived(@NonNull String tapIdentifier, int data);
     void onMouseInputReceived(@NonNull String tapIdentifier, @NonNull MousePacket data);
     void onAirMouseInputReceived(@NonNull String tapIdentifier, @NonNull AirMousePacket data);
-    void onRawSensorInputReceived(@NonNull String tapIdentifier, @NonNull int data);
+    void onRawSensorInputReceived(@NonNull String tapIdentifier, @NonNull RawSensorData rsData);
     void onTapChangedState(@NonNull String tapIdentifier, @NonNull int state);
     void onError(@NonNull String tapIdentifier, int code, @NonNull String description);
 }

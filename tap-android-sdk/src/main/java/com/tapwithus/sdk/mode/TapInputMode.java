@@ -51,6 +51,19 @@ public class TapInputMode {
 
     }
 
+
+    public byte getDeviceAccelerometerSensitivity() {
+        return this.deviceAccelerometer;
+    }
+
+    public byte getImuGyroSensitivity() {
+        return this.imuGyro;
+    }
+
+    public byte getImuAccelerometerSensitivity() {
+        return this.imuAccelerometer;
+    }
+
     public boolean isValid() {
         return Arrays.binarySearch(TapInputMode.ALL_MODES, this.type) >= 0;
 
@@ -69,11 +82,11 @@ public class TapInputMode {
         return new TapInputMode(CONTROLLER_WITH_MOUSEHID);
     }
 
-    public static TapInputMode rawSensorData(byte deviceAccelerometer, byte imuAccelerometer, byte imuGyro) {
+    public static TapInputMode rawSensorData(byte deviceAccelerometer, byte imuGyro, byte imuAccelerometer) {
         return new TapInputMode(
                 SensorSensitivity.normDeviceAccel(deviceAccelerometer),
-                SensorSensitivity.normImuAccel(imuAccelerometer),
-                SensorSensitivity.normImuGyro(imuGyro));
+                SensorSensitivity.normImuGyro(imuGyro),
+                SensorSensitivity.normImuAccel(imuAccelerometer));
     }
 
     public byte[] getBytes() {

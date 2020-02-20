@@ -7,7 +7,7 @@ import com.tapwithus.sdk.ListenerManager;
 import com.tapwithus.sdk.NotifyAction;
 import com.tapwithus.sdk.airmouse.AirMousePacket;
 import com.tapwithus.sdk.mouse.MousePacket;
-
+import com.tapwithus.sdk.haptic.HapticPacket;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Set;
@@ -34,6 +34,7 @@ public class TapBluetoothManager {
     protected static final UUID NAME = UUID.fromString("C3FF0003-1D8B-40FD-A56F-C7BD5D0F3370");
     protected static final UUID MOUSE_DATA = UUID.fromString("C3FF0006-1D8B-40FD-A56F-C7BD5D0F3370");
     protected static final UUID AIR_MOUSE_DATA = UUID.fromString("C3FF000A-1D8B-40FD-A56F-C7BD5D0F3370");
+    protected static final UUID HAPTIC = UUID.fromString("C3FF0009-1D8B-40FD-A56F-C7BD5D0F3370");
 
     protected BluetoothManager bluetoothManager;
     private ListenerManager<TapBluetoothListener> tapBluetoothListeners = new ListenerManager<>();
@@ -100,6 +101,30 @@ public class TapBluetoothManager {
 
     public void startMode(@NonNull String tapAddress, byte[] data) {
         bluetoothManager.writeCharacteristic(tapAddress, NUS, RX, data);
+    }
+
+    public void sendHapticPacket(String tapAddress, int[] durations) {
+        HapticPacket p = new HapticPacket(new byte[] { });
+        p.vOn1.set(durations[0]);
+        p.vOff1.set(durations[1]);
+        p.vOn2.set(durations[2]);
+        p.vOff2.set(durations[3]);
+        p.vOn3.set(durations[4]);
+        p.vOff3.set(durations[5]);
+        p.vOn4.set(durations[6]);
+        p.vOff4.set(durations[7]);
+        p.vOn5.set(durations[8]);
+        p.vOff5.set(durations[9]);
+        p.vOn6.set(durations[10]);
+        p.vOff6.set(durations[11]);
+        p.vOn7.set(durations[12]);
+        p.vOff7.set(durations[13]);
+        p.vOn8.set(durations[14]);
+        p.vOff8.set(durations[15]);
+        p.vOn9.set(durations[16]);
+        p.vOff9.set(durations[17]);
+        log("Sending Haptic packet - " + Arrays.toString(p.getData()));
+        bluetoothManager.writeCharacteristic(tapAddress, TAP, HAPTIC, p.getData());
     }
 
 //    public void startControllerMode(@NonNull String tapAddress) {
@@ -296,7 +321,7 @@ public class TapBluetoothManager {
 
         @Override
         public void onNotificationReceived(@NonNull String deviceAddress, @NonNull UUID characteristic, @NonNull byte[] data) {
-            log("Notification Received " + Arrays.toString(data));
+//            log("Notification Received " + Arrays.toString(data));
 
             if (characteristic.equals(TAP_DATA)) {
                 if (data[0] != 0) {
@@ -314,7 +339,7 @@ public class TapBluetoothManager {
                     notifyOnAirMouseInputReceived(deviceAddress, airMousePacket);
                 }
             } else if (characteristic.equals(TX)) {
-                notifyOnRawSensorInputReceived(deviceAddress, 3);
+                notifyOnRawSensorInputReceived(deviceAddress, data);
             }
         }
 
@@ -522,11 +547,11 @@ public class TapBluetoothManager {
         });
     }
 
-    private void notifyOnRawSensorInputReceived(@NonNull final String tapAddress, @NonNull final int data) {
+    private void notifyOnRawSensorInputReceived(@NonNull final String tapAddress, @NonNull final byte[] data) {
         tapBluetoothListeners.notifyAll(new NotifyAction<TapBluetoothListener>() {
             @Override
             public void onNotify(TapBluetoothListener listener) {
-                listener.onRawSensorInputReceived(tapAddress);
+                listener.onRawSensorDataReceieved(tapAddress, data);
             }
         });
     }

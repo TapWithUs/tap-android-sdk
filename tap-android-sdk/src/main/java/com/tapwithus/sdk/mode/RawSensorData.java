@@ -5,6 +5,8 @@ import android.support.annotation.Nullable;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import android.util.Log;
+
 
 public class RawSensorData {
 
@@ -39,38 +41,69 @@ public class RawSensorData {
         int length = 6;
         boolean onGyroSensitivity = dataType == DataType.IMU;
 
-        while (offset < data.length) {
-            if (offset + length < data.length) {
-                double sens = 0;
-                if (dataType == DataType.IMU) {
-                    if (onGyroSensitivity) {
-                        sens = SensorSensitivity.getImuGyroFactor(imuGyroSens);
-                    } else {
-                        sens = SensorSensitivity.getImuAccelFactor(imuAccelSens);
-                    }
+        while (offset + length - 1 < data.length) {
+            double sens = 0;
+            if (dataType == DataType.IMU) {
+                if (onGyroSensitivity) {
+                    sens = SensorSensitivity.getImuGyroFactor(imuGyroSens);
                 } else {
-                    sens = SensorSensitivity.getDeviceAccelFactor(deviceAccelSens);
+                    sens = SensorSensitivity.getImuAccelFactor(imuAccelSens);
                 }
-
-                if (sens == 0) {
-                    return null;
-                }
-
-                Point3 point = Point3.make(Arrays.copyOfRange(data, offset, offset + length), sens);
-                if (point != null) {
-                    points.add(point);
-                } else {
-                    return null;
-                }
-                onGyroSensitivity = false;
             } else {
+                sens = SensorSensitivity.getDeviceAccelFactor(deviceAccelSens);
+            }
+
+            if (sens == 0) {
                 return null;
             }
+
+            Point3 point = Point3.make(Arrays.copyOfRange(data, offset, offset + length), sens);
+            if (point != null) {
+                points.add(point);
+            } else {
+                Log.d("RawSensorData", "Point is Null!");
+                return null;
+            }
+            onGyroSensitivity = false;
+            offset = offset + 6;
+        }
+        if (dataType == DataType.IMU && points.size() != 2) {
+            return null;
+        } else if (dataType == DataType.Device && points.size() != 5) {
+            return null;
         }
         return new RawSensorData(timestamp, dataType, points.toArray(new Point3[0]));
     }
 
+    public String toString() {
+        String typeString = this.dataType == DataType.IMU ? "IMU" : "DEVICE";
+        String pointsString = "";
+        for (int i=0; i < this.points.length; i++) {
+            pointsString = pointsString + this.points[i].toString();
+            if (i < this.points.length -1) {
+                pointsString = pointsString + ", ";
+            }
+        }
+        return "timestamp: " + this.timestamp + ", type: " + typeString + ", points: " + pointsString;
+    }
 
+    public String rawString(String delimeter) {
+        String typeString = "IMU";
+        if (this.dataType == DataType.Device) {
+            typeString = "DEVICE";
+        }
 
+        String pointsString = "";
+        for (int i=0; i<this.points.length; i++) {
+            pointsString = pointsString + this.points[i].rawString(delimeter);
+
+        }
+        return this.timestamp + delimeter + typeString + delimeter + pointsString;
+    }
+
+    public Point3 getPoint(int index) {
+        if (this.points.length > 0 && index >= 0 && index < this.points.length) {
+            return this.points[index];
+    }
 
 }

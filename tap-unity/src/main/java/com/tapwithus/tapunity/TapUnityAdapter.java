@@ -12,6 +12,7 @@ import com.tapwithus.sdk.airmouse.AirMousePacket;
 import com.tapwithus.sdk.mode.TapInputMode;
 import com.tapwithus.sdk.mouse.MousePacket;
 import com.tapwithus.sdk.tap.Tap;
+import com.tapwithus.sdk.mode.RawSensorData;
 import com.unity3d.player.UnityPlayer;
 
 @SuppressWarnings("unused")
@@ -33,9 +34,10 @@ public class TapUnityAdapter {
     private static final String UNITY_CONTROLLER_MODE_CALLBACK = "onControllerModeStarted";
     private static final String UNITY_TEXT_MODE_CALLBACK = "onTextModeStarted";
     private static final String UNITY_TAP_INPUT_CALLBACK = "onTapInputReceived";
+    private static final String UNITY_RAW_SENSOR_DATA_CALLBACK = "onRawSensorDataReceived";
     private static final String UNITY_MOUSE_INPUT_CALLBACK = "onMouseInputReceived";
     private static final String UNITY_AIRMOUSE_INPUT_CALLBACK = "onAirGestureInputReceived";
-    private static final String UNITY_TAP_CHANGED_STATE_CALLBACK = "onTapChangedState";
+    private static final String UNITY_TAP_CHANGED_STATE_CALLBACK = "onTapChangedAirGestureState";
     private static final String UNITY_CONNECTED_TAPS_CALLBACK = "onConnectedTapsReceived";
     private static final String UNITY_GET_MODE_CALLBACK = "onModeReceived";
     private static final String UNITY_ERROR_CALLBACK = "onError";
@@ -82,27 +84,53 @@ public class TapUnityAdapter {
 //        tapSdk.setMouseHIDEnabledInRawModeForAllTaps(enable);
 //    }
 
-    public boolean isAnyTapInAirMouseState() {
-        return tapSdk.isAnyTapInAirMouseState();
+    public boolean isAnyTapInAirGestureState() {
+        return tapSdk.isAnyTapInAirGestureState();
     }
 
-    public boolean isAnyTapSupportsAirMouse() {
-        return tapSdk.isAnyTapSupportsAirMouse();
+    public boolean isAnyTapSupportsAirGesture() {
+        return tapSdk.isAnyTapSupportsAirGesture();
     }
 
     public void startControllerMode(@NonNull String tapIdentifier) {
-        tapSdk.startMode(tapIdentifier, TapInputMode.controller());
+        tapSdk.startControllerMode(tapIdentifier);
+//        tapSdk.startMode(tapIdentifier, TapInputMode.controller());
 //        tapSdk.startMode(tapIdentifier, TapSdk.MODE_CONTROLLER);
     }
 
     public void startTextMode(@NonNull String tapIdentifier) {
-        tapSdk.startMode(tapIdentifier, TapInputMode.text());
+        tapSdk.startTextMode(tapIdentifier);
+//        tapSdk.startMode(tapIdentifier, TapInputMode.text());
 //        tapSdk.startMode(tapIdentifier, TapSdk.MODE_TEXT);
     }
 
     public void startControllerWithMouseHIDMode(@NonNull String tapIdentifier) {
-        tapSdk.startMode(tapIdentifier, TapInputMode.controller());
+        tapSdk.startControllerWithMouseHIDMode(tapIdentifier);
+//        tapSdk.startMode(tapIdentifier, TapInputMode.controller());
+
 //        tapSdk.startMode(tapIdentifier, TapSdk.MODE_CONTROLLER_WITH_MOUSEHID);
+    }
+
+    public void startRawSensorMode(@NonNull String tapIdentifier, int deviceAccelerometerSensitivity, int imuGyroSensitivity, int imuAccelerometerSensitivity) {
+        tapSdk.startRawSensorMode(tapIdentifier,(byte)deviceAccelerometerSensitivity, (byte)imuGyroSensitivity, (byte)imuAccelerometerSensitivity);
+    }
+
+    public void vibrate(@NonNull String tapIdentifier, @NonNull String durations, @NonNull String delimiter) {
+        String newDelimiter = "\\" + delimiter;
+        String[] dursSplit = durations.split(newDelimiter);
+        int[] durs= new int[dursSplit.length];
+        for (int i=0; i<dursSplit.length; i++) {
+            try {
+                int converted = Integer.parseInt(dursSplit[i].trim());
+                if (i < durs.length) {
+                    durs[i] = converted;
+                }
+            } catch (Exception e) {
+                return;
+            }
+        }
+        tapSdk.vibrate(tapIdentifier, durs);
+
     }
 
     public void getConnectedTaps() {
@@ -208,15 +236,17 @@ public class TapUnityAdapter {
         }
 
         @Override
+        public void onRawSensorInputReceived(@NonNull String tapIdentifier,@NonNull RawSensorData rsData) {
+            log(tapIdentifier = "TAP RawSensor Data received" + rsData.toString());
+            String args = tapIdentifier + UNITY_ARGS_SEPARATOR + rsData.rawString("^");
+            UnityPlayer.UnitySendMessage(UNITY_GAME_OBJECT, UNITY_RAW_SENSOR_DATA_CALLBACK, args);
+        }
+
+        @Override
         public void onTapChangedState(@NonNull String tapIdentifier, @NonNull int state) {
             log(tapIdentifier + " TAP changed state " + state);
             String args = tapIdentifier + UNITY_ARGS_SEPARATOR + state;
             UnityPlayer.UnitySendMessage(UNITY_GAME_OBJECT, UNITY_TAP_CHANGED_STATE_CALLBACK, args);
-        }
-
-        @Override
-        public void onRawSensorInputReceived(@NonNull String tapIdentifier, @NonNull int data) {
-
         }
 
         @Override

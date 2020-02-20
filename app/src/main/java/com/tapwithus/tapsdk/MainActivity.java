@@ -1,6 +1,7 @@
 package com.tapwithus.tapsdk;
 
 import android.content.DialogInterface;
+import android.nfc.Tag;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AlertDialog;
@@ -16,11 +17,15 @@ import com.tapwithus.sdk.TapListener;
 import com.tapwithus.sdk.TapSdk;
 import com.tapwithus.sdk.TapSdkFactory;
 import com.tapwithus.sdk.airmouse.AirMousePacket;
+import com.tapwithus.sdk.mode.RawSensorData;
+import com.tapwithus.sdk.mode.Point3;
 import com.tapwithus.sdk.mode.TapInputMode;
 import com.tapwithus.sdk.mouse.MousePacket;
 import com.tapwithus.sdk.tap.Tap;
 
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 import java.util.Set;
 
@@ -31,11 +36,15 @@ public class MainActivity extends AppCompatActivity {
     private boolean startWithControllerMode = false;
     private String lastConnectedTapAddress = "";
 
+    private int imuCounter;
+    private int devCounter;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
+        imuCounter = 0;
+        devCounter = 0;
         log("onCreate");
 
         sdk = TapSdkFactory.getDefault(this);
@@ -102,6 +111,10 @@ public class MainActivity extends AppCompatActivity {
 //                        }
 //                    }
 //            );
+//
+
+
+        sdk.vibrate(item.tapIdentifier, new int[] { 500,100,500});
         askModeDialog(item.tapIdentifier);
 
 
@@ -120,7 +133,7 @@ public class MainActivity extends AppCompatActivity {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Change TAP Mode");
 
-        String[] options = {"Text Mode", "Controller", "Controller with Mouse HID"};
+        String[] options = {"Text Mode", "Controller", "Controller with Mouse HID", "Raw Sensor"};
         builder.setItems(options, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
@@ -130,7 +143,7 @@ public class MainActivity extends AppCompatActivity {
                         sdk.startTextMode(tapIdentifier);
 //                        sdk.startMode(tapIdentifier, TapSdk.MODE_TEXT);
                         break;
-                        
+
                     case 1: // Controller Mode With Mouse HID
                         log("Switching to CONTROLLER mode with MOUSEHID");
 //                        sdk.setMouseHIDEnabledInRawMode(tapIdentifier, true);
@@ -143,6 +156,9 @@ public class MainActivity extends AppCompatActivity {
 //                        sdk.startMode(tapIdentifier, TapSdk.MODE_CONTROLLER);
                         sdk.startControllerMode(tapIdentifier);
                         break;
+                    case 3:
+                        log("Switching to RAW SENSOR MODE");
+                        sdk.startRawSensorMode(tapIdentifier, (byte)0,(byte)0,(byte)0);
                 }
             }
         });
@@ -338,8 +354,31 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @Override
-        public void onRawSensorInputReceived(@NonNull String tapIdentifier, @NonNull int data) {
-            log(tapIdentifier + " raw sensor input received");
+        public void onRawSensorInputReceived(@NonNull String tapIdentifier,@NonNull RawSensorData rsData) {
+            //RawSensorData Object has a timestamp, dataType and an array points(x,y,z).
+            if (rsData .dataType == RawSensorData.DataType.Device) {
+                // Fingers accelerometer.
+                // Each point in array represents the accelerometer value of a finger (thumb, index, middle, ring, pinky).
+                Point3 thumb = rsData.getPoint(RawSensorData.iDEV_INDEX);
+                if (thumb != null) {
+                    double x = thumb.x;
+                    double y = thumb.y;
+                    double z = thumb.z;
+                }
+                // Etc... use indexes: RawSensorData.iDEV_THUMB, RawSensorData.iDEV_INDEX, RawSensorData.iDEV_MIDDLE, RawSensorData.iDEV_RING, RawSensorData.iDEV_PINKY
+            } else if (data.dataType == RawSensorData.DataType.IMU) {
+                // Refers to an additional accelerometer on the Thumb sensor and a Gyro (placed on the thumb unit as well).
+                Point3 gyro = rsData.getPoint(RawSensorData.iIMU_GYRO);
+                if (point3 != null) {
+                    double x = gyro.x;
+                    double y = gyro.y;
+                    double z = gyro.z;
+                }
+                // Etc... use indexes: RawSensorData.iIMU_GYRO, RawSensorData.iIMU_ACCELEROMETER
+            }
+            // -------------------------------------------------
+            // -- Please refer readme.md for more information --
+            // -------------------------------------------------
         }
 
         @Override
