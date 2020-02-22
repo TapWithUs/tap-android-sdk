@@ -223,6 +223,10 @@ public void onRawSensorInputReceived(@NonNull String tapIdentifier,@NonNull RawS
     }
 }
 ```
+
+[For more information about raw sensor mode click here](https://tapwithus.atlassian.net/wiki/spaces/TD/pages/792002574/Tap+Strap+Raw+Sensors+Mode)
+
+
 Example app
 ===========
 The Android Studio project contains an example app where you can see how to use some of the features of `TapSdk`.
