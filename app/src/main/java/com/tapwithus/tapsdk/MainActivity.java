@@ -366,10 +366,10 @@ public class MainActivity extends AppCompatActivity {
                     double z = thumb.z;
                 }
                 // Etc... use indexes: RawSensorData.iDEV_THUMB, RawSensorData.iDEV_INDEX, RawSensorData.iDEV_MIDDLE, RawSensorData.iDEV_RING, RawSensorData.iDEV_PINKY
-            } else if (data.dataType == RawSensorData.DataType.IMU) {
+            } else if (rsData.dataType == RawSensorData.DataType.IMU) {
                 // Refers to an additional accelerometer on the Thumb sensor and a Gyro (placed on the thumb unit as well).
                 Point3 gyro = rsData.getPoint(RawSensorData.iIMU_GYRO);
-                if (point3 != null) {
+                if (gyro != null) {
                     double x = gyro.x;
                     double y = gyro.y;
                     double z = gyro.z;

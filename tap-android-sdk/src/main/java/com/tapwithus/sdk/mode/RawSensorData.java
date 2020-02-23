@@ -96,6 +96,9 @@ public class RawSensorData {
         String pointsString = "";
         for (int i=0; i<this.points.length; i++) {
             pointsString = pointsString + this.points[i].rawString(delimeter);
+            if (i < this.points.length-1) {
+                pointsString = pointsString + delimeter;
+            }
 
         }
         return this.timestamp + delimeter + typeString + delimeter + pointsString;
@@ -104,6 +107,9 @@ public class RawSensorData {
     public Point3 getPoint(int index) {
         if (this.points.length > 0 && index >= 0 && index < this.points.length) {
             return this.points[index];
+        } else {
+            return null;
+        }
     }
 
 }

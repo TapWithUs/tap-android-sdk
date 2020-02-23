@@ -55,6 +55,6 @@ public class Point3 {
     }
 
     public String rawString(String delimeter) {
-        return this.x + delimeter + this.y + delimeter + this.z + delimeter;
+        return this.x + delimeter + this.y + delimeter + this.z;
     }
 }
