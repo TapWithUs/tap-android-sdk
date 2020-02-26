@@ -115,6 +115,18 @@ public class TapUnityAdapter {
         tapSdk.startRawSensorMode(tapIdentifier,(byte)deviceAccelerometerSensitivity, (byte)imuGyroSensitivity, (byte)imuAccelerometerSensitivity);
     }
 
+    public void setDefaultControllerMode(boolean apply) {
+        tapSdk.setDefaultMode(TapInputMode.controller(), apply);
+    }
+
+    public void setDefaultTextMode(boolean apply) {
+        tapSdk.setDefaultMode(TapInputMode.text(), apply);
+    }
+
+    public void setDefaultControllerWithMouseHIDMode(boolean apply) {
+        tapSdk.setDefaultMode(TapInputMode.controllerWithMouseHID(), apply);
+    }
+
     public void vibrate(@NonNull String tapIdentifier, @NonNull String durations, @NonNull String delimiter) {
         String newDelimiter = "\\" + delimiter;
         String[] dursSplit = durations.split(newDelimiter);
