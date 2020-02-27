@@ -145,16 +145,17 @@ public class MainActivity extends AppCompatActivity {
                         break;
 
                     case 1: // Controller Mode With Mouse HID
-                        log("Switching to CONTROLLER mode with MOUSEHID");
+                        log("Switching to CONTROLLER mode without MOUSEHID");
 //                        sdk.setMouseHIDEnabledInRawMode(tapIdentifier, true);
 //                        sdk.startMode(tapIdentifier, TapSdk.MODE_CONTROLLER_WITH_MOUSEHID);
-                        sdk.startControllerWithMouseHIDMode(tapIdentifier);
+                        sdk.startControllerMode(tapIdentifier);
                         break;
                     case 2: // Controller Mode Without Mouse HID
-                        log("Switching to CONTROLLER mode without MOUSEHID");
+                        log("Switching to CONTROLLER mode with MOUSEHID");
 //                        sdk.setMouseHIDEnabledInRawMode(tapIdentifier, false);
 //                        sdk.startMode(tapIdentifier, TapSdk.MODE_CONTROLLER);
-                        sdk.startControllerMode(tapIdentifier);
+
+                        sdk.startControllerWithMouseHIDMode(tapIdentifier);
                         break;
                     case 3:
                         log("Switching to RAW SENSOR MODE");
@@ -341,6 +342,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onTapInputReceived(@NonNull String tapIdentifier, int data) {
             adapter.updateTapInput(tapIdentifier, data);
+            log("TapInputReceived - " + tapIdentifier + ", " + data);
         }
 
         @Override

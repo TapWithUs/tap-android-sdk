@@ -94,21 +94,14 @@ public class TapUnityAdapter {
 
     public void startControllerMode(@NonNull String tapIdentifier) {
         tapSdk.startControllerMode(tapIdentifier);
-//        tapSdk.startMode(tapIdentifier, TapInputMode.controller());
-//        tapSdk.startMode(tapIdentifier, TapSdk.MODE_CONTROLLER);
     }
 
     public void startTextMode(@NonNull String tapIdentifier) {
         tapSdk.startTextMode(tapIdentifier);
-//        tapSdk.startMode(tapIdentifier, TapInputMode.text());
-//        tapSdk.startMode(tapIdentifier, TapSdk.MODE_TEXT);
     }
 
     public void startControllerWithMouseHIDMode(@NonNull String tapIdentifier) {
         tapSdk.startControllerWithMouseHIDMode(tapIdentifier);
-//        tapSdk.startMode(tapIdentifier, TapInputMode.controller());
-
-//        tapSdk.startMode(tapIdentifier, TapSdk.MODE_CONTROLLER_WITH_MOUSEHID);
     }
 
     public void startRawSensorMode(@NonNull String tapIdentifier, int deviceAccelerometerSensitivity, int imuGyroSensitivity, int imuAccelerometerSensitivity) {
