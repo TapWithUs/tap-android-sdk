@@ -18,7 +18,7 @@ public class GattExecutor implements OnCompletionListener<Object>, OnErrorListen
 
     private final BluetoothGatt gatt;
     private final String deviceAddress;
-    private static Queue<GattOperation> operations = new LinkedBlockingDeque<>();
+    private Queue<GattOperation> operations = new LinkedBlockingDeque<>();
     private GattOperation currentOperation;
 
     private boolean isRunning = false;

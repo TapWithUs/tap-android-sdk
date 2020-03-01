@@ -23,7 +23,7 @@ public class CharacteristicReadOperation extends CharacteristicOperation {
     public void onExecute(@NonNull BluetoothGatt gatt) {
         BluetoothGattCharacteristic c = extractCharacteristic(gatt);
         if (c == null) {
-            postOnError(ErrorStrings.NO_CHARACTERISTIC);
+            postOnError(ErrorStrings.NO_CHARACTERISTIC + ": " + this.characteristic.toString());
             return;
         }
 

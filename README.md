@@ -29,12 +29,16 @@ TapSdk sdk = new TapSdk(tapBluetoothManager);
 
 Key features
 ============
-##### Controller Mode & Text Mode
+##### Input Modes
 As stated in the official [Tap BLE API Documentation](https://www.tapwithus.com/api), once you turn ON the TAP device, by default, it will be booted into Text Mode, meaning that the TAP device functions as a bluetooth keyboard, every recognized tap will be mapped to a letter, and __no input data will be sent to the SDK__.
 
 When using the SDK, it is required to get the input data for a specific TAP device. In order to achieve this goal, after a connection with the TAP been established, we need to switch the TAP device to Controller Mode. In addition, it is important we switch back to Text Mode once the application goes to background, so the regular TAP behaviour will be restored.
 
 To simplify the process TAP SDK will perform the needed actions in order to correctly connect and switch between Modes _automatically_, __so you don't have to.__
+
+Two additional modes to Text and Controller :
+Controller with Mouse HID: Behaves as a controller, but also allow the TAP to control the mouse cursor).
+Raw Sensor Mode: Streams raw sensor data (from Gyro and Accelerometer sensors on TAP). More or that later... 
 
 What now?
 =========
@@ -54,16 +58,17 @@ Registering TapListener
 public interface TapListener {
     void onBluetoothTurnedOn();
     void onBluetoothTurnedOff();
-    void onTapStartConnecting(String tapIdentifier);
-    void onTapConnected(String tapIdentifier);
-    void onTapDisconnected(String tapIdentifier);
-    void onTapResumed(String tapIdentifier);
-    void onTapChanged(String tapIdentifier);
-    void onControllerModeStarted(String tapIdentifier);
-    void onTextModeStarted(String tapIdentifier);
-    void onTapInputReceived(String tapIdentifier, int data);
-    void onMouseInputReceived(String tapIdentifier, MousePacket data);
-    void onError(String tapIdentifier, int code, String description);
+    void onTapStartConnecting(@NonNull String tapIdentifier);
+    void onTapConnected(@NonNull String tapIdentifier);
+    void onTapDisconnected(@NonNull String tapIdentifier);
+    void onTapResumed(@NonNull String tapIdentifier);
+    void onTapChanged(@NonNull String tapIdentifier);
+    void onTapInputReceived(@NonNull String tapIdentifier, int data);
+    void onMouseInputReceived(@NonNull String tapIdentifier, @NonNull MousePacket data);
+    void onAirMouseInputReceived(@NonNull String tapIdentifier, @NonNull AirMousePacket data);
+    void onRawSensorInputReceived(@NonNull String tapIdentifier, @NonNull RawSensorData rsData);
+    void onTapChangedState(@NonNull String tapIdentifier, @NonNull int state);
+    void onError(@NonNull String tapIdentifier, int code, @NonNull String description);
 }
 ```
 Just implement it and pass it to `TapSdk` class by calling `sdk.registerTapListener(tapListener)`.
@@ -93,7 +98,13 @@ TapSdk API
 &nbsp;
 &nbsp;
 #### `void enableAutoSetControllerModeOnConnection() & void disableAutoSetControllerModeOnConnection()`
-> As described in the 'Key features' section, the default `TapSdk` behaviour is to switch the connected TAP device to controller mode once it connected. Calling `disableAutoSetControllerModeOnConnection` method will disable this functionality, so each connected TAP device will remain in its initial Mode.
+#### ** DEPRECATED ** 
+> Use SetDefaultMode instead:
+```java
+public void setDefaultMode(TapInputMode mode, Boolean applyImmediate)
+```
+This will set the default mode for new connected devices. 
+pass true to applyImmediate if you wish to apply this mode to current connected devices.
 &nbsp;
 &nbsp;
 #### `void enablePauseResumeHandling() & void disablePauseResumeHandling()`
@@ -113,16 +124,36 @@ TapSdk API
 &nbsp;  
 &nbsp;
 #### `void startMode(String tapIdentifier, int mode)`
-> If your application needs to use the TAP device as a regular bluetooth keyboard, you can manually switch to Text mode by passing the relevant TAP identifier and `TapSdk.MODE_TEXT` as the second argument. Or you can manually switch to Controller mode, by passing the relevant TAP identifier and `TapSdk.MODE_CONTROLLER`.
+#### ** DEPRECATED **
+Use the following methods to change TAP mode:
+```java
+public void startControllerMode(@NonNull String tapIdentifier);
+public  void startTextMode(@NonNull String tapIdentifier);
+public void startControllerWithMouseHIDMode(@NonNull String tapIdentifier); 
+public void startRawSensorMode(@NonNull String tapIdentifier, byte deviceAccelerometerSensitivity, byte imuGyroSensitivity, byte imuAccelerometerSensitivity);
+```
 &nbsp;
 &nbsp;
 #### `int getMode(String tapIdentifier)`
-> Retrieve the TAP's Mode. Can be `MODE_TEXT` or `MODE_CONTROLLER`.
+#### ** DEPRECATED **
 &nbsp;
 &nbsp;
 #### `boolean isInMode(String tapIdentifier, int mode)`
+#### ** DEPRECATED **
 > Another helper method to check what Mode is enabled for a specific TAP device.
 &nbsp;  
+&nbsp;
+#### `public void vibrate(@NonNull String tapIdentifier, int[] durations)`
+Send haptic/vibrations to a TAP device.
+durations: An array of durations in the format of haptic, pause, haptic, pause ... You can specify up to 18 elements in this array. The rest will be ignored.
+Each array element is defined in milliseconds.
+When [tapIdentifiers] is null or missing - the mode will be applied to ALL connected TAPs.
+Example:
+```java
+sdk.vibrate(tapIdentifier, new int[] { 500,100,500});
+```
+Will send two 500 milliseconds haptics with a 100 milliseconds pause in the middle.
+&nbsp;
 &nbsp;
 #### `void writeName(String tapIdentifier, String name)`
 > Write TAP device's name.
@@ -145,6 +176,56 @@ fingers\[3\] indicates if the ring finger was tapped.
 fingers\[4\] indicates if the pinky finger was tapped.
 &nbsp;  
 &nbsp;
+
+# Raw Sensor Mode
+In raw sensors mode, the TAP continuously sends raw data from the following sensors:
+1. Five 3-axis accelerometers on each finger ring.
+2. IMU (3-axis accelerometer + gyro) located on the thumb (**for TAP Strap 2 only**).
+
+### To put a TAP into Raw Sensor Mode
+```java
+public void startRawSensorMode(@NonNull String tapIdentifier, byte deviceAccelerometerSensitivity, byte imuGyroSensitivity, byte imuAccelerometerSensitivity);
+
+...
+
+sdk.startRawSensorMode(tapIdentifier, (byte)0,(byte)0,(byte)0);
+```
+When puting TAP in Raw Sensor Mode, the sensitivities of the values can be defined by the developer.
+deviceAccelerometer refers to the sensitivities of the fingers' accelerometers. Range: 1 to 4.
+imuGyro refers to the gyro sensitivity on the thumb's sensor. Range: 1 to 4.
+imuAccelerometer refers to the accelerometer sensitivity on the thumb's sensor. Range: 1 to 5.
+The default value for all sensitivities is 0. 
+
+### Stream callback:
+
+```java
+public void onRawSensorInputReceived(@NonNull String tapIdentifier,@NonNull RawSensorData rsData) {
+    //RawSensorData Object has a timestamp, dataType and an array points(x,y,z).
+    if (rsData .dataType == RawSensorData.DataType.Device) {
+        // Fingers accelerometer.
+        // Each point in array represents the accelerometer value of a finger (thumb, index, middle, ring, pinky).
+        Point3 thumb = rsData.getPoint(RawSensorData.iDEV_INDEX);
+        if (thumb != null) {
+            double x = thumb.x;
+            double y = thumb.y;
+            double z = thumb.z;
+        }
+        // Etc... use indexes: RawSensorData.iDEV_THUMB, RawSensorData.iDEV_INDEX, RawSensorData.iDEV_MIDDLE, RawSensorData.iDEV_RING, RawSensorData.iDEV_PINKY
+    } else if (data.dataType == RawSensorData.DataType.IMU) {
+        // Refers to an additional accelerometer on the Thumb sensor and a Gyro (placed on the thumb unit as well).
+        Point3 gyro = rsData.getPoint(RawSensorData.iIMU_GYRO);
+        if (point3 != null) {
+            double x = gyro.x;
+            double y = gyro.y;
+            double z = gyro.z;
+        }
+        // Etc... use indexes: RawSensorData.iIMU_GYRO, RawSensorData.iIMU_ACCELEROMETER
+    }
+}
+```
+
+[For more information about raw sensor mode click here](https://tapwithus.atlassian.net/wiki/spaces/TD/pages/792002574/Tap+Strap+Raw+Sensors+Mode)
+
 
 Example app
 ===========
