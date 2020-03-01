@@ -2,9 +2,11 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/Github-tap-android-sdk.iml" filepath="$PROJECT_DIR$/Github-tap-android-sdk.iml" />
+      <module fileurl="file://$PROJECT_DIR$/Github-tap-android-sdk.iml" filepath="$PROJECT_DIR$/Github-tap-android-sdk.iml" group="tap-android-sdk" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
-      <module fileurl="file://$PROJECT_DIR$/tap-android-sdk/tap-android-sdk-tap-android-sdk.iml" filepath="$PROJECT_DIR$/tap-android-sdk/tap-android-sdk-tap-android-sdk.iml" />
+      <module fileurl="file://$PROJECT_DIR$/app/tap-android-sdk-app.iml" filepath="$PROJECT_DIR$/app/tap-android-sdk-app.iml" group="tap-android-sdk/app" />
+      <module fileurl="file://$PROJECT_DIR$/tap-android-sdk/tap-android-sdk-tap-android-sdk.iml" filepath="$PROJECT_DIR$/tap-android-sdk/tap-android-sdk-tap-android-sdk.iml" group="tap-android-sdk/tap-android-sdk" />
+      <module fileurl="file://$PROJECT_DIR$/tap-unity/tap-android-sdk-tap-unity.iml" filepath="$PROJECT_DIR$/tap-unity/tap-android-sdk-tap-unity.iml" group="tap-android-sdk/tap-unity" />
       <module fileurl="file://$PROJECT_DIR$/tap-unity/tap-unity.iml" filepath="$PROJECT_DIR$/tap-unity/tap-unity.iml" />
     </modules>
   </component>
