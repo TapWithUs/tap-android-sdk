@@ -1,12 +1,10 @@
 package com.tapwithus.sdk.mode;
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.Arrays;
 import java.util.ArrayList;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.util.Log;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 public class RawSensorDataParser {
 //    private RawSensorDataParserListener listener;
 

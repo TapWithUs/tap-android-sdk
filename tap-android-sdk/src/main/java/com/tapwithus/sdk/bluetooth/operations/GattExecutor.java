@@ -3,16 +3,17 @@ package com.tapwithus.sdk.bluetooth.operations;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 import android.util.Log;
 
 import com.tapwithus.sdk.bluetooth.callbacks.OnCompletionListener;
 import com.tapwithus.sdk.bluetooth.callbacks.OnErrorListener;
+import com.tapwithus.sdk.bluetooth.callbacks.OnNotFoundListener;
 
 import java.util.Queue;
 import java.util.concurrent.LinkedBlockingDeque;
 
-public class GattExecutor implements OnCompletionListener<Object>, OnErrorListener {
+public class GattExecutor implements OnCompletionListener<Object>, OnErrorListener, OnNotFoundListener {
 
     private static final String TAG = "GattExecutor";
 
@@ -35,6 +36,7 @@ public class GattExecutor implements OnCompletionListener<Object>, OnErrorListen
     public GattExecutor addOperation(GattOperation operation) {
         operation.addOnCompletionListener(this);
         operation.addOnErrorListener(this);
+        operation.addOnNotFoundListener(this);
 
         operations.add(operation);
         run();
@@ -91,6 +93,13 @@ public class GattExecutor implements OnCompletionListener<Object>, OnErrorListen
 
         currentOperation.removeOnErrorListener(this);
         isRunning = false;
+    }
+
+    @Override
+    public void onNotFound(String message) {
+        currentOperation.removeOnNotFoundListener(this);
+        isRunning = false;
+        run();
     }
 
     public void clear() {

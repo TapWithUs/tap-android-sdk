@@ -1,7 +1,7 @@
 package com.tapwithus.sdk.tap;
 
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.tapwithus.sdk.FeatureVersionSupport;
 
@@ -12,6 +12,10 @@ public class TapCache {
 
     private static final int INT_NULL_VALUE = -1;
     private static final boolean BOOLEAN_NULL_VALUE = false;
+    private static final String UNAVAILABLE = "Unavailable";
+    private static final int UNAVAILABLE_INT = -2;
+    private static final int TRUE_INT = 1;
+    private static final int FALSE_INT = 0;
 
     private Map<String, TapCh> tapChs = new ConcurrentHashMap<>();
 
@@ -33,6 +37,12 @@ public class TapCache {
         saveToCache(tapCh);
     }
 
+    public void onBatteryUnavailable(@NonNull String identifier) {
+        TapCh tapCh = getFromCache(identifier);
+        tapCh.battery = UNAVAILABLE_INT;
+        saveToCache(tapCh);
+    }
+
     public void onSerialNumberRead(@NonNull String identifier, @NonNull String serialNumber) {
         TapCh tapCh = getFromCache(identifier);
         tapCh.serialNumber = serialNumber;
@@ -51,34 +61,52 @@ public class TapCache {
         saveToCache(tapCh);
     }
 
+    public void onBootloaderVerRead(@NonNull String identifier, @NonNull String bootloaderVer) {
+        TapCh tapCh = getFromCache(identifier);
+        tapCh.bootloaderVer = bootloaderVer;
+        saveToCache(tapCh);
+    }
+
+    public void onBootloaderUnavailable(@NonNull String identifier) {
+        TapCh tapCh = getFromCache(identifier);
+        tapCh.bootloaderVer = UNAVAILABLE;
+        saveToCache(tapCh);
+    }
+
     public void onTapInputSubscribed(@NonNull String identifier) {
         TapCh tapCh = getFromCache(identifier);
-        tapCh.tapNotification = true;
+        tapCh.tapNotification = TRUE_INT;
         saveToCache(tapCh);
     }
 
     public void onMouseInputSubscribed(@NonNull String identifier) {
         TapCh tapCh = getFromCache(identifier);
-        tapCh.mouseNotification = true;
+        tapCh.mouseNotification = TRUE_INT;
         saveToCache(tapCh);
     }
 
     public void onAirMouseInputSubscribed(@NonNull String identifier) {
         TapCh tapCh = getFromCache(identifier);
-        tapCh.airMouseNotification = true;
+        tapCh.airMouseNotification = TRUE_INT;
+        saveToCache(tapCh);
+    }
+
+    public void onAirMouseUnavailable(@NonNull String identifier) {
+        TapCh tapCh = getFromCache(identifier);
+        tapCh.airMouseNotification = UNAVAILABLE_INT;
         saveToCache(tapCh);
     }
 
     public void onRawSensorInputSubscribed(@NonNull String identifier) {
         TapCh tapCh = getFromCache(identifier);
-        tapCh.rawSensorNotification = true;
+        tapCh.rawSensorNotification = TRUE_INT;
         saveToCache(tapCh);
     }
 
     public @Nullable Tap getCached(@NonNull String identifier) {
         if (isCached(identifier)) {
             TapCh tapCh = getFromCache(identifier);
-            return new Tap(identifier, tapCh.name, tapCh.battery, tapCh.serialNumber, tapCh.hwVer, tapCh.fwVer);
+            return new Tap(identifier, tapCh.name, tapCh.battery, tapCh.serialNumber, tapCh.hwVer, tapCh.fwVer, tapCh.bootloaderVer);
         }
         return null;
     }
@@ -91,10 +119,11 @@ public class TapCache {
             case SerialNumber: return tapCh.serialNumber != null;
             case HwVer: return tapCh.hwVer != null;
             case FwVer: return tapCh.fwVer != null;
-            case TapNotification: return tapCh.tapNotification;
-            case MouseNotification: return tapCh.mouseNotification;
-            case AirMouseNotification: return tapCh.airMouseNotification;
-            case RawSensorNotification: return tapCh.rawSensorNotification;
+            case BootloaderVer: return tapCh.bootloaderVer != null;
+            case TapNotification: return tapCh.tapNotification != FALSE_INT;
+            case MouseNotification: return tapCh.mouseNotification != FALSE_INT;
+            case AirMouseNotification: return tapCh.airMouseNotification != FALSE_INT;
+            case RawSensorNotification: return tapCh.rawSensorNotification != FALSE_INT;
         }
         return false;
     }
@@ -109,7 +138,7 @@ public class TapCache {
 
     public void softClear(@NonNull String identifier) {
         TapCh tapCh = getFromCache(identifier);
-        tapCh.tapNotification = BOOLEAN_NULL_VALUE;
+        tapCh.tapNotification = FALSE_INT;
         saveToCache(tapCh);
     }
 
@@ -119,24 +148,24 @@ public class TapCache {
 
     private boolean isCached(TapCh tapCh) {
         if (tapCh.name == null || tapCh.battery == INT_NULL_VALUE || tapCh.serialNumber == null ||
-                tapCh.hwVer == null || tapCh.fwVer == null || tapCh.tapNotification == BOOLEAN_NULL_VALUE) {
+                tapCh.hwVer == null || tapCh.fwVer == null ||  tapCh.bootloaderVer == null || tapCh.tapNotification == FALSE_INT) {
             return false;
         }
 
         if (FeatureVersionSupport.isFeatureSupported(tapCh.hwVer, tapCh.fwVer, FeatureVersionSupport.FEATURE_MOUSE_MODE)) {
-            if (tapCh.mouseNotification == BOOLEAN_NULL_VALUE) {
+            if (tapCh.mouseNotification == FALSE_INT) {
                 return false;
             }
         }
 
         if (FeatureVersionSupport.isFeatureSupported(tapCh.hwVer, tapCh.fwVer, FeatureVersionSupport.FEATURE_AIR_MOUSE)) {
-            if (tapCh.airMouseNotification == BOOLEAN_NULL_VALUE) {
+            if (tapCh.airMouseNotification == FALSE_INT) {
                 return false;
             }
         }
 
         if (FeatureVersionSupport.isFeatureSupported(tapCh.hwVer, tapCh.fwVer, FeatureVersionSupport.FEATURE_RAW_SENSOR)) {
-            if (tapCh.rawSensorNotification == BOOLEAN_NULL_VALUE) {
+            if (tapCh.rawSensorNotification == FALSE_INT) {
                 return false;
             }
         }
@@ -166,10 +195,11 @@ public class TapCache {
         String serialNumber = null;
         String hwVer = null;
         String fwVer = null;
-        boolean tapNotification = BOOLEAN_NULL_VALUE;
-        boolean mouseNotification = BOOLEAN_NULL_VALUE;
-        boolean airMouseNotification = BOOLEAN_NULL_VALUE;
-        boolean rawSensorNotification = BOOLEAN_NULL_VALUE;
+        String bootloaderVer = null;
+        int tapNotification = FALSE_INT;
+        int mouseNotification = FALSE_INT;
+        int airMouseNotification = FALSE_INT;
+        int rawSensorNotification = FALSE_INT;
 
         TapCh(@NonNull String identifier) {
             this.identifier = identifier;
@@ -182,6 +212,7 @@ public class TapCache {
             this.serialNumber = other.serialNumber;
             this.hwVer = other.hwVer;
             this.fwVer = other.fwVer;
+            this.bootloaderVer = other.bootloaderVer;
             this.tapNotification = other.tapNotification;
             this.mouseNotification = other.mouseNotification;
             this.airMouseNotification = other.airMouseNotification;
@@ -198,6 +229,7 @@ public class TapCache {
         TapNotification,
         MouseNotification,
         AirMouseNotification,
-        RawSensorNotification
+        RawSensorNotification,
+        BootloaderVer
     }
 }

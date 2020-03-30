@@ -13,13 +13,14 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Handler;
 import android.os.Looper;
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 import android.util.Log;
 
 import com.tapwithus.sdk.ListenerManager;
 import com.tapwithus.sdk.NotifyAction;
 import com.tapwithus.sdk.bluetooth.callbacks.OnCompletionListener;
 import com.tapwithus.sdk.bluetooth.callbacks.OnErrorListener;
+import com.tapwithus.sdk.bluetooth.callbacks.OnNotFoundListener;
 import com.tapwithus.sdk.bluetooth.operations.CharacteristicReadOperation;
 import com.tapwithus.sdk.bluetooth.operations.CharacteristicWriteOperation;
 import com.tapwithus.sdk.bluetooth.operations.DiscoverServicesOperation;
@@ -554,6 +555,12 @@ public class BluetoothManager {
                     public void onError(String msg) {
                         notifyOnError(deviceAddress, ERR_C_DEVICE_NOT_CONNECTED, msg);
                     }
+                })
+                .addOnNotFoundListener(new OnNotFoundListener<byte[]>() {
+                    @Override
+                    public void onNotFound(String message) {
+                        notifyOnCharacteristicNotFound(deviceAddress, characteristicUUID);
+                    }
                 });
 
         getExecutor(gatt).addOperation(characteristicReadOp);
@@ -878,6 +885,15 @@ public class BluetoothManager {
             @Override
             public void onNotify(BluetoothListener listener) {
                 listener.onCharacteristicRead(deviceAddress, characteristic, data);
+            }
+        });
+    }
+
+    private void notifyOnCharacteristicNotFound(@NonNull final String deviceAddress, @NonNull final UUID characteristic) {
+        bluetoothListeners.notifyAll(new NotifyAction<BluetoothListener>() {
+            @Override
+            public void onNotify(BluetoothListener listener) {
+                listener.onCharacteristicNotFound(deviceAddress, characteristic);
             }
         });
     }

@@ -1,15 +1,15 @@
 apply plugin: 'com.android.library'
 
 android {
-    compileSdkVersion 28
+    compileSdkVersion 29
 
     defaultConfig {
         minSdkVersion 21
-        targetSdkVersion 28
+        targetSdkVersion 29
         versionCode 1
         versionName "1.0"
 
-        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
     }
 
@@ -25,7 +25,7 @@ android {
 dependencies {
 //    compile fileTree(include: ['*.jar', '*.aar'], dir: 'libs')
 //    implementation 'com.tapwithus:tap-android-sdk:0.1.12'
-    implementation 'com.android.support:support-annotations:28.0.0'
+    implementation 'androidx.annotation:annotation:1.1.0'
     implementation project(':tap-android-sdk')
     compileOnly files('unityLibs/classes.jar')
 }

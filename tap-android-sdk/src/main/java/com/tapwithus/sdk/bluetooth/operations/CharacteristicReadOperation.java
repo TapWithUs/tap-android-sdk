@@ -2,7 +2,7 @@ package com.tapwithus.sdk.bluetooth.operations;
 
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 import com.tapwithus.sdk.bluetooth.ErrorStrings;
 
@@ -23,7 +23,7 @@ public class CharacteristicReadOperation extends CharacteristicOperation {
     public void onExecute(@NonNull BluetoothGatt gatt) {
         BluetoothGattCharacteristic c = extractCharacteristic(gatt);
         if (c == null) {
-            postOnError(ErrorStrings.NO_CHARACTERISTIC + ": " + this.characteristic.toString());
+            postOnNotFound(ErrorStrings.NO_CHARACTERISTIC + ": " + this.characteristic.toString());
             return;
         }
 

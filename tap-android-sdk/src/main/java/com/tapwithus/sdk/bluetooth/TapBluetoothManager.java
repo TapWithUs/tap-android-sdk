@@ -1,6 +1,6 @@
 package com.tapwithus.sdk.bluetooth;
 
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 import android.util.Log;
 
 import com.tapwithus.sdk.ListenerManager;
@@ -27,6 +27,7 @@ public class TapBluetoothManager {
     protected static final UUID SERIAL_NAME_STRING = UUID.fromString("00002A25-0000-1000-8000-00805F9B34FB");
     protected static final UUID HARDWARE_REVISION_STRING = UUID.fromString("00002A27-0000-1000-8000-00805F9B34FB");
     protected static final UUID FIRMWARE_REVISION_STRING = UUID.fromString("00002A26-0000-1000-8000-00805F9B34FB");
+    protected static final UUID SOFTWARE_REVISION_STRING = UUID.fromString("00002A28-0000-1000-8000-00805F9B34FB");
     protected static final UUID TAP_DATA = UUID.fromString("C3FF0005-1D8B-40FD-A56F-C7BD5D0F3370");
     protected static final UUID NUS = UUID.fromString("6E400001-B5A3-F393-E0A9-E50E24DCCA9E");
     protected static final UUID RX = UUID.fromString("6E400002-B5A3-F393-E0A9-E50E24DCCA9E");
@@ -180,6 +181,11 @@ public class TapBluetoothManager {
         bluetoothManager.readCharacteristic(tapAddress, DEVICE_INFORMATION, FIRMWARE_REVISION_STRING);
     }
 
+    public void readBootloaderVer(@NonNull String tapAddress) {
+        log("Reading bootloader ver");
+        bluetoothManager.readCharacteristic(tapAddress, DEVICE_INFORMATION, SOFTWARE_REVISION_STRING);
+    }
+
     public void setupTapNotification(@NonNull String tapAddress) {
         log("Setting up tap notifications");
         bluetoothManager.setupNotification(tapAddress, TAP, TAP_DATA);
@@ -273,10 +279,30 @@ public class TapBluetoothManager {
                 notifyOnHwVerRead(deviceAddress, new String(data));
             } else if (characteristic.equals(FIRMWARE_REVISION_STRING)) {
                 notifyOnFwVerRead(deviceAddress, new String((data)));
+            } else if (characteristic.equals(SOFTWARE_REVISION_STRING)) {
+                notifyOnBootloaderVerRead(deviceAddress, new String((data)));
             } else if (characteristic.equals(AIR_MOUSE_DATA)) {
                 onNotificationReceived(deviceAddress, characteristic, data);
             } else if (characteristic.equals(TX)) {
                 onNotificationReceived(deviceAddress, characteristic, data);
+            }
+        }
+
+        @Override
+        public void onCharacteristicNotFound(@NonNull String deviceAddress, @NonNull UUID characteristic) {
+            log("Characteristic Not Found");
+            if (characteristic.equals(NAME)) {
+                notifyOnNameRead(deviceAddress, new String("Unavailable"));
+            } else if (characteristic.equals(BATTERY_LEVEL)) {
+                notifyOnBatteryRead(deviceAddress, -2);
+            } else if (characteristic.equals(SERIAL_NAME_STRING)) {
+                notifyOnSerialNumberRead(deviceAddress, new String("Unavailable"));
+            } else if (characteristic.equals(HARDWARE_REVISION_STRING)) {
+                notifyOnHwVerRead(deviceAddress, new String("Unavailable"));
+            } else if (characteristic.equals(FIRMWARE_REVISION_STRING)) {
+                notifyOnFwVerRead(deviceAddress, new String(("Unavailable")));
+            } else if (characteristic.equals(SOFTWARE_REVISION_STRING)) {
+                notifyOnBootloaderVerRead(deviceAddress, new String(("Unavailable")));
             }
         }
 
@@ -453,6 +479,15 @@ public class TapBluetoothManager {
             @Override
             public void onNotify(TapBluetoothListener listener) {
                 listener.onFwVerRead(tapAddress, fwVer);
+            }
+        });
+    }
+
+    private void notifyOnBootloaderVerRead(@NonNull final String tapAddress, @NonNull final String bootloaderVer) {
+        tapBluetoothListeners.notifyAll(new NotifyAction<TapBluetoothListener>() {
+            @Override
+            public void onNotify(TapBluetoothListener listener) {
+                listener.onBootloaderVerRead(tapAddress, bootloaderVer);
             }
         });
     }

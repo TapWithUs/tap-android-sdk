@@ -1,10 +1,11 @@
 package com.tapwithus.sdk.bluetooth.operations;
 
 import android.bluetooth.BluetoothGatt;
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 import com.tapwithus.sdk.bluetooth.callbacks.OnCompletionListener;
 import com.tapwithus.sdk.bluetooth.callbacks.OnErrorListener;
+import com.tapwithus.sdk.bluetooth.callbacks.OnNotFoundListener;
 
 import java.util.Iterator;
 import java.util.List;
@@ -26,6 +27,7 @@ public abstract class GattOperation<T> {
 
     private final List<OnCompletionListener<T>> cCallbacks = new CopyOnWriteArrayList<>();
     private final List<OnErrorListener> eCallbacks = new CopyOnWriteArrayList<>();
+    private final List<OnNotFoundListener> nfCallbacks = new CopyOnWriteArrayList<>();
 
     public abstract OperationType type();
     public abstract void onExecute(@NonNull BluetoothGatt gatt);
@@ -85,6 +87,18 @@ public abstract class GattOperation<T> {
         return this;
     }
 
+    public GattOperation<T> addOnNotFoundListener(@NonNull OnNotFoundListener<T> listener) {
+        if (!nfCallbacks.contains(listener)) {
+            nfCallbacks.add(listener);
+        }
+        return this;
+    }
+
+    public GattOperation<T> removeOnNotFoundListener(@NonNull OnNotFoundListener<T> listener) {
+        nfCallbacks.remove(listener);
+        return this;
+    }
+
     public void execute(@NonNull final BluetoothGatt gatt) {
         isRunning = true;
         isCompleted = false;
@@ -137,6 +151,15 @@ public abstract class GattOperation<T> {
 
         for (Iterator<OnErrorListener> iterator = eCallbacks.iterator(); iterator.hasNext();) {
             iterator.next().onError(msg);
+        }
+    }
+
+    protected void postOnNotFound(@NonNull final String message) {
+        isRunning = false;
+        isCompleted = true;
+
+        for (Iterator<OnNotFoundListener> iterator = nfCallbacks.iterator(); iterator.hasNext();) {
+            iterator.next().onNotFound(message);
         }
     }
 

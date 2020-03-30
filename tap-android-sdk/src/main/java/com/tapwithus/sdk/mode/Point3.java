@@ -1,6 +1,6 @@
 package com.tapwithus.sdk.mode;
 
-import android.support.annotation.Nullable;
+import androidx.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 

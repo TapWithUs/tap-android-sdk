@@ -1,7 +1,7 @@
 package com.tapwithus.tapunity;
 
 import android.content.Context;
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 import android.util.Log;
 
 import com.tapwithus.sdk.FeatureVersionSupport;
@@ -226,7 +226,7 @@ public class TapUnityAdapter {
 
         @Override
         public void onTapInputReceived(@NonNull String tapIdentifier, int data) {
-            log(tapIdentifier + " TAP input received " + String.valueOf(data));
+            log(tapIdentifier + " TAP input received " + data);
 
             String args = tapIdentifier + UNITY_ARGS_SEPARATOR + data;
             UnityPlayer.UnitySendMessage(UNITY_GAME_OBJECT, UNITY_TAP_INPUT_CALLBACK, args);

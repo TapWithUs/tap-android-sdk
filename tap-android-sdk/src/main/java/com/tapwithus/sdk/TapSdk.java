@@ -2,8 +2,8 @@ package com.tapwithus.sdk;
 
 import android.os.Handler;
 import android.os.Looper;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import android.util.Log;
 import java.util.*;
 import com.tapwithus.sdk.airmouse.AirMousePacket;
@@ -18,11 +18,9 @@ import com.tapwithus.sdk.tap.TapCache;
 
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 @SuppressWarnings({"unused", "WeakerAccess", "ConstantConditions"})
 public class TapSdk {
@@ -527,6 +525,12 @@ public class TapSdk {
         }
 
         @Override
+        public void onBootloaderVerRead(@NonNull String tapAddress, @NonNull String bootloaderVer) {
+            cache.onBootloaderVerRead(tapAddress, bootloaderVer);
+            handleEmission(tapAddress);
+        }
+
+        @Override
         public void onRawSensorDataReceieved(@NonNull String tapAddress, byte[] data) {
             if (isPaused || isClosing) {
                 return;
@@ -877,6 +881,8 @@ public class TapSdk {
             tapBluetoothManager.readHwVer(tapIdentifier);
         } else if (!cache.has(tapIdentifier, TapCache.DataKey.FwVer)) {
             tapBluetoothManager.readFwVer(tapIdentifier);
+        } else if (!cache.has(tapIdentifier, TapCache.DataKey.BootloaderVer)) {
+            tapBluetoothManager.readBootloaderVer(tapIdentifier);
         } else if (!cache.has(tapIdentifier, TapCache.DataKey.TapNotification)) {
             tapBluetoothManager.setupTapNotification(tapIdentifier);
         } else if (!cache.has(tapIdentifier, TapCache.DataKey.MouseNotification)) {
