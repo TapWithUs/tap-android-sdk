@@ -130,7 +130,7 @@ public class MainActivity extends AppCompatActivity {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Change TAP Mode");
 
-        String[] options = {"Text Mode", "Controller", "Controller with Mouse HID", "Raw Sensor"};
+        String[] options = {"Text Mode", "Controller", "Controller with Mouse HID", "Raw Sensor", "Controller with Full HID"};
         builder.setItems(options, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
@@ -157,6 +157,10 @@ public class MainActivity extends AppCompatActivity {
                     case 3:
                         log("Switching to RAW SENSOR MODE");
                         sdk.startRawSensorMode(tapIdentifier, (byte)0,(byte)0,(byte)0);
+                        break;
+                    case 4:
+                        log("Switching to CONTROLLER mode with FULLHID");
+                        sdk.startControllerWithFullHIDMode(tapIdentifier);
                 }
             }
         });
@@ -381,7 +385,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @Override
-        public void onTapChangedState(@NonNull String tapIdentifier, @NonNull int state) {
+        public void onTapChangedState(@NonNull String tapIdentifier, int state) {
             log(tapIdentifier + " changed state: " + state);
         }
 

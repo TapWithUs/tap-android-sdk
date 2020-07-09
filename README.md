@@ -131,6 +131,7 @@ public void startControllerMode(@NonNull String tapIdentifier);
 public  void startTextMode(@NonNull String tapIdentifier);
 public void startControllerWithMouseHIDMode(@NonNull String tapIdentifier); 
 public void startRawSensorMode(@NonNull String tapIdentifier, byte deviceAccelerometerSensitivity, byte imuGyroSensitivity, byte imuAccelerometerSensitivity);
+public void startControllerWithFullHIDMode(@NonNull String tapIdentifier);
 ```
 &nbsp;
 &nbsp;

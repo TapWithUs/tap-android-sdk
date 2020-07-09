@@ -365,6 +365,18 @@ public class TapSdk {
 //        tapBluetoothManager.startControllerModeWithMouseHID(tapIdentifier);
     }
 
+    public void startControllerWithFullHIDMode(@NonNull String tapIdentifier) {
+
+        if (!isFeatureSupported(tapIdentifier, FeatureVersionSupport.FEATURE_CONTROLLER_WITH_FULLHID)) {
+            logError("FEATURE_CONTROLLER_WITH_FULLHID not supported - " + tapIdentifier + ", Falling back to Controller mode");
+            startControllerMode(tapIdentifier);
+            return;
+        }
+        log("Starting Controller with Keyboard HID mode - " + tapIdentifier);
+        startMode(tapIdentifier, TapInputMode.controllerWithFullHID());
+    }
+
+
     public void startRawSensorMode(@NonNull String tapIdentifier, byte deviceAccelerometerSensitivity, byte imuGyroSensitivity, byte imuAccelerometerSensitivity) {
 
         if (!isFeatureSupported(tapIdentifier, FeatureVersionSupport.FEATURE_RAW_SENSOR)) {
@@ -631,7 +643,7 @@ public class TapSdk {
         }
 
         @Override
-        public void onTapChangedState(@NonNull String tapIdentifier, @NonNull int state) {
+        public void onTapChangedState(@NonNull String tapIdentifier, int state) {
             if (state == 1) {
                 tapsInAirMouseState.add(tapIdentifier);
             } else {
@@ -784,7 +796,7 @@ public class TapSdk {
 //        });
 //    }
 
-    private void notifyOnTapChangedState(@NonNull final String tapIdentifier, @NonNull final int state) {
+    private void notifyOnTapChangedState(@NonNull final String tapIdentifier, final int state) {
         tapListeners.notifyAll(new NotifyAction<TapListener>() {
             @Override
             public void onNotify(TapListener listener) {

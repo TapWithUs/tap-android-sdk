@@ -104,6 +104,10 @@ public class TapUnityAdapter {
         tapSdk.startControllerWithMouseHIDMode(tapIdentifier);
     }
 
+    public void startControllerWithFullHIDMode(@NonNull String tapIdentifier) {
+        tapSdk.startControllerWithFullHIDMode(tapIdentifier);
+    }
+
     public void startRawSensorMode(@NonNull String tapIdentifier, int deviceAccelerometerSensitivity, int imuGyroSensitivity, int imuAccelerometerSensitivity) {
         tapSdk.startRawSensorMode(tapIdentifier,(byte)deviceAccelerometerSensitivity, (byte)imuGyroSensitivity, (byte)imuAccelerometerSensitivity);
     }
@@ -248,7 +252,7 @@ public class TapUnityAdapter {
         }
 
         @Override
-        public void onTapChangedState(@NonNull String tapIdentifier, @NonNull int state) {
+        public void onTapChangedState(@NonNull String tapIdentifier, int state) {
             log(tapIdentifier + " TAP changed state " + state);
             String args = tapIdentifier + UNITY_ARGS_SEPARATOR + state;
             UnityPlayer.UnitySendMessage(UNITY_GAME_OBJECT, UNITY_TAP_CHANGED_STATE_CALLBACK, args);
