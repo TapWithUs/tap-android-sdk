@@ -34,6 +34,8 @@ public class TapUnityAdapter {
     private static final String UNITY_CONTROLLER_MODE_CALLBACK = "onControllerModeStarted";
     private static final String UNITY_TEXT_MODE_CALLBACK = "onTextModeStarted";
     private static final String UNITY_TAP_INPUT_CALLBACK = "onTapInputReceived";
+    private static final String UNITY_TAP_SHIFTSWITCH_CALLBACK = "onTapShiftSwitchReceived";
+    private static final String UNITY_TAP_SPECIALCHAR_CALLBACK = "onTapSpecialCharReceived";
     private static final String UNITY_RAW_SENSOR_DATA_CALLBACK = "onRawSensorDataReceived";
     private static final String UNITY_MOUSE_INPUT_CALLBACK = "onMouseInputReceived";
     private static final String UNITY_AIRMOUSE_INPUT_CALLBACK = "onAirGestureInputReceived";
@@ -234,6 +236,22 @@ public class TapUnityAdapter {
 
             String args = tapIdentifier + UNITY_ARGS_SEPARATOR + data;
             UnityPlayer.UnitySendMessage(UNITY_GAME_OBJECT, UNITY_TAP_INPUT_CALLBACK, args);
+        }
+
+        @Override
+        public void onTapShiftSwitchReceived(@NonNull String tapIdentifier, int data) {
+            log(tapIdentifier + " TAP ShiftSwitch received " + data);
+
+            String args = tapIdentifier + UNITY_ARGS_SEPARATOR + data;
+            UnityPlayer.UnitySendMessage(UNITY_GAME_OBJECT, UNITY_TAP_SHIFTSWITCH_CALLBACK, args);
+        }
+
+        @Override
+        public void onTapSpecialCharReceived(@NonNull String tapIdentifier, int data) {
+            log(tapIdentifier + " TAP SpecialChar received " + data);
+
+            String args = tapIdentifier + UNITY_ARGS_SEPARATOR + data;
+            UnityPlayer.UnitySendMessage(UNITY_GAME_OBJECT, UNITY_TAP_SPECIALCHAR_CALLBACK, args);
         }
 
         @Override

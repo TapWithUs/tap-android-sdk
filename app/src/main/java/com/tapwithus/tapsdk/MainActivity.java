@@ -347,6 +347,18 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @Override
+        public void onTapShiftSwitchReceived(@NonNull String tapIdentifier, int data) {
+            log("TapSwitchShiftReceived - " + tapIdentifier + ", " + data);
+            adapter.updateTapSwitchShift(tapIdentifier, data);
+        }
+
+        @Override
+        public void onTapSpecialCharReceived(@NonNull String tapIdentifier, int data) {
+            log("TapSpecialChartReceived - " + tapIdentifier + ", " + data);
+            adapter.updateTapSpecialChar(tapIdentifier, data);
+        }
+
+        @Override
         public void onMouseInputReceived(@NonNull String tapIdentifier, @NonNull MousePacket data) {
 //            log(tapIdentifier + " mouse input received " + data.dx.getInt() + " " + data.dy.getInt() + " " + data.dt.getUnsignedLong() + " " + data.proximity.getInt());
         }

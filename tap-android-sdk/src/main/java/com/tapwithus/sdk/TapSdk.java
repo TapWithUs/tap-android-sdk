@@ -429,6 +429,14 @@ public class TapSdk {
         return fingers;
     }
 
+    public static int[] toShiftAndSwitch(int tapShiftAndSwitchInt) {
+        final int[] shiftSwitch = new int[2];
+        for (int i = 0; i <2; i++) {
+            shiftSwitch[i] = ((15 << (i * 4) & tapShiftAndSwitchInt) >> (i * 5));
+        }
+        return shiftSwitch;
+    }
+
     public void refreshConnections() {
         tapBluetoothManager.refreshConnections();
     }
@@ -633,6 +641,17 @@ public class TapSdk {
         }
 
         @Override
+        public void onTapShiftSwitchReceived(@NonNull String tapAddress, int data) {
+            notifyOnTapShiftSwitchReceived(tapAddress, data);
+        }
+
+        @Override
+        public void onTapSpecialCharReceived(@NonNull String tapAddress, int data) {
+            notifyOnTapSpecialCharReceived(tapAddress, data);
+        }
+
+
+        @Override
         public void onMouseInputReceived(@NonNull String tapAddress, @NonNull MousePacket data) {
             notifyOnMouseInputReceived(tapAddress, data);
         }
@@ -756,6 +775,24 @@ public class TapSdk {
             @Override
             public void onNotify(TapListener listener) {
                 listener.onTapInputReceived(tapIdentifier, data);
+            }
+        });
+    }
+
+    private void notifyOnTapShiftSwitchReceived(@NonNull final String tapIdentifier, final int data) {
+        tapListeners.notifyAll(new NotifyAction<TapListener>() {
+            @Override
+            public void onNotify(TapListener listener) {
+                listener.onTapShiftSwitchReceived(tapIdentifier, data);
+            }
+        });
+    }
+
+    private void notifyOnTapSpecialCharReceived(@NonNull final String tapIdentifier, final int data) {
+        tapListeners.notifyAll(new NotifyAction<TapListener>() {
+            @Override
+            public void onNotify(TapListener listener) {
+                listener.onTapSpecialCharReceived(tapIdentifier, data);
             }
         });
     }

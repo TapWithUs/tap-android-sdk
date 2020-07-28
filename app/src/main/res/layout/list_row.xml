@@ -74,20 +74,47 @@
         app:layout_constraintTop_toTopOf="@+id/finger5" />
 
     <TextView
+        android:id="@+id/switchState"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="switchState"
+        app:layout_constraintBottom_toTopOf="@+id/specialChar"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/tapMode" />
+
+    <TextView
+        android:id="@+id/specialChar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="specialChar"
+        app:layout_constraintBottom_toTopOf="@+id/shiftState"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/switchState" />
+
+    <TextView
+        android:id="@+id/shiftState"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="shiftState"
+        app:layout_constraintBottom_toTopOf="@+id/tapFwVer"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/specialChar" />
+
+    <TextView
         android:id="@+id/tapFwVer"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="fwVer"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/tapMode" />
+        app:layout_constraintTop_toBottomOf="@+id/shiftState" />
 
     <TextView
         android:id="@+id/tapMode"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Mode"
-        app:layout_constraintBottom_toTopOf="@+id/tapFwVer"
+        app:layout_constraintBottom_toTopOf="@+id/switchState"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 

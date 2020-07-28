@@ -292,17 +292,17 @@ public class TapBluetoothManager {
         public void onCharacteristicNotFound(@NonNull String deviceAddress, @NonNull UUID characteristic) {
             log("Characteristic Not Found");
             if (characteristic.equals(NAME)) {
-                notifyOnNameRead(deviceAddress, new String("Unavailable"));
+                notifyOnNameRead(deviceAddress, "Unavailable");
             } else if (characteristic.equals(BATTERY_LEVEL)) {
                 notifyOnBatteryRead(deviceAddress, -2);
             } else if (characteristic.equals(SERIAL_NAME_STRING)) {
-                notifyOnSerialNumberRead(deviceAddress, new String("Unavailable"));
+                notifyOnSerialNumberRead(deviceAddress, "Unavailable");
             } else if (characteristic.equals(HARDWARE_REVISION_STRING)) {
-                notifyOnHwVerRead(deviceAddress, new String("Unavailable"));
+                notifyOnHwVerRead(deviceAddress, "Unavailable");
             } else if (characteristic.equals(FIRMWARE_REVISION_STRING)) {
-                notifyOnFwVerRead(deviceAddress, new String(("Unavailable")));
+                notifyOnFwVerRead(deviceAddress,"Unavailable");
             } else if (characteristic.equals(SOFTWARE_REVISION_STRING)) {
-                notifyOnBootloaderVerRead(deviceAddress, new String(("Unavailable")));
+                notifyOnBootloaderVerRead(deviceAddress, "Unavailable");
             }
         }
 
@@ -352,6 +352,11 @@ public class TapBluetoothManager {
             if (characteristic.equals(TAP_DATA)) {
                 if (data[0] != 0) {
                     notifyOnTapInputReceived(deviceAddress, data[0]);
+
+                    notifyOnTapShiftSWitchReceived(deviceAddress, data[3]);
+                }
+                if (data[4] != 0) {
+                    notifyOnTapSpecialCharReceived(deviceAddress, data[4]);
                 }
             } else if (characteristic.equals(MOUSE_DATA)) {
                 data = Arrays.copyOfRange(data, 1, data.length);
@@ -564,6 +569,24 @@ public class TapBluetoothManager {
         });
     }
 
+    private void notifyOnTapShiftSWitchReceived(@NonNull final String tapAddress, final int data) {
+        tapBluetoothListeners.notifyAll(new NotifyAction<TapBluetoothListener>() {
+            @Override
+            public void onNotify(TapBluetoothListener listener) {
+                listener.onTapShiftSwitchReceived(tapAddress, data);
+            }
+        });
+    }
+
+    private void notifyOnTapSpecialCharReceived(@NonNull final String tapAddress, final int data) {
+        tapBluetoothListeners.notifyAll(new NotifyAction<TapBluetoothListener>() {
+            @Override
+            public void onNotify(TapBluetoothListener listener) {
+                listener.onTapSpecialCharReceived(tapAddress, data);
+            }
+        });
+    }
+
     private void notifyOnMouseInputReceived(@NonNull final String tapAddress, @NonNull final MousePacket data) {
         tapBluetoothListeners.notifyAll(new NotifyAction<TapBluetoothListener>() {
             @Override
@@ -591,7 +614,7 @@ public class TapBluetoothManager {
         });
     }
 
-    private void notifyOnTapChangedState(@NonNull final String tapAddress, @NonNull final int state) {
+    private void notifyOnTapChangedState(@NonNull final String tapAddress, final int state) {
 
         tapBluetoothListeners.notifyAll(new NotifyAction<TapBluetoothListener>() {
             @Override

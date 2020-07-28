@@ -14,6 +14,8 @@ public interface TapListener {
     void onTapResumed(@NonNull String tapIdentifier);
     void onTapChanged(@NonNull String tapIdentifier);
     void onTapInputReceived(@NonNull String tapIdentifier, int data);
+    void onTapShiftSwitchReceived(@NonNull String tapIdentifier, int data);
+    void onTapSpecialCharReceived(@NonNull String tapIdentifier, int data);
     void onMouseInputReceived(@NonNull String tapIdentifier, @NonNull MousePacket data);
     void onAirMouseInputReceived(@NonNull String tapIdentifier, @NonNull AirMousePacket data);
     void onRawSensorInputReceived(@NonNull String tapIdentifier, @NonNull RawSensorData rsData);

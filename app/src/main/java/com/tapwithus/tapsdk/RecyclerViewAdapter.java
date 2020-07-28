@@ -100,6 +100,37 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
         }
     }
 
+    public void updateTapSwitchShift(String tapIdentifier, int tapSwitchShiftInt) {
+        // I think even a value of zero is meaningful
+
+        for (int position = 0; position < dataSet.size(); position++) {
+            TapListItem item = dataSet.get(position);
+            if (item.tapIdentifier.equals(tapIdentifier)) {
+                if (!onBind) {
+                    item.tapShiftSwitchInt = tapSwitchShiftInt;
+                    item.tapShiftAndSwitch = TapSdk.toShiftAndSwitch(tapSwitchShiftInt);
+                    notifyItemChanged(position);
+                }
+            }
+        }
+    }
+
+    public void updateTapSpecialChar(String tapIdentifier, int tapSpecialCharInt) {
+        if (tapSpecialCharInt == 0) {
+            return;
+        }
+
+        for (int position = 0; position < dataSet.size(); position++) {
+            TapListItem item = dataSet.get(position);
+            if (item.tapIdentifier.equals(tapIdentifier)) {
+                if (!onBind) {
+                    item.tapSspecialCharInt = tapSpecialCharInt;
+                    notifyItemChanged(position);
+                }
+            }
+        }
+    }
+
     public void updateName(String tapIdentifier, String name) {
         for (int position = 0; position < dataSet.size(); position++) {
             TapListItem item = dataSet.get(position);
@@ -159,6 +190,9 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
         public View finger5;
         public TextView mode;
         public TextView fwVer;
+        public TextView shiftState;
+        public TextView switchState;
+        public TextView specialChar;
 
         public ViewHolder(ConstraintLayout itemView) {
             super(itemView);
@@ -181,6 +215,9 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
             finger5 = itemView.findViewById(R.id.finger5);
             mode = itemView.findViewById(R.id.tapMode);
             fwVer = itemView.findViewById(R.id.tapFwVer);
+            shiftState = itemView.findViewById(R.id.shiftState);
+            switchState = itemView.findViewById(R.id.switchState);
+            specialChar = itemView.findViewById(R.id.specialChar);
         }
 
         public void bindTapListItem(final TapListItem listItem) {
@@ -200,8 +237,29 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
                 finger4.setBackgroundResource(listItem.tapInputFingers[3] ? R.drawable.circle_filled : R.drawable.circle_empty);
                 finger5.setBackgroundResource(listItem.tapInputFingers[4] ? R.drawable.circle_filled : R.drawable.circle_empty);
             }
+            if (listItem.tapShiftAndSwitch != null) {
+                switch (listItem.tapShiftAndSwitch[0]) {
+                    case 0:
+                        shiftState.setText("Shift OFF");
+                        break;
+                    case 1:
+                        shiftState.setText("Shift ON");
+                        break;
+                    case 2:
+                        shiftState.setText("Shift LOCK");
+                        break;
+                    default:
+                        shiftState.setText("Shift ERROR!!!");
+                }
+                if (listItem.tapShiftAndSwitch[1] == 1) {
+                    switchState.setText("Switch ON");
+                } else {
+                    switchState.setText("Switch OFF");
+                }
+            }
             mode.setText(listItem.isInControllerMode ? "Controller Mode" : "Text Mode");
             fwVer.setText(listItem.tapFwVer);
+            specialChar.setText("Special = " + listItem.tapSspecialCharInt);
         }
     }
 }
