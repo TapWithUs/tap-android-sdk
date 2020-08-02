@@ -20,6 +20,9 @@ public class TapBluetoothManager {
 
     private static final byte[] READ_TAP_STATE_DATA = new byte[] { 0xd };
 
+    // the value '-15' given here is equivalent to byte value of 241 in ones' complement
+    private static final byte[] REQUEST_SHIFT_SWITCH_STATE = new byte[] { -15, 0 };
+
     protected static final UUID TAP = UUID.fromString("C3FF0001-1D8B-40FD-A56F-C7BD5D0F3370");
     protected static final UUID DEVICE_INFORMATION = UUID.fromString("0000180A-0000-1000-8000-00805F9B34FB");
     protected static final UUID BATTERY = UUID.fromString("0000180F-0000-1000-8000-00805F9B34FB");
@@ -36,6 +39,7 @@ public class TapBluetoothManager {
     protected static final UUID MOUSE_DATA = UUID.fromString("C3FF0006-1D8B-40FD-A56F-C7BD5D0F3370");
     protected static final UUID AIR_MOUSE_DATA = UUID.fromString("C3FF000A-1D8B-40FD-A56F-C7BD5D0F3370");
     protected static final UUID HAPTIC = UUID.fromString("C3FF0009-1D8B-40FD-A56F-C7BD5D0F3370");
+    protected static final UUID DATA_REQUEST = UUID.fromString("C3FF000B-1D8B-40FD-A56F-C7BD5D0F3370");
 
     protected BluetoothManager bluetoothManager;
     private ListenerManager<TapBluetoothListener> tapBluetoothListeners = new ListenerManager<>();
@@ -151,6 +155,11 @@ public class TapBluetoothManager {
         bluetoothManager.writeCharacteristic(tapAddress, TAP, AIR_MOUSE_DATA, READ_TAP_STATE_DATA);
     }
 
+    public void requestShiftSwitchState(@NonNull String tapAddress) {
+        log("request shift/switch state");
+        bluetoothManager.writeCharacteristic(tapAddress, TAP, DATA_REQUEST, REQUEST_SHIFT_SWITCH_STATE);
+    }
+
     public void readName(@NonNull String tapAddress) {
         log("Reading name");
         bluetoothManager.readCharacteristic(tapAddress, TAP, NAME);
@@ -205,6 +214,11 @@ public class TapBluetoothManager {
     public void setupRawSensorNotification(@NonNull String tapAddress) {
         log("Settings up raw sensor notifications");
         bluetoothManager.setupNotification(tapAddress, NUS, TX);
+    }
+
+    public void setupDataNotification(@NonNull String tapAddress) {
+        log("setting up data notifications");
+        bluetoothManager.setupNotification(tapAddress, TAP, DATA_REQUEST);
     }
 
     public boolean isConnectionInProgress() {
@@ -285,6 +299,8 @@ public class TapBluetoothManager {
                 onNotificationReceived(deviceAddress, characteristic, data);
             } else if (characteristic.equals(TX)) {
                 onNotificationReceived(deviceAddress, characteristic, data);
+            } else if (characteristic.equals(DATA_REQUEST)) {
+                onNotificationReceived(deviceAddress, characteristic, data);
             }
         }
 
@@ -341,6 +357,9 @@ public class TapBluetoothManager {
             } else if (characteristic.equals(TX)) {
                 log("Raw sensor notification subscribed");
                 notifyOnRawSensorDataSubscribed(deviceAddress);
+            } else if (characteristic.equals(DATA_REQUEST)) {
+                log("DataRequest notification subscribed");
+                notifyOnDataRequestSubscribed(deviceAddress);
             }
         }
 
@@ -352,9 +371,8 @@ public class TapBluetoothManager {
             if (characteristic.equals(TAP_DATA)) {
                 if (data[0] != 0) {
                     notifyOnTapInputReceived(deviceAddress, data[0]);
-
-                    notifyOnTapShiftSWitchReceived(deviceAddress, data[3]);
                 }
+                notifyOnTapShiftSWitchReceived(deviceAddress, data[3]);
                 if (data[4] != 0) {
                     notifyOnTapSpecialCharReceived(deviceAddress, data[4]);
                 }
@@ -371,6 +389,10 @@ public class TapBluetoothManager {
                 }
             } else if (characteristic.equals(TX)) {
                 notifyOnRawSensorInputReceived(deviceAddress, data);
+            } else if (characteristic.equals(DATA_REQUEST)) {
+                // should deal with this like a character which has come in - nothing should come here
+                // so if something comes in let's give an error
+                logError("!!! Notification Received  on DATA REQUEST channel" + Arrays.toString(data));
             }
         }
 
@@ -547,6 +569,15 @@ public class TapBluetoothManager {
             @Override
             public void onNotify(TapBluetoothListener listener) {
                 listener.onAirMouseInputSubscribed(tapAddress);
+            }
+        });
+    }
+
+    private void notifyOnDataRequestSubscribed(@NonNull final String tapAddress) {
+        tapBluetoothListeners.notifyAll(new NotifyAction<TapBluetoothListener>() {
+            @Override
+            public void onNotify(TapBluetoothListener listener) {
+                listener.onDataRequestSubscribed(tapAddress);
             }
         });
     }

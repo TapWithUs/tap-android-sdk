@@ -26,6 +26,7 @@ public interface TapBluetoothListener {
     void onTapInputSubscribed(@NonNull String tapAddress);
     void onMouseInputSubscribed(@NonNull String tapAddress);
     void onAirMouseInputSubscribed(@NonNull String tapAddress);
+    void onDataRequestSubscribed(@NonNull String tapAddress);
     void onTapInputReceived(@NonNull String tapAddress, int data);
     void onTapShiftSwitchReceived(@NonNull String tapAddress, int data);
     void onTapSpecialCharReceived(@NonNull String tapAddress, int data);

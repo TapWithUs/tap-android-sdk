@@ -103,6 +103,12 @@ public class TapCache {
         saveToCache(tapCh);
     }
 
+    public void onDataRequestSubscribed(@NonNull String  identifier) {
+        TapCh tapCh = getFromCache(identifier);
+        tapCh.dataRequestNotification = TRUE_INT;
+        saveToCache(tapCh);
+    }
+
     public @Nullable Tap getCached(@NonNull String identifier) {
         if (isCached(identifier)) {
             TapCh tapCh = getFromCache(identifier);
@@ -124,6 +130,7 @@ public class TapCache {
             case MouseNotification: return tapCh.mouseNotification != FALSE_INT;
             case AirMouseNotification: return tapCh.airMouseNotification != FALSE_INT;
             case RawSensorNotification: return tapCh.rawSensorNotification != FALSE_INT;
+            case DataRequestNotification: return tapCh.dataRequestNotification != FALSE_INT;
         }
         return false;
     }
@@ -170,6 +177,12 @@ public class TapCache {
             }
         }
 
+        if (FeatureVersionSupport.isFeatureSupported(tapCh.hwVer, tapCh.fwVer, FeatureVersionSupport.FEATURE_CONTROLLER_WITH_FULLHID)) {
+            if (tapCh.dataRequestNotification == FALSE_INT) {
+                return false;
+            }
+        }
+
         return true;
     }
 
@@ -200,6 +213,7 @@ public class TapCache {
         int mouseNotification = FALSE_INT;
         int airMouseNotification = FALSE_INT;
         int rawSensorNotification = FALSE_INT;
+        int dataRequestNotification = FALSE_INT;
 
         TapCh(@NonNull String identifier) {
             this.identifier = identifier;
@@ -217,6 +231,7 @@ public class TapCache {
             this.mouseNotification = other.mouseNotification;
             this.airMouseNotification = other.airMouseNotification;
             this.rawSensorNotification = other.rawSensorNotification;
+            this.dataRequestNotification = other.dataRequestNotification;
         }
     }
 
@@ -230,6 +245,7 @@ public class TapCache {
         MouseNotification,
         AirMouseNotification,
         RawSensorNotification,
+        DataRequestNotification,
         BootloaderVer
     }
 }

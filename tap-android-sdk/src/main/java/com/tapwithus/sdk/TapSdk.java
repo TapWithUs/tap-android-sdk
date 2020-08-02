@@ -376,6 +376,15 @@ public class TapSdk {
         startMode(tapIdentifier, TapInputMode.controllerWithFullHID());
     }
 
+    public void requestShiftSwitchState(@NonNull String tapIdentifier) {
+        if (!isFeatureSupported(tapIdentifier, FeatureVersionSupport.FEATURE_CONTROLLER_WITH_FULLHID)) {
+            logError("FEATURE_CONTROLLER_WITH_FULLHID not supported - " + tapIdentifier + ", Can't request SwitchShift state");
+            startControllerMode(tapIdentifier);
+            return;
+        }
+        log("Requesting Shift/Switch state - " + tapIdentifier);
+        tapBluetoothManager.requestShiftSwitchState(tapIdentifier);
+    }
 
     public void startRawSensorMode(@NonNull String tapIdentifier, byte deviceAccelerometerSensitivity, byte imuGyroSensitivity, byte imuAccelerometerSensitivity) {
 
@@ -614,6 +623,13 @@ public class TapSdk {
         public void onAirMouseInputSubscribed(@NonNull String tapAddress) {
             cache.onAirMouseInputSubscribed(tapAddress);
             tapBluetoothManager.requestReadTapState(tapAddress);
+            handleEmission(tapAddress);
+        }
+
+        @Override
+        public void onDataRequestSubscribed(@NonNull String tapAddress) {
+            cache.onDataRequestSubscribed(tapAddress);
+            tapBluetoothManager.requestShiftSwitchState(tapAddress);
             handleEmission(tapAddress);
         }
 
@@ -940,7 +956,9 @@ public class TapSdk {
             tapBluetoothManager.setupAirMouseNotification(tapIdentifier);
         } else if (!cache.has(tapIdentifier, TapCache.DataKey.RawSensorNotification)) {
             tapBluetoothManager.setupRawSensorNotification(tapIdentifier);
-        } else {
+        } else if (!cache.has(tapIdentifier, TapCache.DataKey.DataRequestNotification)) {
+            tapBluetoothManager.setupDataNotification(tapIdentifier);
+        } else{
             logError("Cache already has all required fields");
         }
     }
