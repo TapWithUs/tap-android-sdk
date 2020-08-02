@@ -369,13 +369,15 @@ public class TapBluetoothManager {
 //            log("Notification Received " + Arrays.toString(data));
 
             if (characteristic.equals(TAP_DATA)) {
+                int byte3 = 0;
+                if (data.length > 3) {
+                    byte3 = data[3];
+                }
                 if (data[0] != 0) {
-                    notifyOnTapInputReceived(deviceAddress, data[0]);
+                    // we are now going to send byte [3] into the same function to decide single/double/triple
+                    notifyOnTapInputReceived(deviceAddress, data[0], byte3);
                 }
-                notifyOnTapShiftSWitchReceived(deviceAddress, data[3]);
-                if (data[4] != 0) {
-                    notifyOnTapSpecialCharReceived(deviceAddress, data[4]);
-                }
+                notifyOnTapShiftSWitchReceived(deviceAddress, byte3);
             } else if (characteristic.equals(MOUSE_DATA)) {
                 data = Arrays.copyOfRange(data, 1, data.length);
                 MousePacket mousePacket = new MousePacket(data);
@@ -591,11 +593,11 @@ public class TapBluetoothManager {
         });
     }
 
-    private void notifyOnTapInputReceived(@NonNull final String tapAddress, final int data) {
+    private void notifyOnTapInputReceived(@NonNull final String tapAddress, final int data, final int repeatData) {
         tapBluetoothListeners.notifyAll(new NotifyAction<TapBluetoothListener>() {
             @Override
             public void onNotify(TapBluetoothListener listener) {
-                listener.onTapInputReceived(tapAddress, data);
+                listener.onTapInputReceived(tapAddress, data, repeatData);
             }
         });
     }
@@ -605,15 +607,6 @@ public class TapBluetoothManager {
             @Override
             public void onNotify(TapBluetoothListener listener) {
                 listener.onTapShiftSwitchReceived(tapAddress, data);
-            }
-        });
-    }
-
-    private void notifyOnTapSpecialCharReceived(@NonNull final String tapAddress, final int data) {
-        tapBluetoothListeners.notifyAll(new NotifyAction<TapBluetoothListener>() {
-            @Override
-            public void onNotify(TapBluetoothListener listener) {
-                listener.onTapSpecialCharReceived(tapAddress, data);
             }
         });
     }

@@ -83,7 +83,7 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
         }
     }
 
-    public void updateTapInput(String tapIdentifier, int tapInputInt) {
+    public void updateTapInput(String tapIdentifier, int tapInputInt, int repeatDataInt) {
         if (tapInputInt == 0) {
             return;
         }
@@ -93,6 +93,7 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
             if (item.tapIdentifier.equals(tapIdentifier)) {
                 if (!onBind) {
                     item.tapInputInt = tapInputInt;
+                    item.tapRepeatInt = repeatDataInt;
                     item.tapInputFingers = TapSdk.toFingers(tapInputInt);
                     notifyItemChanged(position);
                 }
@@ -109,22 +110,6 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
                 if (!onBind) {
                     item.tapShiftSwitchInt = tapSwitchShiftInt;
                     item.tapShiftAndSwitch = TapSdk.toShiftAndSwitch(tapSwitchShiftInt);
-                    notifyItemChanged(position);
-                }
-            }
-        }
-    }
-
-    public void updateTapSpecialChar(String tapIdentifier, int tapSpecialCharInt) {
-        if (tapSpecialCharInt == 0) {
-            return;
-        }
-
-        for (int position = 0; position < dataSet.size(); position++) {
-            TapListItem item = dataSet.get(position);
-            if (item.tapIdentifier.equals(tapIdentifier)) {
-                if (!onBind) {
-                    item.tapSspecialCharInt = tapSpecialCharInt;
                     notifyItemChanged(position);
                 }
             }
@@ -251,7 +236,7 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
                     default:
                         shiftState.setText("Shift ERROR!!!");
                 }
-                if (listItem.tapShiftAndSwitch[1] == 1) {
+                if (listItem.tapShiftAndSwitch[1] > 0) {
                     switchState.setText("Switch ON");
                 } else {
                     switchState.setText("Switch OFF");
@@ -259,7 +244,7 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
             }
             mode.setText(listItem.isInControllerMode ? "Controller Mode" : "Text Mode");
             fwVer.setText(listItem.tapFwVer);
-            specialChar.setText("Special = " + listItem.tapSspecialCharInt);
+            specialChar.setText("Repeat = " + listItem.tapRepeatInt);
         }
     }
 }

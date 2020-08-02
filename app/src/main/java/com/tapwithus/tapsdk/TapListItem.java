@@ -7,7 +7,7 @@ public class TapListItem {
     public String tapFwVer;
     public int tapInputInt;
     public int tapShiftSwitchInt;
-    public int tapSspecialCharInt;
+    public int tapRepeatInt;
     public boolean[] tapInputFingers;
     public int[] tapShiftAndSwitch;
     public boolean isInControllerMode = true;

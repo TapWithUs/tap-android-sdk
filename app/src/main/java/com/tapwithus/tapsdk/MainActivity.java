@@ -341,21 +341,15 @@ public class MainActivity extends AppCompatActivity {
 //        }
 
         @Override
-        public void onTapInputReceived(@NonNull String tapIdentifier, int data) {
-            adapter.updateTapInput(tapIdentifier, data);
-            log("TapInputReceived - " + tapIdentifier + ", " + data);
+        public void onTapInputReceived(@NonNull String tapIdentifier, int data, int repeatData) {
+            adapter.updateTapInput(tapIdentifier, data, repeatData);
+            log("TapInputReceived - " + tapIdentifier + ", " + data + ", repeatData = " + repeatData);
         }
 
         @Override
         public void onTapShiftSwitchReceived(@NonNull String tapIdentifier, int data) {
             log("TapSwitchShiftReceived - " + tapIdentifier + ", " + data);
             adapter.updateTapSwitchShift(tapIdentifier, data);
-        }
-
-        @Override
-        public void onTapSpecialCharReceived(@NonNull String tapIdentifier, int data) {
-            log("TapSpecialChartReceived - " + tapIdentifier + ", " + data);
-            adapter.updateTapSpecialChar(tapIdentifier, data);
         }
 
         @Override

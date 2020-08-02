@@ -440,8 +440,8 @@ public class TapSdk {
 
     public static int[] toShiftAndSwitch(int tapShiftAndSwitchInt) {
         final int[] shiftSwitch = new int[2];
-        for (int i = 0; i <2; i++) {
-            shiftSwitch[i] = ((15 << (i * 4) & tapShiftAndSwitchInt) >> (i * 5));
+        for (int i = 0; i < 2; i++) {
+            shiftSwitch[i] = (3 << (i * 2) & tapShiftAndSwitchInt) >> (i * 2);
         }
         return shiftSwitch;
     }
@@ -640,7 +640,7 @@ public class TapSdk {
         }
 
         @Override
-        public void onTapInputReceived(@NonNull String tapAddress, int data) {
+        public void onTapInputReceived(@NonNull String tapAddress, int data, int repeatData) {
             if (isTapInAirMouseState(tapAddress)) {
                 if (data == 2) {
                     AirMousePacket packet = new AirMousePacket(new byte[] { AirMousePacket.AIR_MOUSE_GESTURE_INDEX_TO_THUMB_TOUCH, 0});
@@ -653,19 +653,38 @@ public class TapSdk {
                 }
                 return;
             }
-            notifyOnTapInputReceived(tapAddress, data);
+            // I think here is the last place where we are about to send the information on repeats back to
+            // everyone, so we need to normalize the repeat info. The Tap sends 0 for one time, 1 for two and 3 for three
+            // theoretically sending 2 is an error - but the info is encoded in the 5th and 6th bit of the byte i.e. 16 and 32
+
+            log("The byte we are using for repeat is " + repeatData);
+            int convertedRepeatData =  (3 << 4 & repeatData) >> (4);
+
+            log("The repeat int is " + convertedRepeatData);
+            switch(convertedRepeatData) {
+                case 0:
+                    convertedRepeatData = 1;
+                    break;
+                case 1:
+                    convertedRepeatData = 2;
+                    break;
+                case 2:
+                    logError("Something weird happened, got a repeat value of 2 from TAP");
+                    break;
+                case 3:
+                    convertedRepeatData = 3;
+                    break;
+                default:
+                    //this shouldn't be possible at all unless I coded wrong
+                    logError("Something super weird, got a value for repeatData of " + repeatData);
+            }
+            notifyOnTapInputReceived(tapAddress, data, convertedRepeatData);
         }
 
         @Override
         public void onTapShiftSwitchReceived(@NonNull String tapAddress, int data) {
             notifyOnTapShiftSwitchReceived(tapAddress, data);
         }
-
-        @Override
-        public void onTapSpecialCharReceived(@NonNull String tapAddress, int data) {
-            notifyOnTapSpecialCharReceived(tapAddress, data);
-        }
-
 
         @Override
         public void onMouseInputReceived(@NonNull String tapAddress, @NonNull MousePacket data) {
@@ -786,11 +805,11 @@ public class TapSdk {
 //        });
     }
 
-    private void notifyOnTapInputReceived(@NonNull final String tapIdentifier, final int data) {
+    private void notifyOnTapInputReceived(@NonNull final String tapIdentifier, final int data, final int repeatData) {
         tapListeners.notifyAll(new NotifyAction<TapListener>() {
             @Override
             public void onNotify(TapListener listener) {
-                listener.onTapInputReceived(tapIdentifier, data);
+                listener.onTapInputReceived(tapIdentifier, data, repeatData);
             }
         });
     }
@@ -800,15 +819,6 @@ public class TapSdk {
             @Override
             public void onNotify(TapListener listener) {
                 listener.onTapShiftSwitchReceived(tapIdentifier, data);
-            }
-        });
-    }
-
-    private void notifyOnTapSpecialCharReceived(@NonNull final String tapIdentifier, final int data) {
-        tapListeners.notifyAll(new NotifyAction<TapListener>() {
-            @Override
-            public void onNotify(TapListener listener) {
-                listener.onTapSpecialCharReceived(tapIdentifier, data);
             }
         });
     }

@@ -63,9 +63,8 @@ public interface TapListener {
     void onTapDisconnected(@NonNull String tapIdentifier);
     void onTapResumed(@NonNull String tapIdentifier);
     void onTapChanged(@NonNull String tapIdentifier);
-    void onTapInputReceived(@NonNull String tapIdentifier, int data);
+    void onTapInputReceived(@NonNull String tapIdentifier, int data, int repeatData);
     void onTapShiftSwitchReceived(@NonNull String tapIdentifier, int data);
-    void onTapSpecialCharReceived(@NonNull String tapIdentifier, int data);
     void onMouseInputReceived(@NonNull String tapIdentifier, @NonNull MousePacket data);
     void onAirMouseInputReceived(@NonNull String tapIdentifier, @NonNull AirMousePacket data);
     void onRawSensorInputReceived(@NonNull String tapIdentifier, @NonNull RawSensorData rsData);
@@ -77,7 +76,7 @@ Just implement it and pass it to `TapSdk` class by calling `sdk.registerTapListe
 
 ___
 #### Important Note:  
-`onTapInputReceived` is a callback function which will be triggered every time a specific TAP device was being tapped, and which fingers were tapped. The returned data is an integer representing a 8-bit unsigned number, between 1 and 31. It's binary form represents the fingers that are tapped. The LSB is thumb finger, the MSB (bit number 5) is the pinky finger. For example: if combination equals 3 - it's binary form is 10100, Which means that the thumb and the middle fingers were tapped. For your convenience, you can convert the binary format into fingers boolean array by calling static function `TapSdk.toFingers(tapInput)` listed below.
+`onTapInputReceived` is a callback function which will be triggered every time a specific TAP device was being tapped, and which fingers were tapped. The returned data is an integer representing a 8-bit unsigned number, between 1 and 31. It's binary form represents the fingers that are tapped. The LSB is thumb finger, the MSB (bit number 5) is the pinky finger. For example: if combination equals 3 - it's binary form is 10100, Which means that the thumb and the middle fingers were tapped. For your convenience, you can convert the binary format into fingers boolean array by calling static function `TapSdk.toFingers(tapInput)` listed below.. The repeat data parameter is one for single taps, 2 for double 3 for triple
 `onTapShiftSwitchReceived` is a callback function which will be triggered every time a specific TAP device was being tapped, holds the state of Shift (0=off, 1=on, 2=locked) and Switch (0=off, 1=on). The returned data is an integer representing a 8-bit unsigned number, between 1 and 31. It's binary form represents the fingers that are tapped. The LSB is thumb finger, the MSB (bit number 5) is the pinky finger. For example: if combination equals 3 - it's binary form is 10100, Which means that the thumb and the middle fingers were tapped. For your convenience, you can convert the binary format into an array of 2 ints by calling static function `TapSdk.toShiftAndSwitch(tapShiftSwitch)` listed below.
 ___
 
@@ -188,7 +187,7 @@ int[] shiftSwitch = TapSdk.toShiftAndSwitch(tapShiftSwitch);
 ```
 > While:
 shiftSwitch\[0\] indicates the shift value (0=off, 1=on, 2=locked).
-shiftSwitch\[1\] indicates the switch value (0=off, 1=on).
+shiftSwitch\[1\] indicates the switch value (0=off, !0=on).
 &nbsp;
 &nbsp;
 
