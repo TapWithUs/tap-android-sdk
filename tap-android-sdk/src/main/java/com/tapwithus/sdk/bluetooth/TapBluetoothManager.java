@@ -1,19 +1,21 @@
 package com.tapwithus.sdk.bluetooth;
 
-import androidx.annotation.NonNull;
 import android.util.Log;
+
+import androidx.annotation.NonNull;
 
 import com.tapwithus.sdk.ListenerManager;
 import com.tapwithus.sdk.NotifyAction;
 import com.tapwithus.sdk.airmouse.AirMousePacket;
-import com.tapwithus.sdk.mouse.MousePacket;
 import com.tapwithus.sdk.haptic.HapticPacket;
+import com.tapwithus.sdk.mouse.MousePacket;
+
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.UUID;
 
-@SuppressWarnings({"WeakerAccess", "unused"})
+@SuppressWarnings({"WeakerAccess"})
 public class TapBluetoothManager {
 
     private static final String TAG = "TapBluetoothManager";
@@ -158,6 +160,12 @@ public class TapBluetoothManager {
     public void requestShiftSwitchState(@NonNull String tapAddress) {
         log("request shift/switch state");
         bluetoothManager.writeCharacteristic(tapAddress, TAP, DATA_REQUEST, REQUEST_SHIFT_SWITCH_STATE);
+    }
+
+    public void requestTap(@NonNull String tapAddress, byte combination) {
+        log("request tap with " + combination);
+        byte[] request_array = new byte[] { combination, 0 };
+        bluetoothManager.writeCharacteristic(tapAddress, TAP, DATA_REQUEST, request_array);
     }
 
     public void readName(@NonNull String tapAddress) {

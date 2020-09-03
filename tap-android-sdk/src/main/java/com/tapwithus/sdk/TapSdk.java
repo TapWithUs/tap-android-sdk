@@ -2,17 +2,18 @@ package com.tapwithus.sdk;
 
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import android.util.Log;
-import java.util.*;
+
 import com.tapwithus.sdk.airmouse.AirMousePacket;
-import com.tapwithus.sdk.mode.TapInputMode;
-import com.tapwithus.sdk.mode.RawSensorDataParser;
-import com.tapwithus.sdk.mode.RawSensorData;
-import com.tapwithus.sdk.mouse.MousePacket;
 import com.tapwithus.sdk.bluetooth.TapBluetoothListener;
 import com.tapwithus.sdk.bluetooth.TapBluetoothManager;
+import com.tapwithus.sdk.mode.RawSensorData;
+import com.tapwithus.sdk.mode.RawSensorDataParser;
+import com.tapwithus.sdk.mode.TapInputMode;
+import com.tapwithus.sdk.mouse.MousePacket;
 import com.tapwithus.sdk.tap.Tap;
 import com.tapwithus.sdk.tap.TapCache;
 
@@ -22,10 +23,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-@SuppressWarnings({"unused", "WeakerAccess", "ConstantConditions"})
+@SuppressWarnings({"WeakerAccess", "ConstantConditions"})
 public class TapSdk {
-
-
 
     private static final int RAW_MODE_LOOP_DELAY = 10000;
 
@@ -386,6 +385,16 @@ public class TapSdk {
         tapBluetoothManager.requestShiftSwitchState(tapIdentifier);
     }
 
+    public void requestTap(@NonNull String tapIdentifier, byte combination) {
+        if (!isFeatureSupported(tapIdentifier, FeatureVersionSupport.FEATURE_CONTROLLER_WITH_FULLHID)) {
+            logError("FEATURE_CONTROLLER_WITH_FULLHID not supported - " + tapIdentifier + ", Can't request setTap");
+            startControllerMode(tapIdentifier);
+            return;
+        }
+        log("Requesting Tap - " + combination + ", on tap: " + tapIdentifier);
+        tapBluetoothManager.requestTap(tapIdentifier, combination);
+    }
+
     public void startRawSensorMode(@NonNull String tapIdentifier, byte deviceAccelerometerSensitivity, byte imuGyroSensitivity, byte imuAccelerometerSensitivity) {
 
         if (!isFeatureSupported(tapIdentifier, FeatureVersionSupport.FEATURE_RAW_SENSOR)) {
@@ -569,10 +578,9 @@ public class TapSdk {
                 ArrayList<RawSensorData> rsData = RawSensorDataParser.parseWhole(tapAddress, data, mode.getDeviceAccelerometerSensitivity(), mode.getImuGyroSensitivity(), mode.getImuAccelerometerSensitivity());
 
 
-                Iterator<RawSensorData> it = rsData.iterator();
-                while (it.hasNext())
-                    notifyOnRawSensorDataReceieved(tapAddress, it.next());
-
+                for (RawSensorData rsDatum : rsData) {
+                    notifyOnRawSensorDataReceieved(tapAddress, rsDatum);
+                }
 
             }
         }
