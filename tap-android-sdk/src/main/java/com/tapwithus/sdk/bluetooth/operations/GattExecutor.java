@@ -91,7 +91,9 @@ public class GattExecutor implements OnCompletionListener<Object>, OnErrorListen
     public void onError(String msg) {
         logError("GattExecutor onError - " + msg);
 
-        currentOperation.removeOnErrorListener(this);
+        if (currentOperation != null) {
+            currentOperation.removeOnErrorListener(this);
+        }
         isRunning = false;
     }
 

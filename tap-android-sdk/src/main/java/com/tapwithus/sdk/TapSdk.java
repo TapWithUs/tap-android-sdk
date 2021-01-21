@@ -665,10 +665,10 @@ public class TapSdk {
             // everyone, so we need to normalize the repeat info. The Tap sends 0 for one time, 1 for two and 3 for three
             // theoretically sending 2 is an error - but the info is encoded in the 5th and 6th bit of the byte i.e. 16 and 32
 
-            log("The byte we are using for repeat is " + repeatData);
+//            log("The byte we are using for repeat is " + repeatData);
             int convertedRepeatData =  (3 << 4 & repeatData) >> (4);
 
-            log("The repeat int is " + convertedRepeatData);
+//            log("The repeat int is " + convertedRepeatData);
             switch(convertedRepeatData) {
                 case 0:
                     convertedRepeatData = 1;
