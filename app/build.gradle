@@ -27,7 +27,8 @@ dependencies {
     testImplementation 'junit:junit:4.13'
     androidTestImplementation 'androidx.test.ext:junit:1.1.2'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
-    implementation project(':tap-android-sdk')
-//    implementation 'com.tapwithus:tap-android-sdk:0.2.3'
+//    implementation project(':tap-android-sdk')
+//    implementation 'com.tapwithus:tap-android-sdk:0.3.4'
+    implementation 'io.github.tapwithus:tap-android-sdk:0.3.4'
 }
 

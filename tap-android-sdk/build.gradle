@@ -21,6 +21,10 @@ ext {
     developerId = 'tap'
     developerName = 'Kibi Hofmann'
     developerEmail = 'kibi@tapwithus.com'
+
+    PUBLISH_GROUP_ID = 'io.github.tapwithus'
+    PUBLISH_VERSION = '0.3.4'
+    PUBLISH_ARTIFACT_ID = 'tap-android-sdk'
 }
 
 android {
@@ -46,5 +50,24 @@ dependencies {
     implementation 'androidx.annotation:annotation:1.2.0'
 }
 
-apply from: '../install.gradle'
-apply from: '../bintray.gradle'
+//apply from: '../install.gradle'
+//apply from: '../bintray.gradle'
+apply from: "${rootProject.projectDir}/scripts/publish-module.gradle"
+
+//publishing {
+//    publications {
+//        release(MavenPublication) {
+//            // Specify own groupId as package name of your library,
+//            // otherwise it would just use project's name (=name of the root directory) by default.
+//            groupId publishedGroupId
+//
+//            // Specify custom artifactId if needed,
+//            // otherwise it would use module's name by default.
+//            artifactId 'tap-android-sdk'
+//
+//            // You can specify custom version,
+//            // otherwise it would use version from `android { defaultConfig { ... } }` by default.
+//            version = libraryVersion
+//        }
+//    }
+//}

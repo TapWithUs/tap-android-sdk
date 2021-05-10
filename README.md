@@ -8,10 +8,10 @@ In a way that each tap is being interpreted as an array of fingers that are tapp
 Getting started
 ===============
 To add TAP SDK library to your project:
-- Make sure you have JCenter in your Gradle repositories.
+- Make sure you have mavenCentral in your Gradle repositories.
 - Add the following Gradle dependency to your build.gradle:
 ```Groovy
-  implementation 'com.tapwithus:tap-android-sdk:0.3.3'
+  implementation 'io.github.tapwithus:tap-android-sdk:0.3.4'
 ```
 
 Getting instance of TapSdk
