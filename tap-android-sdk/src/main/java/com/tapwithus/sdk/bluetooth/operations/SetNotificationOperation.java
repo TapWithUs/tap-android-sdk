@@ -50,13 +50,24 @@ public class SetNotificationOperation extends DescriptorWriteOperation {
             return;
         }
 
-        if (!gatt.setCharacteristicNotification(c, true)) {
+        try {
+            if (!gatt.setCharacteristicNotification(c, true)) {
+                postOnError(ErrorStrings.NOTIFY_OP_INIT_FAIL);
+                return;
+            }
+        } catch (SecurityException se) {
             postOnError(ErrorStrings.NOTIFY_OP_INIT_FAIL);
+            postOnError(ErrorStrings.LACKING_PERMISSION_FAIL);
             return;
         }
 
-        if (!gatt.writeDescriptor(d)) {
-            postOnError(ErrorStrings.WRITE_OP_INIT_FAIL);
+        try {
+            if (!gatt.writeDescriptor(d)) {
+                postOnError(ErrorStrings.WRITE_OP_INIT_FAIL);
+            }
+        } catch (SecurityException se) {
+            postOnError(ErrorStrings.NOTIFY_OP_INIT_FAIL);
+            postOnError(ErrorStrings.LACKING_PERMISSION_FAIL);
         }
     }
 }

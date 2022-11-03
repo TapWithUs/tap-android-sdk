@@ -17,8 +17,13 @@ public class DiscoverServicesOperation extends GattOperation<List<BluetoothGattS
 
     @Override
     public void onExecute(@NonNull BluetoothGatt gatt) {
-        if (!gatt.discoverServices()) {
+        try {
+            if (!gatt.discoverServices()) {
+                postOnError(ErrorStrings.DISCOVER_SERVICES_OP_INIT_FAIL);
+            }
+        } catch (SecurityException se) {
             postOnError(ErrorStrings.DISCOVER_SERVICES_OP_INIT_FAIL);
+            postOnError(ErrorStrings.LACKING_PERMISSION_FAIL);
         }
     }
 

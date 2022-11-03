@@ -35,8 +35,14 @@ public class DescriptorWriteOperation extends DescriptorOperation {
             return;
         }
 
-        if (!gatt.writeDescriptor(d)) {
+        try {
+            if (!gatt.writeDescriptor(d)) {
+                postOnError(ErrorStrings.WRITE_OP_INIT_FAIL);
+            }
+        } catch (SecurityException se) {
             postOnError(ErrorStrings.WRITE_OP_INIT_FAIL);
+            postOnError(ErrorStrings.LACKING_PERMISSION_FAIL);
         }
+
     }
 }

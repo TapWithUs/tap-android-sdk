@@ -16,6 +16,8 @@ public class ErrorStrings {
     public static final String OP_BUNDLE_EMPTY_EXEC = "Cannot execute empty operation in bundle";
     public static final String UNPAIR_OP_INIT_FAIL = "Remove bond (pairing) with the remote device failed";
     public static final String REFRESH_OP_INIT_FAIL = "Failed clearing the internal cache of the remote device";
+    public static final String LACKING_PERMISSION_FAIL = "Operation prevented by not having permissions (Android 12)";
+    public static final String GATT_FAILURE = "GATT operation failure";
 
     public static final String BLUETOOTH_OFF = "Bluetooth is turned OFF";
     public static final String BLUETOOTH_NOT_SUPPORTED = "Bluetooth is not supported on this hardware platform";

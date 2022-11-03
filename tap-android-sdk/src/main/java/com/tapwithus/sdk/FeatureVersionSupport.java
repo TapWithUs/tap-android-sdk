@@ -1,5 +1,6 @@
 package com.tapwithus.sdk;
 
+import android.util.Log;
 import androidx.annotation.NonNull;
 
 import com.tapwithus.sdk.tap.Tap;
@@ -90,7 +91,13 @@ public class FeatureVersionSupport {
 
         String ver = major + minor + patch;
 
-        return Integer.parseInt(ver);
+        int retVal = -1;
+        try {
+            retVal = Integer.parseInt(ver);
+        } catch (NumberFormatException nfe) {
+            Log.e("TapSDK Error", "Could not format \"ver\" error = " + nfe.getMessage());
+        }
+        return retVal;
     }
 
     public static String intToSemVer(int intVer) {

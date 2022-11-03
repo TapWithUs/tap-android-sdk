@@ -34,10 +34,10 @@ public class TapSdk {
     public static final int ERR_HAPTIC = 102;
 
     protected TapBluetoothManager tapBluetoothManager;
-    private ListenerManager<TapListener> tapListeners = new ListenerManager<>();
-    private Map<String, TapInputMode> modeSubscribers = new ConcurrentHashMap<>();
+    private final ListenerManager<TapListener> tapListeners = new ListenerManager<>();
+    private final Map<String, TapInputMode> modeSubscribers = new ConcurrentHashMap<>();
 //    private Set<String> HIDMouseInRawModeSubscribers = new HashSet<>();
-    private Set<String> tapsInAirMouseState = new HashSet<>();
+    private final Set<String> tapsInAirMouseState = new HashSet<>();
 //    private List<String> startModeNotificationSubscribers = new CopyOnWriteArrayList<>();
 //    private List<String> notifyOnConnectedAfterControllerModeStarted = new CopyOnWriteArrayList<>();
 //    private List<String> notifyOnResumedAfterControllerModeStarted = new CopyOnWriteArrayList<>();
@@ -484,7 +484,7 @@ public class TapSdk {
 //    };
 
     @SuppressWarnings("FieldCanBeLocal")
-    private TapBluetoothListener tapBluetoothListener = new TapBluetoothListener() {
+    private final TapBluetoothListener tapBluetoothListener = new TapBluetoothListener() {
 
         @Override
         public void onBluetoothTurnedOn() {
@@ -723,66 +723,31 @@ public class TapSdk {
 
 
     private void notifyOnBluetoothTurnedOn() {
-        tapListeners.notifyAll(new NotifyAction<TapListener>() {
-            @Override
-            public void onNotify(TapListener listener) {
-                listener.onBluetoothTurnedOn();
-            }
-        });
+        tapListeners.notifyAll(TapListener::onBluetoothTurnedOn);
     }
 
     private void notifyOnBluetoothTurnedOff() {
-        tapListeners.notifyAll(new NotifyAction<TapListener>() {
-            @Override
-            public void onNotify(TapListener listener) {
-                listener.onBluetoothTurnedOff();
-            }
-        });
+        tapListeners.notifyAll(TapListener::onBluetoothTurnedOff);
     }
 
     private void notifyOnTapStartConnecting(@NonNull final String tapIdentifier) {
-        tapListeners.notifyAll(new NotifyAction<TapListener>() {
-            @Override
-            public void onNotify(TapListener listener) {
-                listener.onTapStartConnecting(tapIdentifier);
-            }
-        });
+        tapListeners.notifyAll(listener -> listener.onTapStartConnecting(tapIdentifier));
     }
 
     private void notifyOnTapConnected(@NonNull final String tapIdentifier) {
-        tapListeners.notifyAll(new NotifyAction<TapListener>() {
-            @Override
-            public void onNotify(TapListener listener) {
-                listener.onTapConnected(tapIdentifier);
-            }
-        });
+        tapListeners.notifyAll(listener -> listener.onTapConnected(tapIdentifier));
     }
 
     private void notifyOnTapDisconnected(@NonNull final String tapIdentifier) {
-        tapListeners.notifyAll(new NotifyAction<TapListener>() {
-            @Override
-            public void onNotify(TapListener listener) {
-                listener.onTapDisconnected(tapIdentifier);
-            }
-        });
+        tapListeners.notifyAll(listener -> listener.onTapDisconnected(tapIdentifier));
     }
 
     private void notifyOnTapResumed(@NonNull final String tapIdentifier) {
-        tapListeners.notifyAll(new NotifyAction<TapListener>() {
-            @Override
-            public void onNotify(TapListener listener) {
-                listener.onTapResumed(tapIdentifier);
-            }
-        });
+        tapListeners.notifyAll(listener -> listener.onTapResumed(tapIdentifier));
     }
 
     private void notifyOnTapChanged(@NonNull final String tapIdentifier) {
-        tapListeners.notifyAll(new NotifyAction<TapListener>() {
-            @Override
-            public void onNotify(TapListener listener) {
-                listener.onTapChanged(tapIdentifier);
-            }
-        });
+        tapListeners.notifyAll(listener -> listener.onTapChanged(tapIdentifier));
     }
 
     private void notifyOnControllerModeStarted(@NonNull final String tapIdentifier) {
@@ -814,48 +779,23 @@ public class TapSdk {
     }
 
     private void notifyOnTapInputReceived(@NonNull final String tapIdentifier, final int data, final int repeatData) {
-        tapListeners.notifyAll(new NotifyAction<TapListener>() {
-            @Override
-            public void onNotify(TapListener listener) {
-                listener.onTapInputReceived(tapIdentifier, data, repeatData);
-            }
-        });
+        tapListeners.notifyAll(listener -> listener.onTapInputReceived(tapIdentifier, data, repeatData));
     }
 
     private void notifyOnTapShiftSwitchReceived(@NonNull final String tapIdentifier, final int data) {
-        tapListeners.notifyAll(new NotifyAction<TapListener>() {
-            @Override
-            public void onNotify(TapListener listener) {
-                listener.onTapShiftSwitchReceived(tapIdentifier, data);
-            }
-        });
+        tapListeners.notifyAll(listener -> listener.onTapShiftSwitchReceived(tapIdentifier, data));
     }
 
     private void notifyOnRawSensorDataReceieved(@NonNull final String tapIdentifier, final RawSensorData rsData) {
-        tapListeners.notifyAll(new NotifyAction<TapListener>() {
-            @Override
-            public void onNotify(TapListener listener) {
-                listener.onRawSensorInputReceived(tapIdentifier, rsData);
-            }
-        });
+        tapListeners.notifyAll(listener -> listener.onRawSensorInputReceived(tapIdentifier, rsData));
     }
 
     private void notifyOnMouseInputReceived(@NonNull final String tapIdentifier, @NonNull final MousePacket data) {
-        tapListeners.notifyAll(new NotifyAction<TapListener>() {
-            @Override
-            public void onNotify(TapListener listener) {
-                listener.onMouseInputReceived(tapIdentifier, data);
-            }
-        });
+        tapListeners.notifyAll(listener -> listener.onMouseInputReceived(tapIdentifier, data));
     }
 
     private void notifyOnAirMouseInputReceived(@NonNull final String tapIdentifier, @NonNull final AirMousePacket data) {
-        tapListeners.notifyAll(new NotifyAction<TapListener>() {
-            @Override
-            public void onNotify(TapListener listener) {
-                listener.onAirMouseInputReceived(tapIdentifier, data);
-            }
-        });
+        tapListeners.notifyAll(listener -> listener.onAirMouseInputReceived(tapIdentifier, data));
     }
 
 //    private void notifyOnRawSensorInputReceived(@NonNull final String tapIdentifier, @NonNull final int data) {
@@ -868,21 +808,11 @@ public class TapSdk {
 //    }
 
     private void notifyOnTapChangedState(@NonNull final String tapIdentifier, final int state) {
-        tapListeners.notifyAll(new NotifyAction<TapListener>() {
-            @Override
-            public void onNotify(TapListener listener) {
-                listener.onTapChangedState(tapIdentifier, state);
-            }
-        });
+        tapListeners.notifyAll(listener -> listener.onTapChangedState(tapIdentifier, state));
     }
 
     private void notifyOnError(final String tapIdentifier, final int code, final String description) {
-        tapListeners.notifyAll(new NotifyAction<TapListener>() {
-            @Override
-            public void onNotify(TapListener listener) {
-                listener.onError(tapIdentifier, code, description);
-            }
-        });
+        tapListeners.notifyAll(listener -> listener.onError(tapIdentifier, code, description));
     }
 
     protected void log(String message) {

@@ -35,8 +35,13 @@ public class CharacteristicWriteOperation extends CharacteristicOperation {
             return;
         }
 
-        if (!gatt.writeCharacteristic(c)) {
+        try {
+            if (!gatt.writeCharacteristic(c)) {
+                postOnError(ErrorStrings.WRITE_OP_INIT_FAIL);
+            }
+        } catch (SecurityException se) {
             postOnError(ErrorStrings.WRITE_OP_INIT_FAIL);
+            postOnError(ErrorStrings.LACKING_PERMISSION_FAIL);
         }
     }
 }

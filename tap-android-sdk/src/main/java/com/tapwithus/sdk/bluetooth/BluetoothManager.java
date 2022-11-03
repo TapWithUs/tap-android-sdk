@@ -48,7 +48,7 @@ public class BluetoothManager {
     private static final Map<String, BluetoothGatt> gatts = new ConcurrentHashMap<>();
     private static final Map<String, GattExecutor> executors = new ConcurrentHashMap<>();
     private static final List<String> establishConnectionSent = new CopyOnWriteArrayList<>();
-    private List<String> connectionInProgress = new CopyOnWriteArrayList<>();
+    private final List<String> connectionInProgress = new CopyOnWriteArrayList<>();
     private static final Set<String> connectedDevices = new CopyOnWriteArraySet<>();
     private static final Set<String> ignoredDevices = new CopyOnWriteArraySet<>();
     private static final Set<String> ignoreInProgress = new CopyOnWriteArraySet<>();
@@ -59,9 +59,9 @@ public class BluetoothManager {
     public static final int ERR_C_DEVICE_NOT_CONNECTED = 4;
     public static final int ERR_C_GATT_OP = 5;
 
-    private Context context;
-    private BluetoothAdapter bluetoothAdapter;
-    private ListenerManager<BluetoothListener> bluetoothListeners = new ListenerManager<>();
+    private final Context context;
+    private final BluetoothAdapter bluetoothAdapter;
+    private final ListenerManager<BluetoothListener> bluetoothListeners = new ListenerManager<>();
 
     private boolean debug = false;
     private boolean restartBondRequested = false;
@@ -215,7 +215,11 @@ public class BluetoothManager {
         }
 
         log("Trying to connect to gatt");
-        device.connectGatt(context, true, bluetoothGattCallback);
+        try {
+            device.connectGatt(context, true, bluetoothGattCallback);
+        } catch (SecurityException se) {
+            log("No permission granted (Android 12)");
+        }
     }
 
     private void establishConnection(String deviceAddress) {
@@ -231,7 +235,14 @@ public class BluetoothManager {
             notifyOnDeviceAlreadyConnected(connectedDeviceAddress);
         }
 
-        Set<BluetoothDevice> bondedDevices = bluetoothAdapter.getBondedDevices();
+        Set<BluetoothDevice> bondedDevices = null;
+        try {
+            bondedDevices = bluetoothAdapter.getBondedDevices();
+        } catch (SecurityException se) {
+            log("No permission granted for getBondedDevices (Android 12)");
+            notifyOnError(EMPTY_DEVICE_ADDRESS, ERR_C_PAIRED_DEVICES, ErrorStrings.PAIRED_DEVICES);
+            return;
+        }
         if (bondedDevices == null) {
             notifyOnError(EMPTY_DEVICE_ADDRESS, ERR_C_PAIRED_DEVICES, ErrorStrings.PAIRED_DEVICES);
             return;
@@ -249,7 +260,7 @@ public class BluetoothManager {
         }
     }
 
-    private BluetoothGattCallback bluetoothGattCallback = new BluetoothGattCallback() {
+    private final BluetoothGattCallback bluetoothGattCallback = new BluetoothGattCallback() {
 
         @Override
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
@@ -266,7 +277,11 @@ public class BluetoothManager {
              */
 
             BluetoothDevice device = gatt.getDevice();
-            log("Connection state changed - " + device.getName() + " " + device.getAddress() + " status: " + status + " newState: " + newState);
+            try {
+                log("Connection state changed - " + device.getName() + " " + device.getAddress() + " status: " + status + " newState: " + newState);
+            } catch (SecurityException se) {
+                log("Connection state changed - No permission granted for device.getName() (Android 12)");
+            }
 
             if (ignoredDevices.contains(device.getAddress())) {
                 return;
@@ -380,14 +395,14 @@ public class BluetoothManager {
 
         log(deviceAddress + " connected.");
 
-        final GattOperation refreshOp = new RefreshOperation()
+        final GattOperation<?> refreshOp = new RefreshOperation()
                 .addOnCompletionListener(data -> log("Refresh finished successfully"))
                 .addOnErrorListener(msg -> {
                     logError("refreshOperation - " + msg);
                     notifyOnError(deviceAddress, ERR_C_GATT_OP, msg);
                 });
 
-        final GattOperation discoverServicesOp = new DiscoverServicesOperation()
+        final GattOperation<?> discoverServicesOp = new DiscoverServicesOperation()
                 .addOnCompletionListener(data -> {
                     log("Discover services finished successfully");
                     onDiscoverServicesCompleted(gatt, data);
@@ -485,7 +500,11 @@ public class BluetoothManager {
 
     private void closeGatt(BluetoothGatt gatt) {
         removeExecutor(getExecutor(gatt));
-        gatt.close();
+        try {
+            gatt.close();
+        } catch (SecurityException se) {
+            log("Failed to call gatt.close() - No permission granted (Android 12)");
+        }
     }
 
     private void removeFromLists(@NonNull String deviceAddress) {
@@ -505,7 +524,7 @@ public class BluetoothManager {
             return;
         }
 
-        GattOperation setNotificationOp = new SetNotificationOperation(serviceUUID, characteristicUUID)
+        GattOperation<?> setNotificationOp = new SetNotificationOperation(serviceUUID, characteristicUUID)
                 .addOnCompletionListener(data -> notifyOnNotificationSubscribed(deviceAddress, characteristicUUID))
                 .addOnErrorListener(msg -> notifyOnError(deviceAddress, ERR_C_DEVICE_NOT_CONNECTED, msg));
 
@@ -524,7 +543,7 @@ public class BluetoothManager {
             return;
         }
 
-        GattOperation characteristicReadOp = new CharacteristicReadOperation(serviceUUID, characteristicUUID)
+        GattOperation<?> characteristicReadOp = new CharacteristicReadOperation(serviceUUID, characteristicUUID)
                 .addOnCompletionListener(data -> notifyOnCharacteristicRead(deviceAddress, characteristicUUID, data))
                 .addOnErrorListener(msg -> notifyOnError(deviceAddress, ERR_C_DEVICE_NOT_CONNECTED, msg))
                 .addOnNotFoundListener(message -> notifyOnCharacteristicNotFound(deviceAddress, characteristicUUID));
@@ -543,7 +562,7 @@ public class BluetoothManager {
             return;
         }
 
-        GattOperation characteristicWriteOp = new CharacteristicWriteOperation(serviceUUID, characteristicUUID, data)
+        GattOperation<?> characteristicWriteOp = new CharacteristicWriteOperation(serviceUUID, characteristicUUID, data)
                 .addOnCompletionListener(data1 -> notifyOnCharacteristicWrite(deviceAddress, characteristicUUID, data1))
                 .addOnErrorListener(msg -> notifyOnError(deviceAddress, ERR_C_DEVICE_NOT_CONNECTED, msg));
 
@@ -561,7 +580,11 @@ public class BluetoothManager {
         if (gatt == null) {
             return;
         }
-        gatt.disconnect();
+        try {
+            gatt.disconnect();
+        } catch (SecurityException se) {
+            log("Failed to call gatt.disconnect() - No permission granted (Android 12)");
+        }
     }
 
     @NonNull
@@ -575,10 +598,15 @@ public class BluetoothManager {
 
     public boolean setBluetooth(boolean enable) {
         boolean isEnabled = bluetoothAdapter.isEnabled();
-        if (enable && !isEnabled) {
-            return bluetoothAdapter.enable();
-        } else if(!enable && isEnabled) {
-            return bluetoothAdapter.disable();
+        try {
+            if (enable && !isEnabled) {
+                return bluetoothAdapter.enable();
+            } else if(!enable && isEnabled) {
+                return bluetoothAdapter.disable();
+            }
+        } catch (SecurityException se) {
+            log("Failed to call bluetoothAdapter.enable()/bluetoothAdapter.disable() - No permission granted (Android 12)");
+            return false;
         }
         // No need to change bluetooth state
         return true;
@@ -601,7 +629,7 @@ public class BluetoothManager {
         }
     }
 
-    private BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
+    private final BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             if (isClosed) {

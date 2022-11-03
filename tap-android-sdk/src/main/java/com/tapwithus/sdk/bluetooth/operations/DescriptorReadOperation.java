@@ -27,8 +27,13 @@ public class DescriptorReadOperation extends DescriptorOperation {
             return;
         }
 
-        if (!gatt.readDescriptor(d)) {
-            postOnError(ErrorStrings.READ_OP_INIT_FAIL);
+        try {
+            if (!gatt.readDescriptor(d)) {
+                postOnError(ErrorStrings.READ_OP_INIT_FAIL);
+            }
+        } catch (SecurityException se) {
+                postOnError(ErrorStrings.READ_OP_INIT_FAIL);
+                postOnError(ErrorStrings.LACKING_PERMISSION_FAIL);
         }
     }
 }

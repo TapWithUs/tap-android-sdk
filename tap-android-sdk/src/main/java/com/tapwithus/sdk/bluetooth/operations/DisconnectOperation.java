@@ -14,7 +14,13 @@ public class DisconnectOperation extends GattOperation<Void> {
 
     @Override
     public void onExecute(@NonNull BluetoothGatt gatt) {
-        gatt.disconnect();
+        try {
+            gatt.disconnect();
+        } catch (SecurityException se) {
+            postOnError(ErrorStrings.GATT_FAILURE);
+            postOnError(ErrorStrings.LACKING_PERMISSION_FAIL);
+        }
+
     }
 
     @Override
