@@ -4,6 +4,9 @@ import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
 import androidx.annotation.NonNull;
+
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 
 import com.tapwithus.sdk.bluetooth.callbacks.OnCompletionListener;
@@ -11,6 +14,8 @@ import com.tapwithus.sdk.bluetooth.callbacks.OnErrorListener;
 import com.tapwithus.sdk.bluetooth.callbacks.OnNotFoundListener;
 
 import java.util.Queue;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.LinkedBlockingDeque;
 
 public class GattExecutor implements OnCompletionListener<Object>, OnErrorListener, OnNotFoundListener {

@@ -1,6 +1,9 @@
 package com.tapwithus.sdk.tap;
 
+import java.util.Hashtable;
+
 public class Tap {
+
 
     private final String identifier;
     private final String name;
@@ -9,6 +12,9 @@ public class Tap {
     private final String hwVer;
     private final String fwVer;
     private final String bootloaderVer;
+
+
+
 
     public Tap(String identifier, String name, int battery, String serialNumber, String hwVer, String fwVer, String bootloaderVer) {
         this.identifier = identifier;

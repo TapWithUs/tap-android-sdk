@@ -19,6 +19,7 @@ public class CharacteristicReadOperation extends CharacteristicOperation {
         return OperationType.CHAR_READ;
     }
 
+
     @Override
     public void onExecute(@NonNull BluetoothGatt gatt) {
         BluetoothGattCharacteristic c = extractCharacteristic(gatt);

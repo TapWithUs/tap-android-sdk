@@ -5,13 +5,18 @@ import android.os.Bundle;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.DividerItemDecoration;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.content.pm.PackageManager;
+import android.Manifest;
 
+import com.tapwithus.sdk.FeatureVersionSupport;
 import com.tapwithus.sdk.TapListener;
 import com.tapwithus.sdk.TapSdk;
 import com.tapwithus.sdk.TapSdkFactory;
@@ -19,6 +24,7 @@ import com.tapwithus.sdk.airmouse.AirMousePacket;
 import com.tapwithus.sdk.mode.RawSensorData;
 import com.tapwithus.sdk.mode.Point3;
 import com.tapwithus.sdk.mode.TapInputMode;
+import com.tapwithus.sdk.mode.TapXRState;
 import com.tapwithus.sdk.mouse.MousePacket;
 import com.tapwithus.sdk.tap.Tap;
 
@@ -44,6 +50,10 @@ public class MainActivity extends AppCompatActivity {
         devCounter = 0;
         log("onCreate");
 
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[] { Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.BLUETOOTH_SCAN} , 5);
+        }
+
         sdk = TapSdkFactory.getDefault(this);
         sdk.enableDebug();
         if (!startWithControllerMode) {
@@ -66,14 +76,18 @@ public class MainActivity extends AppCompatActivity {
 
 //                sdk.restartBluetooth();
 //                sdk.refreshBond(lastConnectedTapAddress);
-
-                if (sdk.isTapIgnored(lastConnectedTapAddress)) {
-                    sdk.unignoreTap(lastConnectedTapAddress);
-                } else {
-                    sdk.ignoreTap(lastConnectedTapAddress);
-                }
+                sdk.refreshConnections();
+//                if (sdk.isTapIgnored(lastConnectedTapAddress)) {
+//                    sdk.unignoreTap(lastConnectedTapAddress);
+//                } else {
+//                    sdk.ignoreTap(lastConnectedTapAddress);
+//                }
             }
         });
+
+//        this.compareFeatureVersionSupport();
+
+
     }
 
     private TapListItemOnClickListener itemOnClickListener = new TapListItemOnClickListener() {
@@ -171,6 +185,63 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    private class PairHwFw {
+        private int hw;
+        private int fw;
+        public PairHwFw(int hw, int fw) {
+            this.hw = hw;
+            this.fw = fw;
+        }
+        public int getHw() {
+            return this.hw;
+        }
+
+        public int getFw() {
+            return this.fw;
+        }
+
+        public String toString() {
+            return "hw: " + this.hw + ", fw: " + this.fw;
+        }
+    }
+    private void compareFeatureVersionSupport() {
+        ArrayList<PairHwFw> hf = new ArrayList<PairHwFw>();
+
+        ArrayList<Integer> features = new ArrayList<Integer>();
+//        features.add(FeatureVersionSupport.FEATURE_ENABLE_TEXT_MODE);
+//        features.add(FeatureVersionSupport.FEATURE_MOUSE_MODE);
+        features.add(FeatureVersionSupport.FEATURE_AIR_MOUSE);
+//        features.add(FeatureVersionSupport.FEATURE_RAW_SENSOR);
+//        features.add(FeatureVersionSupport.FEATURE_CONTROLLER_WITH_MOUSEHID);
+//        features.add(FeatureVersionSupport.FEATURE_HAPTIC);
+//        features.add(FeatureVersionSupport.FEATURE_DEVELOPER_MODE);
+//        features.add(FeatureVersionSupport.FEATURE_CONTROLLER_WITH_FULLHID);
+
+        hf.add(new PairHwFw(30200, 10000));
+        hf.add(new PairHwFw(30200, 10500));
+        hf.add(new PairHwFw(30300, 20000));
+        hf.add(new PairHwFw(30200, 20325));
+        hf.add(new PairHwFw(30200, 20303));
+        hf.add(new PairHwFw(30200, 20324));
+        hf.add(new PairHwFw(30200, 20405));
+        hf.add(new PairHwFw(40000, 30000));
+
+
+        for (int i=0; i<features.size(); i++) {
+            for (int j=0; j<hf.size(); j++) {
+                boolean a = FeatureVersionSupport.isFeatureSupported(FeatureVersionSupport.intToSemVer(hf.get(j).getHw()), FeatureVersionSupport.intToSemVer(hf.get(j).getFw()), features.get(i));
+//                boolean b = FeatureVersionSupport.isFeatureSupported2(hf.get(j).getHw(), hf.get(j).getFw(), features.get(i));
+//                if (a != b) {
+//                    Log.i("FEATUREVERSION", "Results Differs for feature " + features.get(i).toString() + ", " + hf.get(j).toString() + ", old: " + a + ", new: " + b);
+//                }
+            }
+
+        }
+
+
+
+
+    }
     private void askModeDialog(DialogInterface.OnClickListener textModeListener, DialogInterface.OnClickListener controllerWithMouseHIDListener, DialogInterface.OnClickListener controllerWithoutMouseHIDListener) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Change TAP Mode");
@@ -354,7 +425,7 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onMouseInputReceived(@NonNull String tapIdentifier, @NonNull MousePacket data) {
-//            log(tapIdentifier + " mouse input received " + data.dx.getInt() + " " + data.dy.getInt() + " " + data.dt.getUnsignedLong() + " " + data.proximity.getInt());
+            log(tapIdentifier + " mouse input received " + data.dx.getInt() + " " + data.dy.getInt() + " " + data.dt.getUnsignedLong() + " " + data.proximity.getInt());
         }
 
         @Override

@@ -13,6 +13,7 @@ import com.tapwithus.sdk.bluetooth.TapBluetoothManager;
 import com.tapwithus.sdk.mode.RawSensorData;
 import com.tapwithus.sdk.mode.RawSensorDataParser;
 import com.tapwithus.sdk.mode.TapInputMode;
+import com.tapwithus.sdk.mode.TapXRState;
 import com.tapwithus.sdk.mouse.MousePacket;
 import com.tapwithus.sdk.tap.Tap;
 import com.tapwithus.sdk.tap.TapCache;
@@ -35,7 +36,12 @@ public class TapSdk {
 
     protected TapBluetoothManager tapBluetoothManager;
     private final ListenerManager<TapListener> tapListeners = new ListenerManager<>();
+
+
+
     private final Map<String, TapInputMode> modeSubscribers = new ConcurrentHashMap<>();
+    private final Map<String, TapXRState> stateSubscribers = new ConcurrentHashMap<>();
+
 //    private Set<String> HIDMouseInRawModeSubscribers = new HashSet<>();
     private final Set<String> tapsInAirMouseState = new HashSet<>();
 //    private List<String> startModeNotificationSubscribers = new CopyOnWriteArrayList<>();
@@ -46,19 +52,25 @@ public class TapSdk {
     private boolean isClosed = false;
     private boolean isPaused = false;
     private TapInputMode autoSetModeOnConnection = TapInputMode.controller();
+    private TapXRState defaultXRState = TapXRState.none();
 //    private boolean autoSetControllerModeOnConnection = true;
 
     private Handler rawModeHandler;
     private Runnable rawModeRunnable;
 
-    protected TapCache cache = new TapCache();
+    protected TapCache cache;
     private boolean clearCacheOnTapDisconnection = true;
     private boolean pauseResumeHandling = true;
 
     public TapSdk(TapBluetoothManager tapBluetoothManager) {
+        this.cache = this.getTapCache();
         this.tapBluetoothManager = tapBluetoothManager;
         this.tapBluetoothManager.registerTapBluetoothListener(tapBluetoothListener);
         startRawModeLoop();
+    }
+
+    public TapCache getTapCache() {
+        return new TapCache();
     }
 
     public void enableDebug() {
@@ -285,6 +297,20 @@ public class TapSdk {
 //        return HIDMouseInRawModeSubscribers.contains(tapIdentifier);
 //    }
 
+    public void setDefaultXRState(TapXRState state, Boolean applyImmediate) {
+        if (!state.isValid()) {
+            return;
+        }
+        this.defaultXRState = state;
+        if (applyImmediate) {
+            Set<String> taps = getConnectedTaps();
+            for (String tapIdentifier : taps) {
+                startXRSTate(tapIdentifier, state);
+
+            }
+        }
+    }
+
     public void setDefaultMode(TapInputMode mode, Boolean applyImmediate) {
         if (!mode.isValid()) {
             return;
@@ -295,6 +321,20 @@ public class TapSdk {
             for (String tapIdentifier : taps) {
                 startMode(tapIdentifier, mode);
 
+            }
+        }
+    }
+
+    private void startXRSTate(String tapIdentifier, TapXRState state) {
+        stateSubscribers.put(tapIdentifier, state);
+        if (state.getBytes().length > 0) {
+            if (isFeatureSupported(tapIdentifier, FeatureVersionSupport.FEATURE_XR_STATE)) {
+                if (modeSubscribers.containsKey(tapIdentifier) && modeSubscribers.get(tapIdentifier).type != TapInputMode.TEXT) {
+                    tapBluetoothManager.startXRState(tapIdentifier, state.getBytes());
+                    if (state.type == TapXRState.USER_CONTROL) {
+                        stateSubscribers.put(tapIdentifier, TapXRState.none());
+                    }
+                }
             }
         }
     }
@@ -322,6 +362,10 @@ public class TapSdk {
 
     public void refreshBond(@NonNull String tapIdentifier) {
         tapBluetoothManager.refreshBond(tapIdentifier);
+    }
+
+    public void startWithNoModes() {
+        tapBluetoothManager.disableModes();
     }
 
     public void startControllerMode(@NonNull String tapIdentifier) {
@@ -375,6 +419,17 @@ public class TapSdk {
         startMode(tapIdentifier, TapInputMode.controllerWithFullHID());
     }
 
+    public void startXRUserControlState(@NonNull String tapIdentifier) {
+        this.startXRSTate(tapIdentifier, TapXRState.userControl());
+    }
+
+    public void startXRAirMouseState(@NonNull String tapIdentifier) {
+        this.startXRSTate(tapIdentifier, TapXRState.airMouse());
+    }
+
+    public void startXRTappingState(@NonNull String tapIdentifier) {
+        this.startXRSTate(tapIdentifier, TapXRState.tapping());
+    }
     public void requestShiftSwitchState(@NonNull String tapIdentifier) {
         if (!isFeatureSupported(tapIdentifier, FeatureVersionSupport.FEATURE_CONTROLLER_WITH_FULLHID)) {
             logError("FEATURE_CONTROLLER_WITH_FULLHID not supported - " + tapIdentifier + ", Can't request SwitchShift state");
@@ -468,6 +523,7 @@ public class TapSdk {
     }
 
     public void close() {
+        Log.i("TAPSDK", "CLOSE!!!");
         isClosing = true;
         stopRawModeLoop();
         tapBluetoothManager.close();
@@ -476,6 +532,14 @@ public class TapSdk {
         handleCloseReset();
     }
 
+
+    public void enableModes() {
+        tapBluetoothManager.enableModes();
+    }
+
+    public void disableModes() {
+        tapBluetoothManager.disableModes();
+    }
 //    private RawSensorDataParserListener rawSensorListener = new RawSensorDataParserListener() {
 //        @Override
 //        public void onRawSensorDataReceived(@NonNull String tapIdentifier, RawSensorData rsData) {
@@ -585,7 +649,8 @@ public class TapSdk {
             }
         }
 
-//        @Override
+
+        //        @Override
 //        public void onControllerModeStarted(@NonNull String tapAddress) {
 ////            if (notifyOnConnectedAfterControllerModeStarted.contains(tapAddress)) {
 ////                notifyOnConnectedAfterControllerModeStarted.remove(tapAddress);
@@ -644,6 +709,7 @@ public class TapSdk {
         @Override
         public void onRawSensorInputSubscribed(@NonNull String tapAddress) {
             cache.onRawSensorInputSubscribed(tapAddress);
+
             handleEmission(tapAddress);
         }
 
@@ -791,6 +857,7 @@ public class TapSdk {
     }
 
     private void notifyOnMouseInputReceived(@NonNull final String tapIdentifier, @NonNull final MousePacket data) {
+
         tapListeners.notifyAll(listener -> listener.onMouseInputReceived(tapIdentifier, data));
     }
 
@@ -826,11 +893,13 @@ public class TapSdk {
     }
 
     private void handleTapConnection(@NonNull String tapIdentifier) {
+
         if (isPaused || isClosing) {
             return;
         }
 
         startMode(tapIdentifier, autoSetModeOnConnection);
+        startXRSTate(tapIdentifier, defaultXRState);
         notifyOnTapConnected(tapIdentifier);
 //            List<String> textModeSubscribers = getTapsInMode(MODE_TEXT);
 //            if (textModeSubscribers.contains(tapIdentifier) || !autoSetControllerModeOnConnection) {
@@ -855,6 +924,7 @@ public class TapSdk {
             cache.clear(tapIdentifier);
         }
         modeSubscribers.remove(tapIdentifier);
+        stateSubscribers.remove(tapIdentifier);
 //        HIDMouseInRawModeSubscribers.remove(tapIdentifier);
         if (!isClosing) {
             notifyOnTapDisconnected(tapIdentifier);
@@ -871,11 +941,12 @@ public class TapSdk {
     }
 
     private void handleEmission(@NonNull String tapIdentifier) {
+        Log.i("TAPSDK", "HANDLE EMISSION CALL " + tapIdentifier);
         if (!cache.isCached(tapIdentifier)) {
             handleCacheDependencies(tapIdentifier);
             return;
         }
-
+        Log.i("TAPSDK", "HANDLE EMISSION COMPLETED " + tapIdentifier);
         if (isTapConnected(tapIdentifier)) {
             handleTapConnection(tapIdentifier);
         } else {
@@ -883,30 +954,37 @@ public class TapSdk {
         }
     }
 
-    private void handleCacheDependencies(@NonNull String tapIdentifier) {
-        if (!cache.has(tapIdentifier, TapCache.DataKey.Name)) {
+    public void handleCacheDependencies(@NonNull String tapIdentifier) {
+
+        if (!cache.has(tapIdentifier, TapCache.DataKey.Name) && cache.shouldHave(tapIdentifier, TapCache.DataKey.Name)) {
             tapBluetoothManager.readName(tapIdentifier);
-        } else if (!cache.has(tapIdentifier, TapCache.DataKey.Battery)) {
+        } else if (!cache.has(tapIdentifier, TapCache.DataKey.Battery) && cache.shouldHave(tapIdentifier, TapCache.DataKey.Battery)) {
+
             tapBluetoothManager.readBattery(tapIdentifier);
-        } else if (!cache.has(tapIdentifier, TapCache.DataKey.SerialNumber)) {
+        } else if (!cache.has(tapIdentifier, TapCache.DataKey.SerialNumber) && cache.shouldHave(tapIdentifier, TapCache.DataKey.SerialNumber)) {
+
             tapBluetoothManager.readSerialNumber(tapIdentifier);
-        } else if (!cache.has(tapIdentifier, TapCache.DataKey.HwVer)) {
+        } else if (!cache.has(tapIdentifier, TapCache.DataKey.HwVer) && cache.shouldHave(tapIdentifier, TapCache.DataKey.HwVer)) {
             tapBluetoothManager.readHwVer(tapIdentifier);
-        } else if (!cache.has(tapIdentifier, TapCache.DataKey.FwVer)) {
+        } else if (!cache.has(tapIdentifier, TapCache.DataKey.FwVer) && cache.shouldHave(tapIdentifier, TapCache.DataKey.FwVer)) {
             tapBluetoothManager.readFwVer(tapIdentifier);
-        } else if (!cache.has(tapIdentifier, TapCache.DataKey.BootloaderVer)) {
+        } else if (!cache.has(tapIdentifier, TapCache.DataKey.BootloaderVer) && cache.shouldHave(tapIdentifier, TapCache.DataKey.BootloaderVer)) {
+
             tapBluetoothManager.readBootloaderVer(tapIdentifier);
-        } else if (!cache.has(tapIdentifier, TapCache.DataKey.TapNotification)) {
+        } else if (!cache.has(tapIdentifier, TapCache.DataKey.TapNotification) && cache.shouldHave(tapIdentifier, TapCache.DataKey.TapNotification)) {
             tapBluetoothManager.setupTapNotification(tapIdentifier);
-        } else if (!cache.has(tapIdentifier, TapCache.DataKey.MouseNotification)) {
+        } else if (!cache.has(tapIdentifier, TapCache.DataKey.MouseNotification) && cache.shouldHave(tapIdentifier, TapCache.DataKey.MouseNotification)) {
             tapBluetoothManager.setupMouseNotification(tapIdentifier);
-        } else if (!cache.has(tapIdentifier, TapCache.DataKey.AirMouseNotification)) {
+        } else if (!cache.has(tapIdentifier, TapCache.DataKey.AirMouseNotification) && cache.shouldHave(tapIdentifier, TapCache.DataKey.AirMouseNotification)) {
+
             tapBluetoothManager.setupAirMouseNotification(tapIdentifier);
-        } else if (!cache.has(tapIdentifier, TapCache.DataKey.RawSensorNotification)) {
+        } else if (!cache.has(tapIdentifier, TapCache.DataKey.RawSensorNotification) && cache.shouldHave(tapIdentifier, TapCache.DataKey.RawSensorNotification)) {
+
             tapBluetoothManager.setupRawSensorNotification(tapIdentifier);
-        } else if (!cache.has(tapIdentifier, TapCache.DataKey.DataRequestNotification)) {
+        } else if (!cache.has(tapIdentifier, TapCache.DataKey.DataRequestNotification) && cache.shouldHave(tapIdentifier, TapCache.DataKey.DataRequestNotification)) {
+
             tapBluetoothManager.setupDataNotification(tapIdentifier);
-        } else{
+        } else {
             logError("Cache already has all required fields");
         }
     }
@@ -931,6 +1009,14 @@ public class TapSdk {
                 for (String tapIdentifier: modeSubscribers.keySet()) {
                     tapBluetoothManager.startMode(tapIdentifier, modeSubscribers.get(tapIdentifier).getBytes());
 //                    startControllerMode(tapIdentifier);
+                }
+
+                for (String tapIdentifier : stateSubscribers.keySet()) {
+                    TapXRState state = stateSubscribers.get(tapIdentifier);
+                    tapBluetoothManager.startXRState(tapIdentifier, stateSubscribers.get(tapIdentifier).getBytes());
+                    if (state.type == TapXRState.USER_CONTROL) {
+                        stateSubscribers.put(tapIdentifier, TapXRState.none());
+                    }
                 }
                 rawModeHandler.postDelayed(this, RAW_MODE_LOOP_DELAY);
             }

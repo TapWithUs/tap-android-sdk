@@ -43,14 +43,24 @@ public class TapBluetoothManager {
     protected static final UUID HAPTIC = UUID.fromString("C3FF0009-1D8B-40FD-A56F-C7BD5D0F3370");
     protected static final UUID DATA_REQUEST = UUID.fromString("C3FF000B-1D8B-40FD-A56F-C7BD5D0F3370");
 
+
     protected BluetoothManager bluetoothManager;
     private ListenerManager<TapBluetoothListener> tapBluetoothListeners = new ListenerManager<>();
 
-    private boolean debug = false;
+    private boolean debug = true;
 
+    private boolean modesEnabled = true;
     public TapBluetoothManager(@NonNull BluetoothManager bluetoothManager) {
         this.bluetoothManager = bluetoothManager;
         this.bluetoothManager.registerBluetoothListener(bluetoothListener);
+    }
+
+    public void enableModes() {
+        this.modesEnabled = true;
+    }
+
+    public void disableModes() {
+        this.modesEnabled = false;
     }
 
     public void enableDebug() {
@@ -107,7 +117,15 @@ public class TapBluetoothManager {
     }
 
     public void startMode(@NonNull String tapAddress, byte[] data) {
-        bluetoothManager.writeCharacteristic(tapAddress, NUS, RX, data);
+        if (this.modesEnabled) {
+            bluetoothManager.writeCharacteristic(tapAddress, NUS, RX, data);
+        }
+    }
+
+    public void startXRState(@NonNull String tapAddress, byte[] data) {
+        if (this.modesEnabled && data.length > 0 ) {
+            bluetoothManager.writeCharacteristic(tapAddress, NUS, RX, data);
+        }
     }
 
     public void sendHapticPacket(String tapAddress, int[] durations) {
@@ -310,6 +328,7 @@ public class TapBluetoothManager {
             } else if (characteristic.equals(DATA_REQUEST)) {
                 onNotificationReceived(deviceAddress, characteristic, data);
             }
+
         }
 
         @Override
@@ -328,6 +347,7 @@ public class TapBluetoothManager {
             } else if (characteristic.equals(SOFTWARE_REVISION_STRING)) {
                 notifyOnBootloaderVerRead(deviceAddress, "Unavailable");
             }
+
         }
 
         @Override
@@ -387,6 +407,7 @@ public class TapBluetoothManager {
                 }
                 notifyOnTapShiftSWitchReceived(deviceAddress, byte3);
             } else if (characteristic.equals(MOUSE_DATA)) {
+
                 data = Arrays.copyOfRange(data, 1, data.length);
                 MousePacket mousePacket = new MousePacket(data);
                 notifyOnMouseInputReceived(deviceAddress, mousePacket);
@@ -519,6 +540,7 @@ public class TapBluetoothManager {
             }
         });
     }
+
 
     private void notifyOnBootloaderVerRead(@NonNull final String tapAddress, @NonNull final String bootloaderVer) {
         tapBluetoothListeners.notifyAll(new NotifyAction<TapBluetoothListener>() {

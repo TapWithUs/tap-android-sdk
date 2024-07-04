@@ -7,6 +7,7 @@ import android.bluetooth.BluetoothGattCallback;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
+import android.bluetooth.BluetoothProfile;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -59,11 +60,13 @@ public class BluetoothManager {
     public static final int ERR_C_DEVICE_NOT_CONNECTED = 4;
     public static final int ERR_C_GATT_OP = 5;
 
+
+
     private final Context context;
     private final BluetoothAdapter bluetoothAdapter;
     private final ListenerManager<BluetoothListener> bluetoothListeners = new ListenerManager<>();
 
-    private boolean debug = false;
+    private boolean debug = true;
     private boolean restartBondRequested = false;
     private boolean isClosing = false;
     private boolean isClosed = false;
@@ -133,6 +136,8 @@ public class BluetoothManager {
         isClosed = false;
         establishConnectionSent.clear();
         gatts.clear();
+
+//        executors.clear();
         establishConnections();
     }
 
@@ -163,6 +168,7 @@ public class BluetoothManager {
     private void establishConnections() {
         log("Establishing connections...");
 
+
         if (bluetoothAdapter == null) {
             notifyOnError(EMPTY_DEVICE_ADDRESS, ERR_C_BLUETOOTH_NOT_SUPPORTED, ErrorStrings.BLUETOOTH_NOT_SUPPORTED);
             return;
@@ -171,6 +177,10 @@ public class BluetoothManager {
         for (String deviceAddress: getConnectedDevices()) {
             notifyOnDeviceAlreadyConnected(deviceAddress);
         }
+
+//        BluetoothManager bm = (BluetoothManager) context.getSystemService(Context.BLUETOOTH_SERVICE);
+
+
 
         Set<BluetoothDevice> bondedDevices = null;
         try {
@@ -185,21 +195,13 @@ public class BluetoothManager {
         }
         for (BluetoothDevice bondedDevice : bondedDevices) {
             String deviceAddress = bondedDevice.getAddress();
-//            log("We have a bonded device: " + deviceAddress);
+            log("BONDED : " + deviceAddress);
+
             if (!ignoredDevices.contains(deviceAddress) && !establishConnectionSent.contains(deviceAddress)) {
                 establishConnectionSent.add(deviceAddress);
-//                log("Attempting connection to it!");
                 establishConnection(bondedDevice);
             }
-//            else {
-//                log("But we will NOT bother connecting!!");
-//                if (ignoredDevices.contains(deviceAddress)) {
-//                    log("Because it is in the ignored devices");
-//                }
-//                if(establishConnectionSent.contains(deviceAddress)) {
-//                    log("Because it is already in the establishConnections list");
-//                }
-//            }
+
         }
     }
 
@@ -216,6 +218,7 @@ public class BluetoothManager {
 
         log("Trying to connect to gatt");
         try {
+
             device.connectGatt(context, true, bluetoothGattCallback);
         } catch (SecurityException se) {
             log("No permission granted (Android 12)");
@@ -298,7 +301,11 @@ public class BluetoothManager {
                     handleDeviceConnection(gatt);
                     break;
                 case BluetoothAdapter.STATE_DISCONNECTED:
+
                     handleDeviceDisconnection(gatt);
+//                    if (connectedDevices.contains(device.getAddress())) {
+//                        handleDeviceDisconnection(gatt);
+//                    }
                     break;
             }
         }
@@ -353,6 +360,8 @@ public class BluetoothManager {
     };
 
     private void onDiscoverServicesCompleted(BluetoothGatt gatt, List<BluetoothGattService> services) {
+            log("DISCOVER SERVICES COMPLETED FOR DEVICE ADDRESS: " + gatt.getDevice().getAddress());
+
             String deviceAddress = gatt.getDevice().getAddress();
             gatts.put(deviceAddress, gatt);
 
@@ -370,6 +379,7 @@ public class BluetoothManager {
     }
 
     private void handleDeviceConnection(final BluetoothGatt gatt) {
+
         final String deviceAddress = gatt.getDevice().getAddress();
 
         if (ignoredDevices.contains(deviceAddress)) {
@@ -412,19 +422,21 @@ public class BluetoothManager {
                     notifyOnError(deviceAddress, ERR_C_GATT_OP, msg);
                 });
 
-        GattExecutor executor = getExecutor(gatt);
-        addExecutor(executor);
+        GattExecutor executor = CreateExecutor(gatt);
         executor.addOperation(refreshOp);
         executor.addOperation(discoverServicesOp);
     }
 
     private void handleDeviceDisconnection(BluetoothGatt gatt) {
+        Log.i("TAPSDK", "HandleDeviceDisconnection Call");
         BluetoothDevice device = gatt.getDevice();
         String deviceAddress = device.getAddress();
 
         if (ignoredDevices.contains(deviceAddress)) {
             return;
         }
+
+
 
         BluetoothGatt storedGatt = gatts.get(deviceAddress);
 
@@ -450,6 +462,13 @@ public class BluetoothManager {
 
         log(deviceAddress + " disconnected.");
 
+
+        // FIX: Remove the executor is neccessary when the device is disconnected. There were scenarios when the executor kept running in the background.
+        GattExecutor e = getExecutor(gatt);
+        if (e != null) {
+            removeExecutor(e);
+        }
+
         if (ignoreInProgress.contains(deviceAddress) || isClosing || isBluetoothTurnedOff) {
             closeGatt(gatt);
             removeFromLists(deviceAddress);
@@ -465,6 +484,7 @@ public class BluetoothManager {
         }
 
         notifyOnDeviceDisconnected(deviceAddress);
+
     }
 
     private void handleDeviceUnpaired(BluetoothGatt gatt) {
@@ -499,7 +519,11 @@ public class BluetoothManager {
     }
 
     private void closeGatt(BluetoothGatt gatt) {
-        removeExecutor(getExecutor(gatt));
+        GattExecutor e = getExecutor(gatt);
+        if (e!=null) {
+            removeExecutor(e);
+        }
+
         try {
             gatt.close();
         } catch (SecurityException se) {
@@ -528,8 +552,11 @@ public class BluetoothManager {
                 .addOnCompletionListener(data -> notifyOnNotificationSubscribed(deviceAddress, characteristicUUID))
                 .addOnErrorListener(msg -> notifyOnError(deviceAddress, ERR_C_DEVICE_NOT_CONNECTED, msg));
 
+        GattExecutor e = getExecutor(gatt);
+        if (e!= null) {
+            e.addOperation(setNotificationOp);
+        }
 
-        getExecutor(gatt).addOperation(setNotificationOp);
     }
 
     public void readCharacteristic(@NonNull final String deviceAddress, @NonNull UUID serviceUUID, @NonNull final UUID characteristicUUID) {
@@ -548,7 +575,11 @@ public class BluetoothManager {
                 .addOnErrorListener(msg -> notifyOnError(deviceAddress, ERR_C_DEVICE_NOT_CONNECTED, msg))
                 .addOnNotFoundListener(message -> notifyOnCharacteristicNotFound(deviceAddress, characteristicUUID));
 
-        getExecutor(gatt).addOperation(characteristicReadOp);
+        GattExecutor e = getExecutor(gatt);
+        if (e!= null) {
+            e.addOperation(characteristicReadOp);
+        }
+
     }
 
     public void writeCharacteristic(@NonNull final String deviceAddress, @NonNull UUID serviceUUID, @NonNull final UUID characteristicUUID, @NonNull byte[] data) {
@@ -566,7 +597,10 @@ public class BluetoothManager {
                 .addOnCompletionListener(data1 -> notifyOnCharacteristicWrite(deviceAddress, characteristicUUID, data1))
                 .addOnErrorListener(msg -> notifyOnError(deviceAddress, ERR_C_DEVICE_NOT_CONNECTED, msg));
 
-        getExecutor(gatt).addOperation(characteristicWriteOp);
+        GattExecutor e = getExecutor(gatt);
+        if (e!= null) {
+            e.addOperation(characteristicWriteOp);
+        }
     }
 
     private void disconnectAllDevices() {
@@ -776,13 +810,33 @@ public class BluetoothManager {
         });
     }
 
+    private GattExecutor CreateExecutor(BluetoothGatt gatt) {
+        String deviceAddress = gatt.getDevice().getAddress();
+        if (executors.containsKey(deviceAddress)) {
+            return executors.get(deviceAddress);
+        }
+        GattExecutor executor = new GattExecutor(gatt);
+        executors.put(deviceAddress, executor);
+        return executor;
+    }
+
     private GattExecutor getExecutor(BluetoothGatt gatt) {
         String deviceAddress = gatt.getDevice().getAddress();
         if (executors.containsKey(deviceAddress)) {
             return executors.get(deviceAddress);
         }
-        log("Creating new executor");
-        return new GattExecutor(gatt);
+
+        // Fix: Don't create a new executor . Creation of the executor should happen once - when the gatt is connecting.
+        return null;
+//        if (createNewIfNull) {
+//            log("Creating new executor");
+//            GattExecutor executor = new GattExecutor(gatt);
+//            executors.put(deviceAddress, executor);
+//            return executor;
+//        }
+//        return null;
+
+//        return new GattExecutor(gatt);
     }
 
     private void addExecutor(GattExecutor executor) {
@@ -796,6 +850,7 @@ public class BluetoothManager {
             executors.put(deviceAddress, executor);
         }
     }
+
 
     private void removeExecutor(GattExecutor executor) {
         if (executor != null) {

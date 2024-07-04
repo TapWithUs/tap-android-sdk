@@ -1,5 +1,11 @@
 # TAP Official Android SDK
 
+Updates 
+=======
+
+July 2024 - Added **TAPXR Gestures** (See below).
+
+
 What Is This?
 =============
 TAP Android SDK allows you to build an Android app that can receive inputs from TAP devices,
@@ -239,6 +245,69 @@ public void onRawSensorInputReceived(@NonNull String tapIdentifier,@NonNull RawS
 ```
 
 [For more information about raw sensor mode click here](https://tapwithus.atlassian.net/wiki/spaces/TD/pages/792002574/Tap+Strap+Raw+Sensors+Mode)
+
+# TAPXR Gestures (July 2024)
+
+Added support to read the hand state while in AirMouse mode, for the TapXR device.
+
+## AirMousePacket
+
+Added 3 states for the class AirMousePacket:
+
+```java
+public class AirMousePacket extends Packet {
+    .
+    .
+    .
+    public static final int XR_AIR_GESTURE_NONE = 100;
+    public static final int XR_AIR_GESTURE_THUMB_INDEX = 101;
+    public static final int XR_AIR_GESTURE_THUMB_MIDDLE = 102;
+```
+
+    XR_AIR_GESTURE_NONE: The hand is in resting state.
+    XR_AIR_GESTURE_THUMB_INDEX : the thumb is touching the index finger.
+    XR_AIR_GESTURE_THUMB_MIDDLE : the thumb is touching the middle finger. 
+
+These states will be sent continously multiple times per second.
+
+The best practice is the take the most common one out of the last 3 events received to allow margin for errors.
+
+This will allow you to combine these states and the mouse-move event into "Drag and Drop" Gesture for example.
+
+##TapXRState
+
+In addition to TAPInputMode, the new TAPXR has input states.
+
+You can force TAPXR to switch to input state as follows:
+
+AIRMOUSE - The TAPXR will operate in AIRMOUSE mode ONLY.
+TAPPING - The TAPXR will operate in TAPPING mode only.
+USERCONTROL - The user will freely switch states as wished.
+
+
+Examples:
+
+```java
+tapSdk.setDefaultXRState(TapXRState.tapping(), true);
+tapSdk.setDefaultXRState(TapXRState.userControl(), false);
+tapSdk.startXRAirMouseState("identifier");
+```
+You can change the state of individual connected device or devices by calling one of these methods:
+
+```java
+public void startXRUserControlState(@NonNull String tapIdentifier)
+public void startXRAirMouseState(@NonNull String tapIdentifier)
+public void startXRTappingState(@NonNull String tapIdentifier)
+```
+
+or call this function to set the default XR State:
+
+```java
+public void setDefaultXRState(TapXRState state, Boolean applyImmediate)
+```
+
+While calling setDefaultTAPXRState, it'll set the default state that will be applied to newly connected devices. 
+If you wish to apply this state to already-connected devices, call with "applyImmediate": true.
 
 
 Example app

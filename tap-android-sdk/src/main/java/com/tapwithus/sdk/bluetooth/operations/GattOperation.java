@@ -16,7 +16,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public abstract class GattOperation<T> {
 
     public static final int GATT_SUCCESS = BluetoothGatt.GATT_SUCCESS;
-    public static final int OP_TIMEOUT = 5000;
+    public static final int OP_TIMEOUT = 30000;
+
 
     private boolean isRunning = false;
     private boolean isCompleted = false;
@@ -105,7 +106,7 @@ public abstract class GattOperation<T> {
         isTimedout = false;
 
         if (preDelay == 0) {
-            setTimeout();
+            setTimeout(gatt.toString());
             onExecute(gatt);
             return;
         }
@@ -113,7 +114,7 @@ public abstract class GattOperation<T> {
         delay(preDelay, new OnCompletionListener<Void>() {
             @Override
             public void onCompletion(Void data) {
-                setTimeout();
+                setTimeout(gatt.toString());
                 onExecute(gatt);
             }
         });
@@ -172,13 +173,13 @@ public abstract class GattOperation<T> {
         }
     }
 
-    private void setTimeout() {
+    private void setTimeout(String description) {
         delay(OP_TIMEOUT, new OnCompletionListener<Void>() {
             @Override
             public void onCompletion(Void data) {
                 if (!isCompleted) {
                     isTimedout = true;
-                    postOnError("Operation timeout");
+                    postOnError("Operation timeout (" + type().toString()  + ") " + description);
                 }
             }
         });

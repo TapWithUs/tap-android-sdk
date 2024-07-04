@@ -10,6 +10,7 @@ import com.tapwithus.sdk.TapSdk;
 import com.tapwithus.sdk.TapSdkFactory;
 import com.tapwithus.sdk.airmouse.AirMousePacket;
 import com.tapwithus.sdk.mode.TapInputMode;
+import com.tapwithus.sdk.mode.TapXRState;
 import com.tapwithus.sdk.mouse.MousePacket;
 import com.tapwithus.sdk.tap.Tap;
 import com.tapwithus.sdk.mode.RawSensorData;
@@ -123,6 +124,30 @@ public class TapUnityAdapter {
 
     public void setDefaultControllerWithMouseHIDMode(boolean apply) {
         tapSdk.setDefaultMode(TapInputMode.controllerWithMouseHID(), apply);
+    }
+
+    public void startXRTappingState(@NonNull String tapIdentifier) {
+        tapSdk.startXRTappingState(tapIdentifier);
+    }
+
+    public void startXRAirMouseState(@NonNull String tapIdentifier) {
+        tapSdk.startXRAirMouseState(tapIdentifier);
+    }
+
+    public void startXRUserControlState(@NonNull String tapIdentifier) {
+        tapSdk.startXRUserControlState(tapIdentifier);
+    }
+
+    public void setDefaultXRAirMouseState(boolean applyImmediate) {
+        tapSdk.setDefaultXRState(TapXRState.airMouse(), applyImmediate);
+    }
+
+    public void setDefaultXRTappingState(boolean applyImmediate) {
+        tapSdk.setDefaultXRState(TapXRState.tapping(), applyImmediate);
+    }
+
+    public void setDefaultXRUserControlState(boolean applyImmediate) {
+        tapSdk.setDefaultXRState(TapXRState.userControl(), applyImmediate);
     }
 
     public void vibrate(@NonNull String tapIdentifier, @NonNull String durations, @NonNull String delimiter) {

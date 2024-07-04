@@ -10,6 +10,7 @@ import java.util.Map;
 
 public class FeatureVersionSupport {
 
+
     public static final int FEATURE_ENABLE_TEXT_MODE = 1;
     public static final int FEATURE_MOUSE_MODE = 2;
     public static final int FEATURE_AIR_MOUSE = 3;
@@ -19,85 +20,119 @@ public class FeatureVersionSupport {
     public static final int FEATURE_DEVELOPER_MODE = 7;
     public static final int FEATURE_CONTROLLER_WITH_FULLHID = 8;
 
+
+    public static final int FEATURE_XR_STATE = 11;
     public static final int FIRST_TAP_XR_HW_VERSION = 40000; // as far as we know the TapXR will start at HW 4.0.0
     public static final int FIRST_TAP_XR_FW_VERSION = 30000; // really no idea what version this is
 
     public static final int MAX_VER_NUMBER = 99999;
 
-    protected static Map<Integer, Integer> featureFwVer = new HashMap<Integer, Integer>() {{
-        put(FEATURE_ENABLE_TEXT_MODE, 10000);
-        put(FEATURE_MOUSE_MODE, 10500);
-        put(FEATURE_AIR_MOUSE, 20000);
-        put(FEATURE_RAW_SENSOR, 20325);
-        put(FEATURE_CONTROLLER_WITH_MOUSEHID, 20303);
-        put(FEATURE_HAPTIC, 20325);
-        // just for a test put this up to ver5
-//        put(FEATURE_AIR_MOUSE, 50000);
-        put(FEATURE_DEVELOPER_MODE, 20324);
-        put(FEATURE_CONTROLLER_WITH_FULLHID, 20405);
-    }};
 
-    protected static Map<Integer, Integer> featureFwMaxVersion = new HashMap<Integer, Integer>() {{
-        put(FEATURE_ENABLE_TEXT_MODE, MAX_VER_NUMBER);
-        put(FEATURE_MOUSE_MODE, FIRST_TAP_XR_FW_VERSION - 1);
-        put(FEATURE_AIR_MOUSE, FIRST_TAP_XR_FW_VERSION - 1);
-        put(FEATURE_RAW_SENSOR, MAX_VER_NUMBER);
-        put(FEATURE_CONTROLLER_WITH_MOUSEHID, FIRST_TAP_XR_FW_VERSION - 1);
-        put(FEATURE_HAPTIC, MAX_VER_NUMBER);
-        put(FEATURE_DEVELOPER_MODE, MAX_VER_NUMBER);
-        put(FEATURE_CONTROLLER_WITH_FULLHID, FIRST_TAP_XR_FW_VERSION - 1);
-    }};
 
-    protected static Map<Integer, Integer> featureHwVer = new HashMap<Integer, Integer>() {{
-        put(FEATURE_ENABLE_TEXT_MODE, 30200);
-        put(FEATURE_MOUSE_MODE, 30200);
-        put(FEATURE_AIR_MOUSE, 30300);
-        put(FEATURE_RAW_SENSOR, 30200);
-        put(FEATURE_CONTROLLER_WITH_MOUSEHID, 30200);
-        put(FEATURE_HAPTIC, 30200);
-        put(FEATURE_DEVELOPER_MODE, 30200);
-        put(FEATURE_CONTROLLER_WITH_FULLHID, 30200);
-    }};
+//    protected static Map<Integer, Integer> featureFwVer = new HashMap<Integer, Integer>() {{
+//        put(FEATURE_ENABLE_TEXT_MODE, 10000);
+//        put(FEATURE_MOUSE_MODE, 10500);
+//        put(FEATURE_AIR_MOUSE, 20000);
+//        put(FEATURE_RAW_SENSOR, 20325);
+//        //**
+//        put(FEATURE_CONTROLLER_WITH_MOUSEHID, 20303);
+//        put(FEATURE_HAPTIC, 20325);
+//        // just for a test put this up to ver5
+////        put(FEATURE_AIR_MOUSE, 50000);
+//        put(FEATURE_DEVELOPER_MODE, 20324);
+//        put(FEATURE_CONTROLLER_WITH_FULLHID, 20405);
+//    }};
+//
+//    protected static Map<Integer, Integer> featureFwMaxVersion = new HashMap<Integer, Integer>() {{
+//        put(FEATURE_ENABLE_TEXT_MODE, MAX_VER_NUMBER);
+//        put(FEATURE_MOUSE_MODE, FIRST_TAP_XR_FW_VERSION - 1);
+//        put(FEATURE_AIR_MOUSE, FIRST_TAP_XR_FW_VERSION - 1);
+//        put(FEATURE_RAW_SENSOR, MAX_VER_NUMBER);
+//        //**
+//        put(FEATURE_CONTROLLER_WITH_MOUSEHID, FIRST_TAP_XR_FW_VERSION - 1);
+//        put(FEATURE_HAPTIC, MAX_VER_NUMBER);
+//        put(FEATURE_DEVELOPER_MODE, MAX_VER_NUMBER);
+//        put(FEATURE_CONTROLLER_WITH_FULLHID, FIRST_TAP_XR_FW_VERSION - 1);
+//    }};
+//
+//    protected static Map<Integer, Integer> featureHwVer = new HashMap<Integer, Integer>() {{
+//        put(FEATURE_ENABLE_TEXT_MODE, 30200);
+//        put(FEATURE_MOUSE_MODE, 30200);
+//        put(FEATURE_AIR_MOUSE, 30300);
+//        put(FEATURE_RAW_SENSOR, 30200);
+//        //**
+//        put(FEATURE_CONTROLLER_WITH_MOUSEHID, 30200);
+//        put(FEATURE_HAPTIC, 30200);
+//        put(FEATURE_DEVELOPER_MODE, 30200);
+//        put(FEATURE_CONTROLLER_WITH_FULLHID, 30200);
+//    }};
+//
+//    protected static Map<Integer, Integer> featureHwMaxVersion = new HashMap<Integer, Integer>() {{
+//        put(FEATURE_ENABLE_TEXT_MODE, MAX_VER_NUMBER);
+//        put(FEATURE_MOUSE_MODE, FIRST_TAP_XR_HW_VERSION - 1);
+//        put(FEATURE_AIR_MOUSE, FIRST_TAP_XR_HW_VERSION - 1);
+//        put(FEATURE_RAW_SENSOR, MAX_VER_NUMBER);
+//        //**
+//        put(FEATURE_CONTROLLER_WITH_MOUSEHID, FIRST_TAP_XR_HW_VERSION - 1);
+//        put(FEATURE_HAPTIC, MAX_VER_NUMBER);
+//        put(FEATURE_DEVELOPER_MODE, MAX_VER_NUMBER);
+//        put(FEATURE_CONTROLLER_WITH_FULLHID, FIRST_TAP_XR_HW_VERSION - 1);
+//    }};
 
-    protected static Map<Integer, Integer> featureHwMaxVersion = new HashMap<Integer, Integer>() {{
-        put(FEATURE_ENABLE_TEXT_MODE, MAX_VER_NUMBER);
-        put(FEATURE_MOUSE_MODE, FIRST_TAP_XR_HW_VERSION - 1);
-        put(FEATURE_AIR_MOUSE, FIRST_TAP_XR_HW_VERSION - 1);
-        put(FEATURE_RAW_SENSOR, MAX_VER_NUMBER);
-        put(FEATURE_CONTROLLER_WITH_MOUSEHID, FIRST_TAP_XR_HW_VERSION - 1);
-        put(FEATURE_HAPTIC, MAX_VER_NUMBER);
-        put(FEATURE_DEVELOPER_MODE, MAX_VER_NUMBER);
-        put(FEATURE_CONTROLLER_WITH_FULLHID, FIRST_TAP_XR_HW_VERSION - 1);
+    protected  static Map<Integer, FeatureCompatibility> features = new HashMap<Integer, FeatureCompatibility>() {{
+        put(FEATURE_ENABLE_TEXT_MODE,(new FeatureCompatibility()).withAddedVersionRange(VersionRange.onlyMinValue(30200), VersionRange.onlyMinValue(10000)));
+        put(FEATURE_MOUSE_MODE, (new FeatureCompatibility()).withAddedVersionRange(new VersionRange(30200,39999), VersionRange.onlyMinValue(10500)).withAddedVersionRange(VersionRange.onlyMinValue(40000),VersionRange.onlyMinValue(030401)) );
+        put(FEATURE_AIR_MOUSE, (new FeatureCompatibility()).withAddedVersionRange(new VersionRange(30300, 39999), VersionRange.onlyMinValue(20000))
+                .withAddedVersionRange(VersionRange.onlyMinValue(40000), VersionRange.onlyMinValue(30300)));
+        put(FEATURE_RAW_SENSOR, (new FeatureCompatibility()).withAddedVersionRange(VersionRange.onlyMinValue(30200), VersionRange.onlyMinValue(20325)));
+        put(FEATURE_CONTROLLER_WITH_MOUSEHID, (new FeatureCompatibility()).withAddedVersionRange(new VersionRange(30200,39999), VersionRange.onlyMinValue(20303)));
+        put(FEATURE_HAPTIC, (new FeatureCompatibility()).withAddedVersionRange(VersionRange.onlyMinValue(30200), VersionRange.onlyMinValue(20325)));
+        put(FEATURE_DEVELOPER_MODE, (new FeatureCompatibility()).withAddedVersionRange(VersionRange.onlyMinValue(30200), VersionRange.onlyMinValue(20324)));
+        put(FEATURE_CONTROLLER_WITH_FULLHID, (new FeatureCompatibility()).withAddedVersionRange(new VersionRange(30200,39999), VersionRange.onlyMinValue(20405)));
+        put(FEATURE_XR_STATE, (new FeatureCompatibility()).withAddedVersionRange(VersionRange.onlyMinValue(40000), VersionRange.onlyMinValue(30409)));
     }};
 
     public static boolean isFeatureSupported(@NonNull Tap tap, int feature) {
         return isFeatureSupported(tap.getHwVer(), tap.getFwVer(), feature);
     }
 
+
+    public static boolean isXr(@NonNull String hwVer) {
+        return semVerToInt(hwVer) >= FIRST_TAP_XR_HW_VERSION;
+    }
+
+
     public static boolean isFeatureSupported(@NonNull String hwVer, @NonNull String fwVer, int feature) {
-        int featureMinHwVer = Integer.MAX_VALUE;
-        if (featureHwVer.containsKey(feature)) {
-            featureMinHwVer = featureHwVer.get(feature);
+        int hw = semVerToInt(hwVer);
+        int fw = semVerToInt(fwVer);
+        if (features.containsKey(feature)) {
+            return features.get(feature).isCompatible(hw, fw);
+        } else {
+            return false;
         }
-        int featureMinFwVer = Integer.MAX_VALUE;
-        if (featureFwVer.containsKey(feature)) {
-            featureMinFwVer = featureFwVer.get(feature);
-        }
-
-        // new part because we now have max values too
-        int featureMaxHwVer = 0;
-        if (featureHwMaxVersion.containsKey(feature)) {
-            featureMaxHwVer = featureHwMaxVersion.get(feature);
-        }
-
-        int featureMaxFwVer = 0;
-        if (featureFwMaxVersion.containsKey(feature)) {
-            featureMaxFwVer = featureFwMaxVersion.get(feature);
-        }
-
-//        return semVerToInt(hwVer) >= featureMinHwVer && semVerToInt(fwVer) >= featureMinFwVer;
-        return semVerToInt(hwVer) >= featureMinHwVer && semVerToInt(fwVer) >= featureMinFwVer &&
-                semVerToInt(hwVer) <= featureMaxHwVer && semVerToInt(fwVer) <= featureMaxFwVer;
+//        int featureMinHwVer = Integer.MAX_VALUE;
+//        if (featureHwVer.containsKey(feature)) {
+//            featureMinHwVer = featureHwVer.get(feature);
+//        }
+//        int featureMinFwVer = Integer.MAX_VALUE;
+//        if (featureFwVer.containsKey(feature)) {
+//            featureMinFwVer = featureFwVer.get(feature);
+//        }
+//
+//        // new part because we now have max values too
+//        int featureMaxHwVer = 0;
+//        if (featureHwMaxVersion.containsKey(feature)) {
+//            featureMaxHwVer = featureHwMaxVersion.get(feature);
+//        }
+//
+//        int featureMaxFwVer = 0;
+//        if (featureFwMaxVersion.containsKey(feature)) {
+//            featureMaxFwVer = featureFwMaxVersion.get(feature);
+//        }
+//
+////        return semVerToInt(hwVer) >= featureMinHwVer && semVerToInt(fwVer) >= featureMinFwVer;
+//        return semVerToInt(hwVer) >= featureMinHwVer && semVerToInt(fwVer) >= featureMinFwVer &&
+//                semVerToInt(hwVer) <= featureMaxHwVer && semVerToInt(fwVer) <= featureMaxFwVer;
     }
 
     public static int semVerToInt(String semVer) {

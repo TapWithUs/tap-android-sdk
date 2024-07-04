@@ -18,6 +18,7 @@ public interface TapBluetoothListener {
     void onSerialNumberRead(@NonNull String tapAddress, @NonNull String serialNumber);
     void onHwVerRead(@NonNull String tapAddress, @NonNull String hwVer);
     void onFwVerRead(@NonNull String tapAddress, @NonNull String fwVer);
+
     void onBootloaderVerRead(@NonNull String tapAddress, @NonNull String bootloaderVer);
 //    void onControllerModeStarted(@NonNull String tapAddress);
 //    void onTextModeStarted(@NonNull String tapAddress);
