@@ -246,9 +246,15 @@ public void onRawSensorInputReceived(@NonNull String tapIdentifier,@NonNull RawS
 
 [For more information about raw sensor mode click here](https://tapwithus.atlassian.net/wiki/spaces/TD/pages/792002574/Tap+Strap+Raw+Sensors+Mode)
 
-# TAPXR Gestures (July 2024)
+# TAPXR Gestures (July 2024) - Spatial Control
 
 Added support to read the hand state while in AirMouse mode, for the TapXR device.
+
+Authorized developers can gain access to the experimantal Spatial Control features:
+1. Extended AirGesture state - enabling aggregation for pinch, drag and swipe gestures.
+2. Select input type - enabling the selection of input type to be activated - i.e. AirMouse/Tapping. 
+
+These featureas are only available on TapXR and only for qualified developers. Request access [here](https://www.tapwithus.com/contact-us/)
 
 ## AirMousePacket
 
