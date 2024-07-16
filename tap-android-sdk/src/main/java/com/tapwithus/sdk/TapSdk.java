@@ -954,7 +954,8 @@ public class TapSdk {
         }
     }
 
-    public void handleCacheDependencies(@NonNull String tapIdentifier) {
+
+    public boolean handleCacheDependencies(@NonNull String tapIdentifier) {
 
         if (!cache.has(tapIdentifier, TapCache.DataKey.Name) && cache.shouldHave(tapIdentifier, TapCache.DataKey.Name)) {
             tapBluetoothManager.readName(tapIdentifier);
@@ -982,11 +983,11 @@ public class TapSdk {
 
             tapBluetoothManager.setupRawSensorNotification(tapIdentifier);
         } else if (!cache.has(tapIdentifier, TapCache.DataKey.DataRequestNotification) && cache.shouldHave(tapIdentifier, TapCache.DataKey.DataRequestNotification)) {
-
             tapBluetoothManager.setupDataNotification(tapIdentifier);
         } else {
-            logError("Cache already has all required fields");
+            return true;
         }
+        return false;
     }
 
     private boolean isTapConnected(@NonNull String tapIdentifier) {
