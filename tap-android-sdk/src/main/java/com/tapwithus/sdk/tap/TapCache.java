@@ -61,6 +61,11 @@ public class TapCache {
         saveToCache(tapCh);
     }
 
+    public void onCustomDataRead(@NonNull String identifier, String dataKey, String value) {
+        TapCh tapCh = getFromCache(identifier);
+        tapCh.set(dataKey, value);
+        saveToCache(tapCh);
+    }
 
     public void onHwVerRead(@NonNull String identifier, @NonNull String hwVer) {
         TapCh tapCh = getFromCache(identifier);
