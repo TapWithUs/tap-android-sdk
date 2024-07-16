@@ -258,7 +258,7 @@ public class TapCache {
         return true;
     }
 
-    private @NonNull TapCh getFromCache(@NonNull String identifier) {
+    public @NonNull TapCh getFromCache(@NonNull String identifier) {
         TapCh tapCh = tapChs.get(identifier);
         if (tapCh == null) {
             return new TapCh(identifier);
