@@ -940,7 +940,7 @@ public class TapSdk {
         }
     }
 
-    private void handleEmission(@NonNull String tapIdentifier) {
+    protected void handleEmission(@NonNull String tapIdentifier) {
         Log.i("TAPSDK", "HANDLE EMISSION CALL " + tapIdentifier);
         if (!cache.isCached(tapIdentifier)) {
             handleCacheDependencies(tapIdentifier);
