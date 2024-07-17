@@ -210,7 +210,7 @@ public class TapCache {
         return isCached(getFromCache(identifier));
     }
 
-    private boolean isCached(TapCh tapCh) {
+    protected boolean isCached(TapCh tapCh) {
         if (!tapCh.has(DataKey.Name) || !tapCh.has(DataKey.Battery) || !tapCh.has(DataKey.SerialNumber) || !tapCh.has(DataKey.HwVer) || !tapCh.has(DataKey.FwVer) || !tapCh.has(DataKey.BootloaderVer) || !tapCh.has(DataKey.TapNotification)) {
             return false;
         }
