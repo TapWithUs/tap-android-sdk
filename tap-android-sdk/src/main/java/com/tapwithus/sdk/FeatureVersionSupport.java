@@ -81,7 +81,7 @@ public class FeatureVersionSupport {
 
     protected  static Map<Integer, FeatureCompatibility> features = new HashMap<Integer, FeatureCompatibility>() {{
         put(FEATURE_ENABLE_TEXT_MODE,(new FeatureCompatibility()).withAddedVersionRange(VersionRange.onlyMinValue(30200), VersionRange.onlyMinValue(10000)));
-        put(FEATURE_MOUSE_MODE, (new FeatureCompatibility()).withAddedVersionRange(new VersionRange(30200,39999), VersionRange.onlyMinValue(10500)).withAddedVersionRange(VersionRange.onlyMinValue(40000),VersionRange.onlyMinValue(030401)) );
+        put(FEATURE_MOUSE_MODE, (new FeatureCompatibility()).withAddedVersionRange(new VersionRange(30200,39999), VersionRange.onlyMinValue(10500)).withAddedVersionRange(VersionRange.onlyMinValue(40000),VersionRange.onlyMinValue(30401)));
         put(FEATURE_AIR_MOUSE, (new FeatureCompatibility()).withAddedVersionRange(new VersionRange(30300, 39999), VersionRange.onlyMinValue(20000))
                 .withAddedVersionRange(VersionRange.onlyMinValue(40000), VersionRange.onlyMinValue(30300)));
         put(FEATURE_RAW_SENSOR, (new FeatureCompatibility()).withAddedVersionRange(VersionRange.onlyMinValue(30200), VersionRange.onlyMinValue(20325)));
