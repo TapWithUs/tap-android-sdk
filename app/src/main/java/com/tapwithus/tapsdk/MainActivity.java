@@ -27,6 +27,7 @@ import com.tapwithus.sdk.mode.TapInputMode;
 import com.tapwithus.sdk.mode.TapXRState;
 import com.tapwithus.sdk.mouse.MousePacket;
 import com.tapwithus.sdk.tap.Tap;
+import com.tapwithus.sdk.v2.ImuMotionPacket;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -138,7 +139,40 @@ public class MainActivity extends AppCompatActivity {
 //                sdk.startMode(item.tapIdentifier, TapSdk.MODE_CONTROLLER);
 //            }
         }
+
+        @Override
+        public void onXRStateClick(TapListItem item) {
+            askXRStateDialog(item.tapIdentifier);
+        }
     };
+
+    private void askXRStateDialog(final String tapIdentifier) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Choose Mode");
+
+        String[] options = {"Tapping", "AirMouse"};
+        builder.setItems(options, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                switch (which) {
+                    case 0:
+                        log("Switching to TAPPING state");
+                        sdk.startXRTappingState(tapIdentifier);
+                        adapter.updateXRState(tapIdentifier, false);
+                        break;
+                    case 1:
+                        log("Switching to AIRMOUSE state");
+                        sdk.startXRAirMouseState(tapIdentifier);
+                        adapter.updateXRState(tapIdentifier, true);
+                        break;
+                }
+            }
+        });
+
+        builder.setNegativeButton("Cancel", null);
+        AlertDialog dialog = builder.create();
+        dialog.show();
+    }
 
     private void askModeDialog(final String tapIdentifier) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
@@ -363,6 +397,7 @@ public class MainActivity extends AppCompatActivity {
             TapListItem newItem = new TapListItem(tapIdentifier, itemOnClickListener);
             newItem.tapName = tap.getName();
             newItem.tapFwVer = tap.getFwVer();
+            newItem.isV2 = sdk.isV2Tap(tapIdentifier);
 //            newItem.isInControllerMode = sdk.isInMode(tapIdentifier, TapSdk.MODE_CONTROLLER);
             adapter.addItem(newItem);
         }
@@ -431,6 +466,17 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onAirMouseInputReceived(@NonNull String tapIdentifier, @NonNull AirMousePacket data) {
             log(tapIdentifier + " air mouse input received " + data.gesture.getInt());
+            adapter.updateAirGesture(tapIdentifier, data.gesture.getInt());
+        }
+
+        @Override
+        public void onImuMotionInputReceived(@NonNull String tapIdentifier, @NonNull ImuMotionPacket packet) {
+            log(tapIdentifier + " imu motion input received " + packet);
+        }
+
+        @Override
+        public void onTapStandbyStateChanged(@NonNull String tapIdentifier, boolean standby) {
+            log(tapIdentifier + " standby state changed " + standby);
         }
 
         @Override

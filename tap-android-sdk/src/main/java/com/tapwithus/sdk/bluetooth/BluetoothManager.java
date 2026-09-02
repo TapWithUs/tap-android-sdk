@@ -626,6 +626,26 @@ public class BluetoothManager {
         return connectedDevices;
     }
 
+    /**
+     * @return true if GATT service discovery has completed for the given device,
+     *         meaning characteristic presence can be queried reliably
+     */
+    public boolean isDeviceDiscovered(@NonNull String deviceAddress) {
+        return gatts.containsKey(deviceAddress);
+    }
+
+    public boolean isCharacteristicPresent(@NonNull String deviceAddress, @NonNull UUID serviceUUID, @NonNull UUID characteristicUUID) {
+        BluetoothGatt gatt = gatts.get(deviceAddress);
+        if (gatt == null) {
+            return false;
+        }
+        BluetoothGattService service = gatt.getService(serviceUUID);
+        if (service == null) {
+            return false;
+        }
+        return service.getCharacteristic(characteristicUUID) != null;
+    }
+
     public int numOfConnectedDevices() {
         return gatts.size();
     }

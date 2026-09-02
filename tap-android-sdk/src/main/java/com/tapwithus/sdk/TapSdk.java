@@ -17,6 +17,15 @@ import com.tapwithus.sdk.mode.TapXRState;
 import com.tapwithus.sdk.mouse.MousePacket;
 import com.tapwithus.sdk.tap.Tap;
 import com.tapwithus.sdk.tap.TapCache;
+import com.tapwithus.sdk.v2.DeviceFeature;
+import com.tapwithus.sdk.v2.ImuMotionPacket;
+import com.tapwithus.sdk.v2.ImuSensitivity;
+import com.tapwithus.sdk.v2.TapV2Callback;
+import com.tapwithus.sdk.v2.TapV2Encoder;
+import com.tapwithus.sdk.v2.TapV2InputModeMapper;
+import com.tapwithus.sdk.v2.TapV2Message;
+import com.tapwithus.sdk.v2.VisionSensorModel;
+import com.tapwithus.sdk.v2.VisionSensorOpMode;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -33,6 +42,9 @@ public class TapSdk {
 
     public static final int ERR_SUBSCRIBE_MODE = 101;
     public static final int ERR_HAPTIC = 102;
+    public static final int ERR_V2_NOT_SUPPORTED = 103;
+
+    private static final int V2_GET_TIMEOUT_MS = 2000;
 
     protected TapBluetoothManager tapBluetoothManager;
     private final ListenerManager<TapListener> tapListeners = new ListenerManager<>();
@@ -41,6 +53,9 @@ public class TapSdk {
 
     private final Map<String, TapInputMode> modeSubscribers = new ConcurrentHashMap<>();
     private final Map<String, TapXRState> stateSubscribers = new ConcurrentHashMap<>();
+    private final Map<String, ImuSensitivity> v2ImuSensitivities = new ConcurrentHashMap<>();
+    private final Map<String, PendingV2Request> pendingV2Requests = new ConcurrentHashMap<>();
+    private final Handler v2RequestHandler = new Handler(Looper.getMainLooper());
 
 //    private Set<String> HIDMouseInRawModeSubscribers = new HashSet<>();
     private final Set<String> tapsInAirMouseState = new HashSet<>();
@@ -189,7 +204,11 @@ public class TapSdk {
         Set<String> connectedTaps = getConnectedTaps();
         TapInputMode textMode = TapInputMode.text();
         for (String tapIdentifier : connectedTaps) {
-
+            if (isV2Tap(tapIdentifier)) {
+                // Text mode on V2 devices means disabling all data-stream features
+                tapBluetoothManager.startV2Mode(tapIdentifier, TapV2InputModeMapper.commands(textMode, null));
+                continue;
+            }
             tapBluetoothManager.startMode(tapIdentifier, textMode.getBytes());
         }
 //        List<String> controllerModeSubscribers = getTapsInMode(MODE_CONTROLLER);
@@ -266,12 +285,184 @@ public class TapSdk {
     }
 
     public void vibrate(@NonNull String tapIdentifier, int[] durations) {
+        if (isV2Tap(tapIdentifier)) {
+            tapBluetoothManager.sendV2HapticPacket(tapIdentifier, generateDurations(durations));
+            return;
+        }
         if (!isFeatureSupported(tapIdentifier, FeatureVersionSupport.FEATURE_HAPTIC)) {
             notifyOnError(tapIdentifier, ERR_HAPTIC, "FEATURE_HAPTIC not supported");
             return;
         }
         tapBluetoothManager.sendHapticPacket(tapIdentifier, generateDurations(durations));
     }
+
+    // ============================== V2 (framed protocol) API ==============================
+
+    /**
+     * @return true if the connected Tap speaks the V2 framed protocol
+     *         (e.g. TapBand, or TapXR with V2 firmware)
+     */
+    public boolean isV2Tap(@NonNull String tapIdentifier) {
+        return cache.isV2(tapIdentifier);
+    }
+
+    /**
+     * Enables or disables a single device feature on a V2 Tap. Note that setting
+     * an input mode also updates features - prefer one control style per session.
+     */
+    public void setFeature(@NonNull String tapIdentifier, @NonNull DeviceFeature feature, boolean enable) {
+        if (!verifyV2(tapIdentifier, "setFeature")) {
+            return;
+        }
+        tapBluetoothManager.sendV2Frame(tapIdentifier, TapV2Encoder.encodeSetFeature(feature, enable));
+    }
+
+    public void getFeature(@NonNull String tapIdentifier, @NonNull DeviceFeature feature, @NonNull TapV2Callback<Boolean> callback) {
+        if (!verifyV2(tapIdentifier, "getFeature")) {
+            callback.onResponse(tapIdentifier, null);
+            return;
+        }
+        requestV2(tapIdentifier, "feature:" + feature.getValue(), TapV2Encoder.encodeGetFeature(feature), callback);
+    }
+
+    public void setVisionSensorOpMode(@NonNull String tapIdentifier, @NonNull VisionSensorOpMode mode) {
+        if (!verifyV2(tapIdentifier, "setVisionSensorOpMode")) {
+            return;
+        }
+        tapBluetoothManager.sendV2Frame(tapIdentifier, TapV2Encoder.encodeSetVisionSensorOpMode(mode));
+    }
+
+    public void getVisionSensorOpMode(@NonNull String tapIdentifier, @NonNull TapV2Callback<VisionSensorOpMode> callback) {
+        if (!verifyV2(tapIdentifier, "getVisionSensorOpMode")) {
+            callback.onResponse(tapIdentifier, null);
+            return;
+        }
+        requestV2(tapIdentifier, "vision_op_mode", TapV2Encoder.encodeGetVisionSensorOpMode(), callback);
+    }
+
+    public void setVisionSensorModel(@NonNull String tapIdentifier, @NonNull VisionSensorModel model) {
+        if (!verifyV2(tapIdentifier, "setVisionSensorModel")) {
+            return;
+        }
+        tapBluetoothManager.sendV2Frame(tapIdentifier, TapV2Encoder.encodeSetVisionSensorModel(model));
+    }
+
+    public void getVisionSensorModel(@NonNull String tapIdentifier, @NonNull TapV2Callback<VisionSensorModel> callback) {
+        if (!verifyV2(tapIdentifier, "getVisionSensorModel")) {
+            callback.onResponse(tapIdentifier, null);
+            return;
+        }
+        requestV2(tapIdentifier, "vision_model", TapV2Encoder.encodeGetVisionSensorModel(), callback);
+    }
+
+    /**
+     * @param gyroSensitivity gyroscope sensitivity index (0-5)
+     * @param accelerometerSensitivity IMU accelerometer sensitivity index (0-4)
+     */
+    public void setImuSensitivity(@NonNull String tapIdentifier, int gyroSensitivity, int accelerometerSensitivity) {
+        if (!verifyV2(tapIdentifier, "setImuSensitivity")) {
+            return;
+        }
+        ImuSensitivity sensitivity = new ImuSensitivity(gyroSensitivity, accelerometerSensitivity);
+        v2ImuSensitivities.put(tapIdentifier, sensitivity);
+        tapBluetoothManager.sendV2Frame(tapIdentifier,
+                TapV2Encoder.encodeSetImuSensitivity(sensitivity.getGyro(), sensitivity.getAccelerometer()));
+    }
+
+    public void getImuSensitivity(@NonNull String tapIdentifier, @NonNull TapV2Callback<ImuSensitivity> callback) {
+        if (!verifyV2(tapIdentifier, "getImuSensitivity")) {
+            callback.onResponse(tapIdentifier, null);
+            return;
+        }
+        requestV2(tapIdentifier, "imu_sensitivity", TapV2Encoder.encodeGetImuSensitivity(), callback);
+    }
+
+    public void setStandbyState(@NonNull String tapIdentifier, boolean standby) {
+        if (!verifyV2(tapIdentifier, "setStandbyState")) {
+            return;
+        }
+        tapBluetoothManager.sendV2Frame(tapIdentifier, TapV2Encoder.encodeStandbyStateSet(standby));
+    }
+
+    public void getStandbyState(@NonNull String tapIdentifier, @NonNull TapV2Callback<Boolean> callback) {
+        if (!verifyV2(tapIdentifier, "getStandbyState")) {
+            callback.onResponse(tapIdentifier, null);
+            return;
+        }
+        requestV2(tapIdentifier, "standby", TapV2Encoder.encodeStandbyStateGet(), callback);
+    }
+
+    public void sendKeepAlive(@NonNull String tapIdentifier) {
+        if (!verifyV2(tapIdentifier, "sendKeepAlive")) {
+            return;
+        }
+        tapBluetoothManager.sendV2KeepAlive(tapIdentifier);
+    }
+
+    private boolean verifyV2(@NonNull String tapIdentifier, @NonNull String action) {
+        if (!isV2Tap(tapIdentifier)) {
+            notifyOnError(tapIdentifier, ERR_V2_NOT_SUPPORTED, action + " requires a V2 Tap device");
+            return false;
+        }
+        return true;
+    }
+
+    private class PendingV2Request {
+
+        final String tapIdentifier;
+        final String fullKey;
+        final TapV2Callback callback;
+        final Runnable timeoutRunnable;
+
+        PendingV2Request(String tapIdentifier, String fullKey, TapV2Callback callback) {
+            this.tapIdentifier = tapIdentifier;
+            this.fullKey = fullKey;
+            this.callback = callback;
+            this.timeoutRunnable = () -> {
+                if (pendingV2Requests.remove(fullKey, this)) {
+                    invoke(null);
+                }
+            };
+        }
+
+        @SuppressWarnings("unchecked")
+        void invoke(@Nullable Object value) {
+            v2RequestHandler.removeCallbacks(timeoutRunnable);
+            callback.onResponse(tapIdentifier, value);
+        }
+    }
+
+    @SuppressWarnings("rawtypes")
+    private void requestV2(@NonNull String tapIdentifier, @NonNull String key, @NonNull byte[] frame, @NonNull TapV2Callback callback) {
+        String fullKey = tapIdentifier + "|" + key;
+        PendingV2Request request = new PendingV2Request(tapIdentifier, fullKey, callback);
+        PendingV2Request prior = pendingV2Requests.put(fullKey, request);
+        if (prior != null) {
+            // A newer request supersedes the pending one
+            prior.invoke(null);
+        }
+        tapBluetoothManager.sendV2Frame(tapIdentifier, frame);
+        v2RequestHandler.postDelayed(request.timeoutRunnable, V2_GET_TIMEOUT_MS);
+    }
+
+    private void resolveV2Request(@NonNull String tapIdentifier, @NonNull String key, @Nullable Object value) {
+        PendingV2Request request = pendingV2Requests.remove(tapIdentifier + "|" + key);
+        if (request != null) {
+            request.invoke(value);
+        }
+    }
+
+    private void cancelV2Requests(@NonNull String tapIdentifier) {
+        for (Map.Entry<String, PendingV2Request> entry : pendingV2Requests.entrySet()) {
+            if (entry.getKey().startsWith(tapIdentifier + "|")) {
+                if (pendingV2Requests.remove(entry.getKey(), entry.getValue())) {
+                    entry.getValue().invoke(null);
+                }
+            }
+        }
+    }
+
+    // =======================================================================================
 
     public boolean isTapInAirMouseState(String tapIdentifier)
     {
@@ -327,6 +518,23 @@ public class TapSdk {
 
     private void startXRSTate(String tapIdentifier, TapXRState state) {
         stateSubscribers.put(tapIdentifier, state);
+
+        if (isV2Tap(tapIdentifier)) {
+            if (state.type == TapXRState.NONE) {
+                return;
+            }
+            TapInputMode mode = modeSubscribers.containsKey(tapIdentifier)
+                    ? modeSubscribers.get(tapIdentifier)
+                    : TapInputMode.controller();
+            if (mode.type != TapInputMode.TEXT) {
+                tapBluetoothManager.startV2Mode(tapIdentifier, TapV2InputModeMapper.commands(mode, state));
+                if (state.type == TapXRState.USER_CONTROL) {
+                    stateSubscribers.put(tapIdentifier, TapXRState.none());
+                }
+            }
+            return;
+        }
+
         if (state.getBytes().length > 0) {
             if (isFeatureSupported(tapIdentifier, FeatureVersionSupport.FEATURE_XR_STATE)) {
                 if (modeSubscribers.containsKey(tapIdentifier) && modeSubscribers.get(tapIdentifier).type != TapInputMode.TEXT) {
@@ -346,6 +554,17 @@ public class TapSdk {
         }
 
         modeSubscribers.put(tapIdentifier, mode);
+
+        if (isV2Tap(tapIdentifier)) {
+            if (mode.type == TapInputMode.RAW_SENSOR) {
+                v2ImuSensitivities.put(tapIdentifier,
+                        new ImuSensitivity(mode.getImuGyroSensitivity(), mode.getImuAccelerometerSensitivity()));
+            }
+            tapBluetoothManager.startV2Mode(tapIdentifier,
+                    TapV2InputModeMapper.commands(mode, stateSubscribers.get(tapIdentifier)));
+            return;
+        }
+
         tapBluetoothManager.startMode(tapIdentifier, mode.getBytes());
 //        startModeNotificationSubscribers.add(tapIdentifier);
 //        switch (mode) {
@@ -377,7 +596,7 @@ public class TapSdk {
     }
 
     public  void startTextMode(@NonNull String tapIdentifier) {
-        if (!isFeatureSupported(tapIdentifier, FeatureVersionSupport.FEATURE_ENABLE_TEXT_MODE)) {
+        if (!isV2Tap(tapIdentifier) && !isFeatureSupported(tapIdentifier, FeatureVersionSupport.FEATURE_ENABLE_TEXT_MODE)) {
             logError("FEATURE_ENABLE_TEXT_MODE not supported - " + tapIdentifier);
 //            startModeNotificationSubscribers.remove(tapIdentifier);
             return;
@@ -397,7 +616,7 @@ public class TapSdk {
 
     public void startControllerWithMouseHIDMode(@NonNull String tapIdentifier) {
 
-        if (!isFeatureSupported(tapIdentifier, FeatureVersionSupport.FEATURE_CONTROLLER_WITH_MOUSEHID)) {
+        if (!isV2Tap(tapIdentifier) && !isFeatureSupported(tapIdentifier, FeatureVersionSupport.FEATURE_CONTROLLER_WITH_MOUSEHID)) {
             logError("FEATURE_CONTROLLER_WITH_MOUSEHID not supported - " + tapIdentifier + ", Falling back to Controller mode");
             startControllerMode(tapIdentifier);
             return;
@@ -410,7 +629,7 @@ public class TapSdk {
 
     public void startControllerWithFullHIDMode(@NonNull String tapIdentifier) {
 
-        if (!isFeatureSupported(tapIdentifier, FeatureVersionSupport.FEATURE_CONTROLLER_WITH_FULLHID)) {
+        if (!isV2Tap(tapIdentifier) && !isFeatureSupported(tapIdentifier, FeatureVersionSupport.FEATURE_CONTROLLER_WITH_FULLHID)) {
             logError("FEATURE_CONTROLLER_WITH_FULLHID not supported - " + tapIdentifier + ", Falling back to Controller mode");
             startControllerMode(tapIdentifier);
             return;
@@ -431,6 +650,10 @@ public class TapSdk {
         this.startXRSTate(tapIdentifier, TapXRState.tapping());
     }
     public void requestShiftSwitchState(@NonNull String tapIdentifier) {
+        if (isV2Tap(tapIdentifier)) {
+            logError("Shift/Switch state is not available on V2 Tap devices - " + tapIdentifier);
+            return;
+        }
         if (!isFeatureSupported(tapIdentifier, FeatureVersionSupport.FEATURE_CONTROLLER_WITH_FULLHID)) {
             logError("FEATURE_CONTROLLER_WITH_FULLHID not supported - " + tapIdentifier + ", Can't request SwitchShift state");
             startControllerMode(tapIdentifier);
@@ -441,6 +664,10 @@ public class TapSdk {
     }
 
     public void requestTap(@NonNull String tapIdentifier, byte combination) {
+        if (isV2Tap(tapIdentifier)) {
+            logError("requestTap is not available on V2 Tap devices - " + tapIdentifier);
+            return;
+        }
         if (!isFeatureSupported(tapIdentifier, FeatureVersionSupport.FEATURE_CONTROLLER_WITH_FULLHID)) {
             logError("FEATURE_CONTROLLER_WITH_FULLHID not supported - " + tapIdentifier + ", Can't request setTap");
             startControllerMode(tapIdentifier);
@@ -452,7 +679,7 @@ public class TapSdk {
 
     public void startRawSensorMode(@NonNull String tapIdentifier, byte deviceAccelerometerSensitivity, byte imuGyroSensitivity, byte imuAccelerometerSensitivity) {
 
-        if (!isFeatureSupported(tapIdentifier, FeatureVersionSupport.FEATURE_RAW_SENSOR)) {
+        if (!isV2Tap(tapIdentifier) && !isFeatureSupported(tapIdentifier, FeatureVersionSupport.FEATURE_RAW_SENSOR)) {
             logError("FEATURE_RAW_SENSOR not supported - " + tapIdentifier);
             return;
         }
@@ -577,11 +804,13 @@ public class TapSdk {
 
         @Override
         public void onTapConnected(@NonNull String tapAddress) {
+            detectProtocol(tapAddress);
             handleEmission(tapAddress);
         }
 
         @Override
         public void onTapAlreadyConnected(@NonNull String tapAddress) {
+            detectProtocol(tapAddress);
             handleEmission(tapAddress);
         }
 
@@ -637,15 +866,35 @@ public class TapSdk {
             if (isPaused || isClosing) {
                 return;
             }
-            if (modeSubscribers.containsKey(tapAddress)) {
-                TapInputMode mode = modeSubscribers.get(tapAddress);
-                ArrayList<RawSensorData> rsData = RawSensorDataParser.parseWhole(tapAddress, data, mode.getDeviceAccelerometerSensitivity(), mode.getImuGyroSensitivity(), mode.getImuAccelerometerSensitivity());
 
+            byte deviceAccelerometerSensitivity;
+            byte imuGyroSensitivity;
+            byte imuAccelerometerSensitivity;
 
-                for (RawSensorData rsDatum : rsData) {
-                    notifyOnRawSensorDataReceieved(tapAddress, rsDatum);
+            if (isV2Tap(tapAddress)) {
+                // V2 devices stream raw IMU data only; sensitivity is configured through
+                // setImuSensitivity (or raw sensor mode) and tracked per device
+                ImuSensitivity sensitivity = v2ImuSensitivities.get(tapAddress);
+                if (sensitivity == null) {
+                    sensitivity = new ImuSensitivity(0, 0);
                 }
+                deviceAccelerometerSensitivity = 0;
+                imuGyroSensitivity = (byte) sensitivity.getGyro();
+                imuAccelerometerSensitivity = (byte) sensitivity.getAccelerometer();
+            } else if (modeSubscribers.containsKey(tapAddress)) {
+                TapInputMode mode = modeSubscribers.get(tapAddress);
+                deviceAccelerometerSensitivity = mode.getDeviceAccelerometerSensitivity();
+                imuGyroSensitivity = mode.getImuGyroSensitivity();
+                imuAccelerometerSensitivity = mode.getImuAccelerometerSensitivity();
+            } else {
+                return;
+            }
 
+            ArrayList<RawSensorData> rsData = RawSensorDataParser.parseWhole(tapAddress, data,
+                    deviceAccelerometerSensitivity, imuGyroSensitivity, imuAccelerometerSensitivity);
+
+            for (RawSensorData rsDatum : rsData) {
+                notifyOnRawSensorDataReceieved(tapAddress, rsDatum);
             }
         }
 
@@ -711,6 +960,52 @@ public class TapSdk {
             cache.onRawSensorInputSubscribed(tapAddress);
 
             handleEmission(tapAddress);
+        }
+
+        @Override
+        public void onV2InputSubscribed(@NonNull String tapAddress) {
+            cache.onV2InputSubscribed(tapAddress);
+            handleEmission(tapAddress);
+        }
+
+        @Override
+        public void onImuMotionInputReceived(@NonNull String tapAddress, @NonNull ImuMotionPacket packet) {
+            if (isPaused || isClosing) {
+                return;
+            }
+            notifyOnImuMotionInputReceived(tapAddress, packet);
+        }
+
+        @Override
+        public void onStandbyStateReceived(@NonNull String tapAddress, boolean standby) {
+            resolveV2Request(tapAddress, "standby", standby);
+            notifyOnTapStandbyStateChanged(tapAddress, standby);
+        }
+
+        @Override
+        public void onV2ConfigStateReceived(@NonNull String tapAddress, @NonNull TapV2Message message) {
+            switch (message.type) {
+                case CONFIG_FEATURE:
+                    resolveV2Request(tapAddress, "feature:" + (message.payload[0] & 0xFF),
+                            message.payload[1] == 1);
+                    break;
+                case CONFIG_VISION_OP_MODE:
+                    resolveV2Request(tapAddress, "vision_op_mode",
+                            VisionSensorOpMode.fromValue(message.payload[0] & 0xFF));
+                    break;
+                case CONFIG_VISION_MODEL:
+                    resolveV2Request(tapAddress, "vision_model",
+                            VisionSensorModel.fromValue(message.payload[0] & 0xFF));
+                    break;
+                case CONFIG_IMU_SENSITIVITY:
+                    // Reply payload is [gyro, accelerometer], same order as the set command
+                    resolveV2Request(tapAddress, "imu_sensitivity",
+                            new ImuSensitivity(message.payload[0] & 0xFF, message.payload[1] & 0xFF));
+                    break;
+                default:
+                    log("Unhandled V2 config state - " + message.type);
+                    break;
+            }
         }
 
         @Override
@@ -878,6 +1173,14 @@ public class TapSdk {
         tapListeners.notifyAll(listener -> listener.onTapChangedState(tapIdentifier, state));
     }
 
+    private void notifyOnImuMotionInputReceived(@NonNull final String tapIdentifier, @NonNull final ImuMotionPacket packet) {
+        tapListeners.notifyAll(listener -> listener.onImuMotionInputReceived(tapIdentifier, packet));
+    }
+
+    private void notifyOnTapStandbyStateChanged(@NonNull final String tapIdentifier, final boolean standby) {
+        tapListeners.notifyAll(listener -> listener.onTapStandbyStateChanged(tapIdentifier, standby));
+    }
+
     private void notifyOnError(final String tapIdentifier, final int code, final String description) {
         tapListeners.notifyAll(listener -> listener.onError(tapIdentifier, code, description));
     }
@@ -890,6 +1193,16 @@ public class TapSdk {
 
     protected void logError(String message) {
         Log.e(TAG, message);
+    }
+
+    private void detectProtocol(@NonNull String tapIdentifier) {
+        // Only decide once GATT service discovery completed, so the V2
+        // characteristics are visible if the device has them
+        if (tapBluetoothManager.isProtocolDetectionReady(tapIdentifier)) {
+            String protocol = tapBluetoothManager.isV2Tap(tapIdentifier) ? TapCache.PROTOCOL_V2 : TapCache.PROTOCOL_V1;
+            cache.onProtocolDetected(tapIdentifier, protocol);
+            log("Detected protocol " + protocol + " - " + tapIdentifier);
+        }
     }
 
     private void handleTapConnection(@NonNull String tapIdentifier) {
@@ -925,6 +1238,8 @@ public class TapSdk {
         }
         modeSubscribers.remove(tapIdentifier);
         stateSubscribers.remove(tapIdentifier);
+        v2ImuSensitivities.remove(tapIdentifier);
+        cancelV2Requests(tapIdentifier);
 //        HIDMouseInRawModeSubscribers.remove(tapIdentifier);
         if (!isClosing) {
             notifyOnTapDisconnected(tapIdentifier);
@@ -984,6 +1299,8 @@ public class TapSdk {
             tapBluetoothManager.setupRawSensorNotification(tapIdentifier);
         } else if (!cache.has(tapIdentifier, TapCache.DataKey.DataRequestNotification) && cache.shouldHave(tapIdentifier, TapCache.DataKey.DataRequestNotification)) {
             tapBluetoothManager.setupDataNotification(tapIdentifier);
+        } else if (!cache.has(tapIdentifier, TapCache.DataKey.V2Notification) && cache.shouldHave(tapIdentifier, TapCache.DataKey.V2Notification)) {
+            tapBluetoothManager.setupV2Notification(tapIdentifier);
         } else {
             return true;
         }
@@ -1007,12 +1324,29 @@ public class TapSdk {
             @Override
             public void run() {
                 log("In raw mode loop");
+
+                // V2 devices don't need periodic mode refresh - they need a keepalive
+                // message on the framed pipe instead, sent to every connected V2 device
+                // whether or not a mode was requested (matches tap-ios-sdk's global
+                // keepalive timer and tap-python-sdk's KeepAliveManager)
+                for (String tapIdentifier : getConnectedTaps()) {
+                    if (isV2Tap(tapIdentifier)) {
+                        tapBluetoothManager.sendV2KeepAlive(tapIdentifier);
+                    }
+                }
+
                 for (String tapIdentifier: modeSubscribers.keySet()) {
+                    if (isV2Tap(tapIdentifier)) {
+                        continue;
+                    }
                     tapBluetoothManager.startMode(tapIdentifier, modeSubscribers.get(tapIdentifier).getBytes());
 //                    startControllerMode(tapIdentifier);
                 }
 
                 for (String tapIdentifier : stateSubscribers.keySet()) {
+                    if (isV2Tap(tapIdentifier)) {
+                        continue;
+                    }
                     TapXRState state = stateSubscribers.get(tapIdentifier);
                     tapBluetoothManager.startXRState(tapIdentifier, stateSubscribers.get(tapIdentifier).getBytes());
                     if (state.type == TapXRState.USER_CONTROL) {

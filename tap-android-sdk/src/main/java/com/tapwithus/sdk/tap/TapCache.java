@@ -24,7 +24,27 @@ public class TapCache {
     private static final String TRUE_STRING = "TRUE";
     private static final String UNAVAILABLE_STRING = "N.A";
 
+    public static final String PROTOCOL_V1 = "v1";
+    public static final String PROTOCOL_V2 = "v2";
+
     protected Map<String, TapCh> tapChs = new ConcurrentHashMap<>();
+
+    public void onProtocolDetected(@NonNull String identifier, @NonNull String protocol) {
+        TapCh tapCh = getFromCache(identifier);
+        tapCh.set(DataKey.Protocol, protocol);
+        saveToCache(tapCh);
+    }
+
+    public boolean isV2(@NonNull String identifier) {
+        TapCh tapCh = getFromCache(identifier);
+        return PROTOCOL_V2.equals(tapCh.get(DataKey.Protocol));
+    }
+
+    public void onV2InputSubscribed(@NonNull String identifier) {
+        TapCh tapCh = getFromCache(identifier);
+        tapCh.set(DataKey.V2Notification, TRUE_STRING);
+        saveToCache(tapCh);
+    }
 
     public void onNameRead(@NonNull String identifier, @NonNull String name) {
         TapCh tapCh = getFromCache(identifier);
@@ -174,6 +194,23 @@ public class TapCache {
         TapCh tapCh = getFromCache(identifier);
         String hwVer = tapCh.has(DataKey.HwVer) ? tapCh.get(DataKey.HwVer) : "0";
         String fwVer = tapCh.has(DataKey.FwVer) ? tapCh.get(DataKey.FwVer) : "0";
+
+        if (PROTOCOL_V2.equals(tapCh.get(DataKey.Protocol))) {
+            // V2 devices expose a single framed notification pipe instead of the
+            // v1 notification characteristics
+            switch (dataKey) {
+                case DataKey.Name:
+                case DataKey.Battery:
+                case DataKey.SerialNumber:
+                case DataKey.HwVer:
+                case DataKey.FwVer:
+                case DataKey.BootloaderVer:
+                case DataKey.V2Notification:
+                    return true;
+            }
+            return false;
+        }
+
         switch (dataKey) {
             case DataKey.Name: return true;
             case DataKey.Battery: return true;
@@ -200,7 +237,11 @@ public class TapCache {
 
     public void softClear(@NonNull String identifier) {
         TapCh tapCh = getFromCache(identifier);
-        tapCh.remove(DataKey.TapNotification);
+        if (PROTOCOL_V2.equals(tapCh.get(DataKey.Protocol))) {
+            tapCh.remove(DataKey.V2Notification);
+        } else {
+            tapCh.remove(DataKey.TapNotification);
+        }
 //        tapCh.set(DataKey.TapNotification, FALSE_STRING);
 //        tapCh.tapNotification = FALSE_INT;
         saveToCache(tapCh);
@@ -211,6 +252,12 @@ public class TapCache {
     }
 
     protected boolean isCached(TapCh tapCh) {
+        if (PROTOCOL_V2.equals(tapCh.get(DataKey.Protocol))) {
+            return tapCh.has(DataKey.Name) && tapCh.has(DataKey.Battery) && tapCh.has(DataKey.SerialNumber) &&
+                    tapCh.has(DataKey.HwVer) && tapCh.has(DataKey.FwVer) && tapCh.has(DataKey.BootloaderVer) &&
+                    tapCh.has(DataKey.V2Notification);
+        }
+
         if (!tapCh.has(DataKey.Name) || !tapCh.has(DataKey.Battery) || !tapCh.has(DataKey.SerialNumber) || !tapCh.has(DataKey.HwVer) || !tapCh.has(DataKey.FwVer) || !tapCh.has(DataKey.BootloaderVer) || !tapCh.has(DataKey.TapNotification)) {
             return false;
         }
@@ -359,5 +406,7 @@ public class TapCache {
         public static final String RawSensorNotification = "RawSensorNotification";
         public static final String DataRequestNotification = "DataRequestNotification";
         public static final String BootloaderVer = "BootloaderVer";
+        public static final String Protocol = "Protocol";
+        public static final String V2Notification = "V2Notification";
     }
 }

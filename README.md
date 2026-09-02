@@ -3,6 +3,8 @@
 Updates 
 =======
 
+September 2026 - Added **V2 Tap devices (framed protocol)** support - feature toggles, vision sensor configuration, IMU motion + Euler angles, standby state, unified air gestures and keepalive (See below). Aligned with [tap-python-sdk](https://github.com/TapWithUs/tap-python-sdk) and tap-ios-sdk.
+
 July 2024 - Added **TAPXR Gestures** (See below).
 
 
@@ -316,9 +318,113 @@ While calling setDefaultTAPXRState, it'll set the default state that will be app
 If you wish to apply this state to already-connected devices, call with "applyImmediate": true.
 
 
+# V2 Tap Devices (September 2026)
+
+Newer Tap devices (TapBand, and TapXR with V2 firmware) speak a framed BLE protocol ("V2" / TapSDK2) instead of the classic characteristic-per-stream protocol. The SDK detects the protocol automatically after connection - no code changes are required for basic usage:
+
+* Tap events keep arriving via `onTapInputReceived` (V2 taps always report `repeatData == 1`).
+* Mouse / pointer movement keeps arriving via `onMouseInputReceived`, and additionally via `onImuMotionInputReceived` which includes Euler angles (roll, pitch, yaw).
+* Raw sensor data keeps arriving via `onRawSensorInputReceived` (V2 devices stream the thumb IMU only - there are no finger accelerometers).
+* Air gestures keep arriving via `onAirMouseInputReceived`, with gesture codes from the `UnifiedAirGesture` enum (100-114): directional gestures, pinches (AB/AC/AD/AE), fist, and their hold variants.
+* The existing mode API (`startControllerMode`, `startTextMode`, `startRawSensorMode`, XR states...) is translated automatically into V2 feature commands.
+* `vibrate` is sent through the framed protocol automatically.
+* A keepalive message is sent automatically every 10 seconds to every connected V2 Tap (matching tap-ios-sdk and tap-python-sdk). You can also send one manually with `sdk.sendKeepAlive(tapIdentifier)`.
+
+You can check the protocol of a connected Tap with:
+
+```java
+boolean isV2 = sdk.isV2Tap(tapIdentifier);
+```
+
+### Device features
+
+Instead of a single input mode, V2 devices expose independent feature toggles (`com.tapwithus.sdk.v2.DeviceFeature`): `RAW_IMU_DATA`, `MODEL_DETECTION` (taps + air gestures), `IMU_MOTION_DATA`, `STANDBY_GESTURE_DETECTION`. For fine-grained control you can set them directly:
+
+```java
+sdk.setFeature(tapIdentifier, DeviceFeature.MODEL_DETECTION, true);
+sdk.getFeature(tapIdentifier, DeviceFeature.MODEL_DETECTION, (identifier, enabled) -> {
+    // enabled is null on timeout
+});
+```
+
+### Unified air gestures
+
+On V2 devices air gestures arrive through the same `onAirMouseInputReceived` callback, but the gesture value holds a code from the `com.tapwithus.sdk.v2.UnifiedAirGesture` enum (100-114) instead of the classic `AirMousePacket` constants:
+
+```java
+@Override
+public void onAirMouseInputReceived(@NonNull String tapIdentifier, @NonNull AirMousePacket data) {
+    if (sdk.isV2Tap(tapIdentifier)) {
+        UnifiedAirGesture gesture = UnifiedAirGesture.fromCode(data.gesture.getInt());
+        if (gesture != null) {
+            switch (gesture) {
+                case LEFT:      // swipe left
+                case RIGHT:     // swipe right
+                case UP:        // swipe up
+                case DOWN:      // swipe down
+                case AB:        // thumb-index pinch (AC/AD/AE for the other fingers)
+                case FIST:
+                case AB_HOLD:   // held pinch (drag) - also AC/AD/AE/FIST _HOLD variants
+                case NONE:
+                    break;
+            }
+        }
+    } else {
+        // classic device - use the AirMousePacket.AIR_MOUSE_GESTURE_* constants
+    }
+}
+```
+
+### Vision sensor (model & op-mode)
+
+The vision sensor runs one detection model at a time - `TAPPING` or `AIR_GESTURE` - with an operating mode controlling when it streams. The existing XR state API maps onto it automatically: `startXRTappingState` selects the `TAPPING` model with op-mode `TRIGGER`, and `startXRAirMouseState` selects the `AIR_GESTURE` model with op-mode `STREAM`. For direct control:
+
+```java
+sdk.setVisionSensorModel(tapIdentifier, VisionSensorModel.AIR_GESTURE); // or TAPPING
+sdk.setVisionSensorOpMode(tapIdentifier, VisionSensorOpMode.STREAM);    // or TRIGGER / STREAM_ON_TRIGGER
+sdk.getVisionSensorModel(tapIdentifier, (identifier, model) -> { });
+sdk.getVisionSensorOpMode(tapIdentifier, (identifier, opMode) -> { });
+```
+
+### IMU sensitivity
+
+```java
+sdk.setImuSensitivity(tapIdentifier, /* gyro 0-5 */ 3, /* accelerometer 0-4 */ 2);
+sdk.getImuSensitivity(tapIdentifier, (identifier, sensitivity) -> { });
+```
+
+### Standby state
+
+```java
+sdk.setStandbyState(tapIdentifier, true);
+sdk.getStandbyState(tapIdentifier, (identifier, standby) -> { });
+```
+
+Standby changes are also delivered through the listener callback:
+
+```java
+default void onTapStandbyStateChanged(@NonNull String tapIdentifier, boolean standby) { }
+```
+
+### IMU motion with orientation
+
+```java
+default void onImuMotionInputReceived(@NonNull String tapIdentifier, @NonNull ImuMotionPacket packet) {
+    // packet.dx, packet.dy, packet.isMouse, packet.roll, packet.pitch, packet.yaw
+}
+```
+
+All `get*` calls reply asynchronously on a `TapV2Callback`; if the device doesn't answer within 2 seconds the callback fires with a `null` value. Calling a V2-only API on a v1 device reports error `TapSdk.ERR_V2_NOT_SUPPORTED` (103) via `onError`.
+
 Example app
 ===========
-The Android Studio project contains an example app where you can see how to use some of the features of `TapSdk`.
+The Android Studio project contains an example app (the `app` module) where you can see how to use some of the features of `TapSdk`. Each connected Tap is shown as a list row demonstrating:
+
+* Tap input (finger combination + repeat), shift/switch state and mouse/air-gesture events.
+* The detected protocol (`V2` or `Legacy`, via `sdk.isV2Tap`).
+* The last air gesture performed, decoded per protocol (`UnifiedAirGesture` for V2 devices, `AirMousePacket` constants for classic devices).
+* Switching between Tapping and AirMouse detection by tapping the mode label (`startXRTappingState` / `startXRAirMouseState`).
+* Changing input modes (text / controller / raw sensor...) by tapping the row, and sending haptics via `vibrate`.
 
 Support
 ===========

@@ -11,6 +11,9 @@ public class TapListItem {
     public boolean[] tapInputFingers;
     public int[] tapShiftAndSwitch;
     public boolean isInControllerMode = true;
+    public boolean isV2 = false;
+    public int airGestureInt = -1;
+    public boolean isAirMouseState = false;
 
     public TapListItemOnClickListener onClickListener;
 

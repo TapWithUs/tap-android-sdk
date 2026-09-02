@@ -63,6 +63,15 @@
         app:layout_constraintTop_toTopOf="@id/finger1" />
 
     <TextView
+        android:id="@+id/airGesture"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text=""
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/finger1" />
+
+    <TextView
         android:id="@+id/tapInputInt"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -105,9 +114,31 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="fwVer"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/tapProtocol"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/shiftState" />
+
+    <TextView
+        android:id="@+id/tapProtocol"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="protocol"
+        app:layout_constraintBottom_toTopOf="@+id/xrState"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/tapFwVer" />
+
+    <TextView
+        android:id="@+id/xrState"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="?android:attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true"
+        android:text="Tapping Mode"
+        android:textStyle="bold"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/tapProtocol" />
 
     <TextView
         android:id="@+id/tapMode"

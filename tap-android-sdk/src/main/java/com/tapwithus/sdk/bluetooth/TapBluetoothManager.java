@@ -9,9 +9,14 @@ import com.tapwithus.sdk.NotifyAction;
 import com.tapwithus.sdk.airmouse.AirMousePacket;
 import com.tapwithus.sdk.haptic.HapticPacket;
 import com.tapwithus.sdk.mouse.MousePacket;
+import com.tapwithus.sdk.v2.ImuMotionPacket;
+import com.tapwithus.sdk.v2.TapV2Encoder;
+import com.tapwithus.sdk.v2.TapV2Message;
+import com.tapwithus.sdk.v2.TapV2Parser;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -42,6 +47,12 @@ public class TapBluetoothManager {
     protected static final UUID AIR_MOUSE_DATA = UUID.fromString("C3FF000A-1D8B-40FD-A56F-C7BD5D0F3370");
     protected static final UUID HAPTIC = UUID.fromString("C3FF0009-1D8B-40FD-A56F-C7BD5D0F3370");
     protected static final UUID DATA_REQUEST = UUID.fromString("C3FF000B-1D8B-40FD-A56F-C7BD5D0F3370");
+
+    // V2 (framed protocol) characteristics - all inbound events arrive on V2_READ,
+    // all outbound commands are written to V2_WRITE. Their presence after service
+    // discovery marks a device as a V2 device.
+    protected static final UUID V2_READ = UUID.fromString("C3FF000E-1D8B-40FD-A56F-C7BD5D0F3370");
+    protected static final UUID V2_WRITE = UUID.fromString("C3FF000F-1D8B-40FD-A56F-C7BD5D0F3370");
 
 
     protected BluetoothManager bluetoothManager;
@@ -126,6 +137,50 @@ public class TapBluetoothManager {
         if (this.modesEnabled && data.length > 0 ) {
             bluetoothManager.writeCharacteristic(tapAddress, NUS, RX, data);
         }
+    }
+
+    /**
+     * @return true if GATT service discovery completed for the given device, so
+     *         {@link #isV2Tap} can answer reliably
+     */
+    public boolean isProtocolDetectionReady(@NonNull String tapAddress) {
+        return bluetoothManager.isDeviceDiscovered(tapAddress);
+    }
+
+    /**
+     * A Tap is a V2 (framed protocol) device if both V2 characteristics were
+     * discovered on the TAP service.
+     */
+    public boolean isV2Tap(@NonNull String tapAddress) {
+        return bluetoothManager.isCharacteristicPresent(tapAddress, TAP, V2_READ)
+                && bluetoothManager.isCharacteristicPresent(tapAddress, TAP, V2_WRITE);
+    }
+
+    public void setupV2Notification(@NonNull String tapAddress) {
+        log("Setting up V2 notifications");
+        bluetoothManager.setupNotification(tapAddress, TAP, V2_READ);
+    }
+
+    public void sendV2Frame(@NonNull String tapAddress, @NonNull byte[] frame) {
+        bluetoothManager.writeCharacteristic(tapAddress, TAP, V2_WRITE, frame);
+    }
+
+    public void startV2Mode(@NonNull String tapAddress, @NonNull List<byte[]> frames) {
+        if (this.modesEnabled) {
+            for (byte[] frame : frames) {
+                sendV2Frame(tapAddress, frame);
+            }
+        }
+    }
+
+    public void sendV2KeepAlive(@NonNull String tapAddress) {
+        sendV2Frame(tapAddress, TapV2Encoder.encodeKeepAlive());
+    }
+
+    public void sendV2HapticPacket(@NonNull String tapAddress, @NonNull int[] scaledDurations) {
+        byte[] frame = TapV2Encoder.encodeSetHapticPattern(scaledDurations);
+        log("Sending V2 Haptic packet - " + Arrays.toString(frame));
+        sendV2Frame(tapAddress, frame);
     }
 
     public void sendHapticPacket(String tapAddress, int[] durations) {
@@ -388,6 +443,9 @@ public class TapBluetoothManager {
             } else if (characteristic.equals(DATA_REQUEST)) {
                 log("DataRequest notification subscribed");
                 notifyOnDataRequestSubscribed(deviceAddress);
+            } else if (characteristic.equals(V2_READ)) {
+                log("V2 notification subscribed");
+                notifyOnV2Subscribed(deviceAddress);
             }
         }
 
@@ -420,6 +478,8 @@ public class TapBluetoothManager {
                 }
             } else if (characteristic.equals(TX)) {
                 notifyOnRawSensorInputReceived(deviceAddress, data);
+            } else if (characteristic.equals(V2_READ)) {
+                handleV2Notification(deviceAddress, data);
             } else if (characteristic.equals(DATA_REQUEST)) {
                 // should deal with this like a character which has come in - nothing should come here
                 // so if something comes in let's give an error
@@ -432,6 +492,41 @@ public class TapBluetoothManager {
             notifyOnError(deviceAddress, code, description);
         }
     };
+
+    private void handleV2Notification(@NonNull String deviceAddress, @NonNull byte[] data) {
+        TapV2Message message = TapV2Parser.parse(data);
+        if (message == null) {
+            log("Unsupported V2 frame received - " + Arrays.toString(data));
+            return;
+        }
+
+        switch (message.type) {
+            case TAP_GESTURE:
+                // V2 tap gestures carry no repeat information - repeat byte 0 maps to a single tap
+                notifyOnTapInputReceived(deviceAddress, message.payload[0], 0);
+                break;
+            case AIR_GESTURE:
+                notifyOnAirMouseInputReceived(deviceAddress, new AirMousePacket(new byte[] { message.payload[0], 0 }));
+                break;
+            case IMU_MOTION:
+                notifyOnImuMotionInputReceived(deviceAddress, new ImuMotionPacket(message.payload));
+                // Also remap onto the classic mouse pipeline (same payload layout),
+                // so existing mouse handling keeps working on V2 devices
+                notifyOnMouseInputReceived(deviceAddress,
+                        new MousePacket(Arrays.copyOfRange(message.payload, 1, message.payload.length)));
+                break;
+            case IMU_RAW:
+                // Same wire format as the v1 NUS raw sensor stream
+                notifyOnRawSensorInputReceived(deviceAddress, message.payload);
+                break;
+            case STANDBY_STATE:
+                notifyOnStandbyStateReceived(deviceAddress, message.payload[0] == 1);
+                break;
+            default:
+                notifyOnV2ConfigStateReceived(deviceAddress, message);
+                break;
+        }
+    }
 
     private void notifyOnBluetoothTurnedOn() {
         tapBluetoothListeners.notifyAll(new NotifyAction<TapBluetoothListener>() {
@@ -683,6 +778,42 @@ public class TapBluetoothManager {
             @Override
             public void onNotify(TapBluetoothListener listener) {
                 listener.onError(tapAddress, code, description);
+            }
+        });
+    }
+
+    private void notifyOnV2Subscribed(@NonNull final String tapAddress) {
+        tapBluetoothListeners.notifyAll(new NotifyAction<TapBluetoothListener>() {
+            @Override
+            public void onNotify(TapBluetoothListener listener) {
+                listener.onV2InputSubscribed(tapAddress);
+            }
+        });
+    }
+
+    private void notifyOnImuMotionInputReceived(@NonNull final String tapAddress, @NonNull final ImuMotionPacket packet) {
+        tapBluetoothListeners.notifyAll(new NotifyAction<TapBluetoothListener>() {
+            @Override
+            public void onNotify(TapBluetoothListener listener) {
+                listener.onImuMotionInputReceived(tapAddress, packet);
+            }
+        });
+    }
+
+    private void notifyOnStandbyStateReceived(@NonNull final String tapAddress, final boolean standby) {
+        tapBluetoothListeners.notifyAll(new NotifyAction<TapBluetoothListener>() {
+            @Override
+            public void onNotify(TapBluetoothListener listener) {
+                listener.onStandbyStateReceived(tapAddress, standby);
+            }
+        });
+    }
+
+    private void notifyOnV2ConfigStateReceived(@NonNull final String tapAddress, @NonNull final TapV2Message message) {
+        tapBluetoothListeners.notifyAll(new NotifyAction<TapBluetoothListener>() {
+            @Override
+            public void onNotify(TapBluetoothListener listener) {
+                listener.onV2ConfigStateReceived(tapAddress, message);
             }
         });
     }

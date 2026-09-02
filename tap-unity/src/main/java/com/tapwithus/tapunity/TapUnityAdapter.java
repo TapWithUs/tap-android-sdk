@@ -14,6 +14,7 @@ import com.tapwithus.sdk.mode.TapXRState;
 import com.tapwithus.sdk.mouse.MousePacket;
 import com.tapwithus.sdk.tap.Tap;
 import com.tapwithus.sdk.mode.RawSensorData;
+import com.tapwithus.sdk.v2.ImuMotionPacket;
 import com.unity3d.player.UnityPlayer;
 
 @SuppressWarnings("unused")
@@ -299,6 +300,16 @@ public class TapUnityAdapter {
 
             String args = tapIdentifier + UNITY_ARGS_SEPARATOR + data.dx.getInt() + UNITY_ARGS_SEPARATOR + data.dy.getInt() + UNITY_ARGS_SEPARATOR + data.proximity.getInt();
             UnityPlayer.UnitySendMessage(UNITY_GAME_OBJECT, UNITY_MOUSE_INPUT_CALLBACK, args);
+        }
+
+        @Override
+        public void onImuMotionInputReceived(@NonNull String tapIdentifier, @NonNull ImuMotionPacket packet) {
+            log(tapIdentifier + " imu motion input received " + packet);
+        }
+
+        @Override
+        public void onTapStandbyStateChanged(@NonNull String tapIdentifier, boolean standby) {
+            log(tapIdentifier + " standby state changed " + standby);
         }
 
         @Override

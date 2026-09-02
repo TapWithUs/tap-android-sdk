@@ -4,6 +4,8 @@ import androidx.annotation.NonNull;
 
 import com.tapwithus.sdk.airmouse.AirMousePacket;
 import com.tapwithus.sdk.mouse.MousePacket;
+import com.tapwithus.sdk.v2.ImuMotionPacket;
+import com.tapwithus.sdk.v2.TapV2Message;
 
 public interface TapBluetoothListener {
     void onBluetoothTurnedOn();
@@ -35,4 +37,10 @@ public interface TapBluetoothListener {
     void onRawSensorInputSubscribed(@NonNull String tapAddress);
     void onTapChangedState(@NonNull String tapIdentifier, int state);
     void onError(@NonNull String tapAddress, int code, @NonNull String description);
+
+    // V2 (framed protocol) events
+    default void onV2InputSubscribed(@NonNull String tapAddress) { }
+    default void onImuMotionInputReceived(@NonNull String tapAddress, @NonNull ImuMotionPacket packet) { }
+    default void onStandbyStateReceived(@NonNull String tapAddress, boolean standby) { }
+    default void onV2ConfigStateReceived(@NonNull String tapAddress, @NonNull TapV2Message message) { }
 }
