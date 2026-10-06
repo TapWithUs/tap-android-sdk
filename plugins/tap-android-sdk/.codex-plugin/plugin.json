@@ -1,0 +1,10 @@
+{
+  "name": "tap-android-sdk",
+  "version": "1.0.0",
+  "description": "Skills for building Android apps with Tap Strap, TapXR, and TapBand.",
+  "author": {
+    "name": "Tap Systems"
+  },
+  "homepage": "https://github.com/TapWithUs/tap-android-sdk",
+  "skills": "./skills/"
+}

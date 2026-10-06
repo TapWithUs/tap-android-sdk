@@ -1,6 +1,7 @@
 package com.tapwithus.tapsdk;
 
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.os.Bundle;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
@@ -66,6 +67,14 @@ public class MainActivity extends AppCompatActivity {
         }
 
         initRecyclerView();
+
+        Button gestureSampleButton = findViewById(R.id.gestureSampleButton);
+        gestureSampleButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startActivity(new Intent(MainActivity.this, GestureSampleActivity.class));
+            }
+        });
 
         Button button = findViewById(R.id.button);
         button.setOnClickListener(new View.OnClickListener() {

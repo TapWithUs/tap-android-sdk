@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:id="@+id/gestureStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Waiting for a V2 Tap…"
+            android:textSize="16sp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Knobs (pinch-hold AB–AE, then twist)"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/knobValues"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="monospace"
+            android:text="AB 50\nAC 50\nAD 50\nAE 50"
+            android:textSize="16sp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="D-Pad"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/dpadLive"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="monospace"
+            android:text="idle"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/dpadLog"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:fontFamily="monospace"
+            android:textSize="14sp" />
+    </LinearLayout>
+</ScrollView>

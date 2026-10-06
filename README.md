@@ -5,6 +5,8 @@ Updates
 
 September 2026 - Added **V2 Tap devices (framed protocol)** support - feature toggles, vision sensor configuration, IMU motion + Euler angles, standby state, unified air gestures and keepalive (See below). Aligned with [tap-python-sdk](https://github.com/TapWithUs/tap-python-sdk) and tap-ios-sdk.
 
+Coding-agent skills (Cursor, Claude Code, Codex, AGENTS.md) are in [AI-Assisted Development](#ai-assisted-development).
+
 July 2024 - Added **TAPXR Gestures** (See below).
 
 
@@ -214,9 +216,9 @@ sdk.startRawSensorMode(tapIdentifier, (byte)0,(byte)0,(byte)0);
 ```
 When puting TAP in Raw Sensor Mode, the sensitivities of the values can be defined by the developer.
 deviceAccelerometer refers to the sensitivities of the fingers' accelerometers. Range: 1 to 4.
-imuGyro refers to the gyro sensitivity on the thumb's sensor. Range: 1 to 4.
-imuAccelerometer refers to the accelerometer sensitivity on the thumb's sensor. Range: 1 to 5.
-The default value for all sensitivities is 0. 
+imuGyro refers to the gyro sensitivity on the thumb's sensor. Range: 1 to 5 (`ImuGyroSensitivity`: 1 = ±125 dps … 5 = ±2000 dps).
+imuAccelerometer refers to the accelerometer sensitivity on the thumb's sensor. Range: 1 to 4 (`ImuAcclSensitivity`: 1 = ±2 g … 4 = ±16 g).
+The default value for all sensitivities is 0. 0 is not a named V2 range. 
 
 ### Stream callback:
 
@@ -388,10 +390,19 @@ sdk.getVisionSensorOpMode(tapIdentifier, (identifier, opMode) -> { });
 
 ### IMU sensitivity
 
+Named ranges match tap-python-sdk and are the bytes written to the device (gyro, then accelerometer):
+
 ```java
-sdk.setImuSensitivity(tapIdentifier, /* gyro 0-5 */ 3, /* accelerometer 0-4 */ 2);
-sdk.getImuSensitivity(tapIdentifier, (identifier, sensitivity) -> { });
+sdk.setImuSensitivity(tapIdentifier, ImuGyroSensitivity.DPS500, ImuAcclSensitivity.G4);
+sdk.getImuSensitivity(tapIdentifier, (identifier, sensitivity) -> {
+    // sensitivity.getGyroSensitivity() is DPS125..DPS2000, or null when the byte is 0
+});
 ```
+
+`ImuGyroSensitivity`: `DPS125`(1), `DPS250`(2), `DPS500`(3), `DPS1000`(4), `DPS2000`(5).
+`ImuAcclSensitivity`: `G2`(1), `G4`(2), `G8`(3), `G16`(4).
+
+The older `setImuSensitivity(id, int, int)` is deprecated. It still clamps to gyro 0–5 and accelerometer 0–4 and sends those integers, so existing callers keep the same bytes. `0` is not a named range. New code should pass the enums.
 
 ### Standby state
 
@@ -425,6 +436,65 @@ The Android Studio project contains an example app (the `app` module) where you 
 * The last air gesture performed, decoded per protocol (`UnifiedAirGesture` for V2 devices, `AirMousePacket` constants for classic devices).
 * Switching between Tapping and AirMouse detection by tapping the mode label (`startXRTappingState` / `startXRAirMouseState`).
 * Changing input modes (text / controller / raw sensor...) by tapping the row, and sending haptics via `vibrate`.
+* A **Knob / D-Pad** screen (`GestureSampleActivity`) for V2 devices: pinch-hold plus twist, and swipe / pinch / hold-to-drag. It compiles the skill templates `KnobTracker` and `DpadStateMachine`.
+
+AI-Assisted Development
+=======================
+
+You do not need to memorize the SDK to build with a Tap. Install the Tap skills into your coding agent, then describe the Android app you want. The agent knows the Android order: `TapSdkFactory.getDefault(context)`, then `registerTapListener`, then `resume()` / `pause()`. There is no `connect()` or `start()` call. `getDefault()` alone delivers no taps.
+
+The installer writes into the **current folder**. Add `-g` to install for your user instead, so the skills are available in every project.
+
+| Tool | This folder (default) | Every project (`-g`) |
+|------|------------------------|----------------------|
+| Claude Code | `.claude/skills/` | `claude plugin install … --scope user` |
+| Codex | `.agents/skills/` | `codex plugin add …` |
+| Cursor | `.cursor/skills/` + [`.cursor/rules/tap-sdk.mdc`](.cursor/rules/tap-sdk.mdc) | `~/.cursor/skills/` + `~/.cursor/rules/tap-sdk.mdc` |
+| Any agent that reads `AGENTS.md` | [`AGENTS.md`](AGENTS.md) | `~/.codex/AGENTS.md` |
+
+Run the commands below in your app's project folder (or from a clone of this repository).
+
+```console
+./install-skills.sh claude    # .claude/skills/
+./install-skills.sh codex     # .agents/skills/
+./install-skills.sh cursor    # .cursor/skills/ and .cursor/rules/
+./install-skills.sh agents    # ./AGENTS.md
+./install-skills.sh all       # all four, this folder
+./install-skills.sh -g all    # all four, every project
+```
+
+Or, without a clone (after this branch is on `master`):
+
+```console
+curl -sL https://raw.githubusercontent.com/TapWithUs/tap-android-sdk/master/install-skills.sh | bash -s cursor
+curl -sL https://raw.githubusercontent.com/TapWithUs/tap-android-sdk/master/install-skills.sh | bash
+curl -sL https://raw.githubusercontent.com/TapWithUs/tap-android-sdk/master/install-skills.sh | bash -s -- -g all
+```
+
+`-g claude` and `-g codex` need the `claude` and `codex` commands. You can also open `/plugins` in Codex and install **Tap Android SDK** from the marketplace list.
+
+#### What's included
+
+- **tap-android-getting-started**: Gradle dependency, Bluetooth permissions, pairing, connect, troubleshooting
+- **tap-android-tapping**: which fingers tapped, finger combos, double taps, haptics, input modes
+- **tap-android-vision-models**: switch between the tapping and air-gesture models; swipes, pinches, holds, fist (v2)
+- **tap-android-imu-motion**: pointer movement, tilt, roll / pitch / yaw (v2) and mouse events (v1)
+- **tap-android-raw-sensors**: raw accelerometer and gyro streams, sensitivity
+- **tap-android-knob**: hold a pinch and twist to turn a value up or down (v2)
+- **tap-android-dpad**: swipe for directions, pinch to select, hold to rotate or drag (v2)
+- **tap-android-build-an-app**: turn Tap events into an Android app (main thread, connection status, lifecycle)
+- **tap-android-sdk**: method-by-method API reference
+
+Skill source: [`plugins/tap-android-sdk/skills`](plugins/tap-android-sdk/skills).
+
+#### Onboard your agent
+
+1. Open your Android project in the coding agent.
+2. Install the skills (see above).
+3. Turn on your Tap, charge it, pair it in Android Bluetooth settings, and update its firmware with Tap Manager.
+4. Tell the agent which device you have (Tap Strap, Tap Strap 2, TapXR, or TapBand).
+5. Ask it to connect first: *"Use the tap-android-getting-started skill to connect to my Tap and show my taps."* Tap your fingers and tell the agent what you see.
+6. When taps arrive, describe your app. Build one interaction at a time and try each one with the device.
 
 Support
 ===========
