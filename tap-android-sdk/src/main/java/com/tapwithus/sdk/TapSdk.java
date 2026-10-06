@@ -19,6 +19,8 @@ import com.tapwithus.sdk.tap.Tap;
 import com.tapwithus.sdk.tap.TapCache;
 import com.tapwithus.sdk.v2.DeviceFeature;
 import com.tapwithus.sdk.v2.ImuMotionPacket;
+import com.tapwithus.sdk.v2.ImuAcclSensitivity;
+import com.tapwithus.sdk.v2.ImuGyroSensitivity;
 import com.tapwithus.sdk.v2.ImuSensitivity;
 import com.tapwithus.sdk.v2.TapV2Callback;
 import com.tapwithus.sdk.v2.TapV2Encoder;
@@ -356,17 +358,49 @@ public class TapSdk {
     }
 
     /**
-     * @param gyroSensitivity gyroscope sensitivity index (0-5)
-     * @param accelerometerSensitivity IMU accelerometer sensitivity index (0-4)
+     * Sets the V2 thumb IMU full-scale range. Wire bytes are the enum values,
+     * the same integers tap-python-sdk sends ({@code ImuGyroSensitivity} 1–5,
+     * {@code ImuAcclSensitivity} 1–4). Argument order here is gyro then
+     * accelerometer, which is also the on-wire order.
      */
+    public void setImuSensitivity(@NonNull String tapIdentifier,
+                                  @NonNull ImuGyroSensitivity gyroSensitivity,
+                                  @NonNull ImuAcclSensitivity accelerometerSensitivity) {
+        if (!verifyV2(tapIdentifier, "setImuSensitivity")) {
+            return;
+        }
+        sendImuSensitivity(tapIdentifier, gyroSensitivity.getValue(), accelerometerSensitivity.getValue());
+    }
+
+    /**
+     * @param gyroSensitivity raw gyroscope byte, clamped to 0–5
+     * @param accelerometerSensitivity raw accelerometer byte, clamped to 0–4
+     * @deprecated This overload still clamps to the historical 0–5 / 0–4 range and
+     *             sends those integers unchanged, including {@code 0}, which is not a
+     *             named range. Prefer
+     *             {@link #setImuSensitivity(String, ImuGyroSensitivity, ImuAcclSensitivity)}.
+     *             Values 1–5 and 1–4 already match the Python enums; {@code 0} does not.
+     */
+    @Deprecated
+    @SuppressWarnings("deprecation")
     public void setImuSensitivity(@NonNull String tapIdentifier, int gyroSensitivity, int accelerometerSensitivity) {
         if (!verifyV2(tapIdentifier, "setImuSensitivity")) {
             return;
         }
-        ImuSensitivity sensitivity = new ImuSensitivity(gyroSensitivity, accelerometerSensitivity);
+        int gyro = clamp(gyroSensitivity, ImuSensitivity.GYRO_MIN, ImuSensitivity.GYRO_MAX);
+        int accelerometer = clamp(accelerometerSensitivity, ImuSensitivity.ACCELEROMETER_MIN, ImuSensitivity.ACCELEROMETER_MAX);
+        sendImuSensitivity(tapIdentifier, gyro, accelerometer);
+    }
+
+    private void sendImuSensitivity(@NonNull String tapIdentifier, int gyro, int accelerometer) {
+        ImuSensitivity sensitivity = new ImuSensitivity(gyro, accelerometer);
         v2ImuSensitivities.put(tapIdentifier, sensitivity);
         tapBluetoothManager.sendV2Frame(tapIdentifier,
-                TapV2Encoder.encodeSetImuSensitivity(sensitivity.getGyro(), sensitivity.getAccelerometer()));
+                TapV2Encoder.encodeSetImuSensitivity(gyro, accelerometer));
+    }
+
+    private static int clamp(int value, int min, int max) {
+        return Math.max(min, Math.min(max, value));
     }
 
     public void getImuSensitivity(@NonNull String tapIdentifier, @NonNull TapV2Callback<ImuSensitivity> callback) {

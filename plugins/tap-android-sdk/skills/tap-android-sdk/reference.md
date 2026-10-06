@@ -1,6 +1,6 @@
 # TAP Android SDK — API Reference
 
-Connect order: `TapSdkFactory.getDefault(context)`, then `registerTapListener`, then `resume()` / `pause()`. There is no `connect()` or `start()`. See `../tap-getting-started/SKILL.md` before using this page.
+Connect order: `TapSdkFactory.getDefault(context)`, then `registerTapListener`, then `resume()` / `pause()`. There is no `connect()` or `start()`. See `../tap-android-getting-started/SKILL.md` before using this page.
 
 Complete public API surface. Package root: `com.tapwithus.sdk`.
 Everywhere below, `tapIdentifier` is the device's Bluetooth address (`String`),
@@ -52,7 +52,7 @@ TapSdk sdk = new TapSdk(tapBluetoothManager);
 | `startTextMode(String)` | Device acts as a Bluetooth keyboard; no SDK input |
 | `startControllerWithMouseHIDMode(String)` | Controller + system mouse cursor |
 | `startControllerWithFullHIDMode(String)` | Controller + full HID |
-| `startRawSensorMode(String, byte devAccelSens, byte imuGyroSens, byte imuAccelSens)` | Raw sensor streaming. Sensitivities: device accelerometer 1–4, IMU gyro 1–4, IMU accelerometer 1–5, 0 = default |
+| `startRawSensorMode(String, byte devAccelSens, byte imuGyroSens, byte imuAccelSens)` | Raw sensor streaming. Finger accelerometer 1–4, IMU gyro 1–5, IMU accelerometer 1–4, 0 = default. Gyro 1–5 and accelerometer 1–4 match `ImuGyroSensitivity` / `ImuAcclSensitivity`. |
 
 Deprecated: `startMode(String, int)`, `getMode(String)`, `isInMode(String, int)`.
 
@@ -181,7 +181,8 @@ void getVisionSensorModel(String id, TapV2Callback<VisionSensorModel> cb);
 void setVisionSensorOpMode(String id, VisionSensorOpMode mode);
 void getVisionSensorOpMode(String id, TapV2Callback<VisionSensorOpMode> cb);
 
-void setImuSensitivity(String id, int gyro /*0-5*/, int accelerometer /*0-4*/);
+void setImuSensitivity(String id, ImuGyroSensitivity gyro, ImuAcclSensitivity accelerometer);
+@Deprecated void setImuSensitivity(String id, int gyro, int accelerometer); // historical 0–5 / 0–4 clamp
 void getImuSensitivity(String id, TapV2Callback<ImuSensitivity> cb);
 
 void setStandbyState(String id, boolean standby);
@@ -192,6 +193,8 @@ void sendKeepAlive(String id); // automatic every 10s; manual send optional
 
 ### Enums
 
+- `ImuGyroSensitivity`: `DPS125(1)`, `DPS250(2)`, `DPS500(3)`, `DPS1000(4)`, `DPS2000(5)`. Same wire values as Python.
+- `ImuAcclSensitivity`: `G2(1)`, `G4(2)`, `G8(3)`, `G16(4)`. Same wire values as Python.
 - `DeviceFeature`: `RAW_IMU_DATA(0)`, `MODEL_DETECTION(1)` (taps + air gestures), `IMU_MOTION_DATA(2)`, `TRIGGER_DETECTIONS(3)`, `STANDBY_GESTURE_DETECTION(4)`
 - `VisionSensorModel`: `TAPPING`, `AIR_GESTURE` (one model active at a time)
 - `VisionSensorOpMode`: `TRIGGER`, `STREAM`, `STREAM_ON_TRIGGER`

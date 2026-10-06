@@ -69,14 +69,14 @@ Callbacks are not guaranteed to be on the main thread. Keep them short. Post UI 
 
 | Skill | Use for |
 |-------|---------|
-| `tap-getting-started` | Gradle dependency, permissions, pairing, connect, quickstart, troubleshooting |
-| `tap-tapping` | tapcodes, finger combos, double taps, haptics, input modes |
-| `tap-vision-models` | v2 model switching, `UnifiedAirGesture` (swipe, pinch, hold, fist) |
-| `tap-imu-motion` | pointer, tilt, roll / pitch / yaw, v1 mouse |
-| `tap-raw-sensors` | raw accelerometer / gyro, sensitivity |
-| `tap-knob` | v2 pinch-hold + twist to change a value |
-| `tap-dpad` | v2 swipes, pinch select, hold to rotate or drag |
-| `tap-build-an-app` | complete Android apps: listener, main thread, connection status |
+| `tap-android-getting-started` | Gradle dependency, permissions, pairing, connect, quickstart, troubleshooting |
+| `tap-android-tapping` | tapcodes, finger combos, double taps, haptics, input modes |
+| `tap-android-vision-models` | v2 model switching, `UnifiedAirGesture` (swipe, pinch, hold, fist) |
+| `tap-android-imu-motion` | pointer, tilt, roll / pitch / yaw, v1 mouse |
+| `tap-android-raw-sensors` | raw accelerometer / gyro, sensitivity |
+| `tap-android-knob` | v2 pinch-hold + twist to change a value |
+| `tap-android-dpad` | v2 swipes, pinch select, hold to rotate or drag |
+| `tap-android-build-an-app` | complete Android apps: listener, main thread, connection status |
 | `tap-android-sdk` | method-by-method API reference |
 
 Skill files live in `plugins/tap-android-sdk/skills/<name>/SKILL.md` in the SDK repository. `./install-skills.sh` copies them into an app project.

@@ -1,6 +1,8 @@
 package com.tapwithus.sdk.v2;
 
 import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 import org.junit.Test;
 
@@ -48,11 +50,45 @@ public class TapV2EncoderTest {
 
     @Test
     public void imuSensitivity() {
-        // Wire order is [gyro, accelerometer]
+        // Wire order is [gyro, accelerometer]. 3, 2 is Python DPS500, G4.
         assertArrayEquals(new byte[] { 1, 1, 2, 0, 3, 2 },
-                TapV2Encoder.encodeSetImuSensitivity(3, 2));
+                TapV2Encoder.encodeSetImuSensitivity(
+                        ImuGyroSensitivity.DPS500.getValue(),
+                        ImuAcclSensitivity.G4.getValue()));
         assertArrayEquals(new byte[] { 1, 1, 12, 0 },
                 TapV2Encoder.encodeGetImuSensitivity());
+    }
+
+    @Test
+    public void imuSensitivityEnumsMatchPythonWireValues() {
+        assertEquals(1, ImuGyroSensitivity.DPS125.getValue());
+        assertEquals(2, ImuGyroSensitivity.DPS250.getValue());
+        assertEquals(3, ImuGyroSensitivity.DPS500.getValue());
+        assertEquals(4, ImuGyroSensitivity.DPS1000.getValue());
+        assertEquals(5, ImuGyroSensitivity.DPS2000.getValue());
+        assertEquals(1, ImuAcclSensitivity.G2.getValue());
+        assertEquals(2, ImuAcclSensitivity.G4.getValue());
+        assertEquals(3, ImuAcclSensitivity.G8.getValue());
+        assertEquals(4, ImuAcclSensitivity.G16.getValue());
+
+        assertArrayEquals(new byte[] { 1, 1, 2, 0, 1, 1 },
+                TapV2Encoder.encodeSetImuSensitivity(
+                        ImuGyroSensitivity.DPS125.getValue(),
+                        ImuAcclSensitivity.G2.getValue()));
+        assertArrayEquals(new byte[] { 1, 1, 2, 0, 5, 4 },
+                TapV2Encoder.encodeSetImuSensitivity(
+                        ImuGyroSensitivity.DPS2000.getValue(),
+                        ImuAcclSensitivity.G16.getValue()));
+
+        ImuSensitivity read = new ImuSensitivity(1, 1);
+        assertEquals(ImuGyroSensitivity.DPS125, read.getGyroSensitivity());
+        assertEquals(ImuAcclSensitivity.G2, read.getAccelerometerSensitivity());
+        // 0 is the historical raw-index "unset" byte. It is not a Python enum.
+        ImuSensitivity unset = new ImuSensitivity(0, 0);
+        assertNull(unset.getGyroSensitivity());
+        assertNull(unset.getAccelerometerSensitivity());
+        assertEquals(0, unset.getGyro());
+        assertEquals(0, unset.getAccelerometer());
     }
 
     @Test

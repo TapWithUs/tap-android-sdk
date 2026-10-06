@@ -17,6 +17,13 @@ android {
         }
     }
     namespace 'com.tapwithus.tapsdk'
+
+    sourceSets {
+        main {
+            java.srcDir '../plugins/tap-android-sdk/skills/tap-android-knob/java'
+            java.srcDir '../plugins/tap-android-sdk/skills/tap-android-dpad/java'
+        }
+    }
 }
 
 dependencies {

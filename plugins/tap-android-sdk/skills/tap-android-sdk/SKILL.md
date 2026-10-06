@@ -3,7 +3,7 @@ name: tap-android-sdk
 description: >-
   API reference for the TAP Android SDK (com.tapwithus.sdk): TapSdk,
   TapListener, modes, V2 features, haptics. Use when you need a method,
-  callback, or data-type detail. For a new app, use tap-getting-started
+  callback, or data-type detail. For a new app, use tap-android-getting-started
   first. Order: TapSdkFactory.getDefault(context), then registerTapListener,
   then resume() in onResume and pause() in onPause. getDefault() alone
   delivers no taps. There is no connect() or start() method.
@@ -14,7 +14,7 @@ description: >-
 SDK for receiving input from TAP wearable devices (TAP Strap, TapXR, TapBand) over BLE.
 Entry point: `com.tapwithus.sdk.TapSdk`. Published as `io.github.tapwithus:tap-android-sdk` on Maven Central.
 
-Task skills (connect, taps, air gestures, motion, knob, D-Pad, full apps) live next to this file under `plugins/tap-android-sdk/skills/`. Start with `tap-getting-started`. This file is the method-level reference.
+Task skills (connect, taps, air gestures, motion, knob, D-Pad, full apps) live next to this file under `plugins/tap-android-sdk/skills/`. Start with `tap-android-getting-started`. This file is the method-level reference.
 
 ## Required order
 
@@ -150,7 +150,7 @@ on 2s timeout; calling on a v1 device raises error `TapSdk.ERR_V2_NOT_SUPPORTED`
 sdk.setFeature(id, DeviceFeature.MODEL_DETECTION, true); // RAW_IMU_DATA, IMU_MOTION_DATA, STANDBY_GESTURE_DETECTION...
 sdk.setVisionSensorModel(id, VisionSensorModel.AIR_GESTURE); // or TAPPING
 sdk.setVisionSensorOpMode(id, VisionSensorOpMode.STREAM);    // or TRIGGER / STREAM_ON_TRIGGER
-sdk.setImuSensitivity(id, /*gyro 0-5*/ 3, /*accel 0-4*/ 2);
+sdk.setImuSensitivity(id, ImuGyroSensitivity.DPS500, ImuAcclSensitivity.G4);
 sdk.setStandbyState(id, true);
 sdk.sendKeepAlive(id); // sent automatically every 10s anyway
 ```
@@ -163,12 +163,12 @@ sdk.sendKeepAlive(id); // sent automatically every 10s anyway
 - On v2, Controller mode alone does not select `TAPPING` vs `AIR_GESTURE`. Call `startXRTappingState` or `startXRAirMouseState`.
 - Raw sensor mode on V2 devices streams only the thumb IMU (no finger accelerometers).
 - `repeatData` (double/triple tap) is always 1 on V2 devices.
-- `setImuSensitivity` indexes are gyro 0–5 and accelerometer 0–4. They are not the same integers as the v1 `startRawSensorMode` sensitivity bytes.
+- V2 `setImuSensitivity` takes `ImuGyroSensitivity` (1–5) and `ImuAcclSensitivity` (1–4), the same wire values as the Python SDK. The int overload is deprecated and still sends its historical 0–5 / 0–4 clamp, including 0.
 - Callbacks are not guaranteed to be on the main thread.
 
 ## Additional resources
 
 - Full API listing and data-type details: [reference.md](reference.md)
-- Task skills: `tap-getting-started`, `tap-tapping`, `tap-vision-models`, `tap-imu-motion`, `tap-raw-sensors`, `tap-knob`, `tap-dpad`, `tap-build-an-app`
+- Task skills: `tap-android-getting-started`, `tap-android-tapping`, `tap-android-vision-models`, `tap-android-imu-motion`, `tap-android-raw-sensors`, `tap-android-knob`, `tap-android-dpad`, `tap-android-build-an-app`
 - Working example: the `app` module (`app/src/main/java/com/tapwithus/tapsdk/MainActivity.java`)
 - Project README covers the same ground with more prose: `README.md`

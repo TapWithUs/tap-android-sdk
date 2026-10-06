@@ -98,12 +98,16 @@ public class TapV2Encoder {
     }
 
     /**
-     * @param gyroSensitivity gyroscope sensitivity index (0-5)
-     * @param accelerometerSensitivity IMU accelerometer sensitivity index (0-4)
+     * @param gyroSensitivity gyroscope wire byte. Named ranges are
+     *                        {@link ImuGyroSensitivity} 1–5, the same values as
+     *                        tap-python-sdk's {@code ImuGyroSensitivity}.
+     * @param accelerometerSensitivity accelerometer wire byte. Named ranges are
+     *                                 {@link ImuAcclSensitivity} 1–4.
      */
     @NonNull
     public static byte[] encodeSetImuSensitivity(int gyroSensitivity, int accelerometerSensitivity) {
-        // Wire order is [gyro, accelerometer], same as the python reference
+        // Wire order is [gyro, accelerometer]. Python's set_imu_sensitivity
+        // arguments are (accelerometer, gyro) but the frame is gyro then accelerometer.
         byte[] payload = new byte[] { (byte) gyroSensitivity, (byte) accelerometerSensitivity };
         return encodeMessage(CMD_PERIPHERAL, SUBCMD1_PERIPHERAL_IMU, SUBCMD2_SET_IMU_SENSITIVITY, 0, payload);
     }

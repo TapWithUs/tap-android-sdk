@@ -30,6 +30,11 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".GestureSampleActivity"
+            android:exported="false"
+            android:label="Knob / D-Pad" />
+
     </application>
 
 </manifest>
