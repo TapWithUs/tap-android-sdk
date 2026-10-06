@@ -5,6 +5,8 @@ Updates
 
 September 2026 - Added **V2 Tap devices (framed protocol)** support - feature toggles, vision sensor configuration, IMU motion + Euler angles, standby state, unified air gestures and keepalive (See below). Aligned with [tap-python-sdk](https://github.com/TapWithUs/tap-python-sdk) and tap-ios-sdk.
 
+Coding-agent skills (Cursor, Claude Code, Codex, AGENTS.md) are in [AI-Assisted Development](#ai-assisted-development).
+
 July 2024 - Added **TAPXR Gestures** (See below).
 
 
@@ -425,6 +427,64 @@ The Android Studio project contains an example app (the `app` module) where you 
 * The last air gesture performed, decoded per protocol (`UnifiedAirGesture` for V2 devices, `AirMousePacket` constants for classic devices).
 * Switching between Tapping and AirMouse detection by tapping the mode label (`startXRTappingState` / `startXRAirMouseState`).
 * Changing input modes (text / controller / raw sensor...) by tapping the row, and sending haptics via `vibrate`.
+
+AI-Assisted Development
+=======================
+
+You do not need to memorize the SDK to build with a Tap. Install the Tap skills into your coding agent, then describe the Android app you want. The agent knows the Android order: `TapSdkFactory.getDefault(context)`, then `registerTapListener`, then `resume()` / `pause()`. There is no `connect()` or `start()` call. `getDefault()` alone delivers no taps.
+
+The installer writes into the **current folder**. Add `-g` to install for your user instead, so the skills are available in every project.
+
+| Tool | This folder (default) | Every project (`-g`) |
+|------|------------------------|----------------------|
+| Claude Code | `.claude/skills/` | `claude plugin install … --scope user` |
+| Codex | `.agents/skills/` | `codex plugin add …` |
+| Cursor | `.cursor/skills/` + [`.cursor/rules/tap-sdk.mdc`](.cursor/rules/tap-sdk.mdc) | `~/.cursor/skills/` + `~/.cursor/rules/tap-sdk.mdc` |
+| Any agent that reads `AGENTS.md` | [`AGENTS.md`](AGENTS.md) | `~/.codex/AGENTS.md` |
+
+Run the commands below in your app's project folder (or from a clone of this repository).
+
+```console
+./install-skills.sh claude    # .claude/skills/
+./install-skills.sh codex     # .agents/skills/
+./install-skills.sh cursor    # .cursor/skills/ and .cursor/rules/
+./install-skills.sh agents    # ./AGENTS.md
+./install-skills.sh all       # all four, this folder
+./install-skills.sh -g all    # all four, every project
+```
+
+Or, without a clone (after this branch is on `master`):
+
+```console
+curl -sL https://raw.githubusercontent.com/TapWithUs/tap-android-sdk/master/install-skills.sh | bash -s cursor
+curl -sL https://raw.githubusercontent.com/TapWithUs/tap-android-sdk/master/install-skills.sh | bash
+curl -sL https://raw.githubusercontent.com/TapWithUs/tap-android-sdk/master/install-skills.sh | bash -s -- -g all
+```
+
+`-g claude` and `-g codex` need the `claude` and `codex` commands. You can also open `/plugins` in Codex and install **Tap Android SDK** from the marketplace list.
+
+#### What's included
+
+- **tap-getting-started**: Gradle dependency, Bluetooth permissions, pairing, connect, troubleshooting
+- **tap-tapping**: which fingers tapped, finger combos, double taps, haptics, input modes
+- **tap-vision-models**: switch between the tapping and air-gesture models; swipes, pinches, holds, fist (v2)
+- **tap-imu-motion**: pointer movement, tilt, roll / pitch / yaw (v2) and mouse events (v1)
+- **tap-raw-sensors**: raw accelerometer and gyro streams, sensitivity
+- **tap-knob**: hold a pinch and twist to turn a value up or down (v2)
+- **tap-dpad**: swipe for directions, pinch to select, hold to rotate or drag (v2)
+- **tap-build-an-app**: turn Tap events into an Android app (main thread, connection status, lifecycle)
+- **tap-android-sdk**: method-by-method API reference
+
+Skill source: [`plugins/tap-android-sdk/skills`](plugins/tap-android-sdk/skills).
+
+#### Onboard your agent
+
+1. Open your Android project in the coding agent.
+2. Install the skills (see above).
+3. Turn on your Tap, charge it, pair it in Android Bluetooth settings, and update its firmware with Tap Manager.
+4. Tell the agent which device you have (Tap Strap, Tap Strap 2, TapXR, or TapBand).
+5. Ask it to connect first: *"Use the tap-getting-started skill to connect to my Tap and show my taps."* Tap your fingers and tell the agent what you see.
+6. When taps arrive, describe your app. Build one interaction at a time and try each one with the device.
 
 Support
 ===========

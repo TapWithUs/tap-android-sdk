@@ -1,5 +1,7 @@
 # TAP Android SDK — API Reference
 
+Connect order: `TapSdkFactory.getDefault(context)`, then `registerTapListener`, then `resume()` / `pause()`. There is no `connect()` or `start()`. See `../tap-getting-started/SKILL.md` before using this page.
+
 Complete public API surface. Package root: `com.tapwithus.sdk`.
 Everywhere below, `tapIdentifier` is the device's Bluetooth address (`String`),
 delivered first via `TapListener.onTapConnected`.
@@ -123,7 +125,7 @@ public interface TapListener {
 
 Notes:
 - `onTapInputReceived`: `data` is 1–31 finger bitmask (LSB=thumb), `repeatData` 1/2/3 = single/double/triple (V2 always 1).
-- `onTapChangedState`: reports `TapXRState` constants (`NONE=0, USER_CONTROL=1, TAPPING=2, AIR_MOUSE=4`).
+- `onTapChangedState`: fired when an air-mouse packet's gesture is 20. `state` is `AirMousePacket.state` (the device byte). The SDK treats `state == 1` as air-mouse and then suppresses `onTapInputReceived`. Do not compare this value to `TapXRState` constants (`AIR_MOUSE` there is 4).
 
 ## Data classes
 

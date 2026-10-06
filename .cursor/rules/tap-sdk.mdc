@@ -1,0 +1,16 @@
+---
+description: Tap Android SDK. Order is TapSdkFactory.getDefault(context), then registerTapListener, then resume() and pause(). getDefault() alone delivers no taps.
+alwaysApply: true
+---
+
+# Tap Android SDK
+
+When the user wants to build an Android app with a Tap device, read `.cursor/skills/tap-getting-started/SKILL.md` first.
+
+- Order: `TapSdkFactory.getDefault(context)`, then `registerTapListener`, then `resume()` in `onResume` and `pause()` in `onPause`. There is no `connect()` or `start()`. `getDefault()` alone delivers no taps.
+- The SDK connects only to Taps already paired in Android Bluetooth settings. On Android 12+ request `BLUETOOTH_CONNECT` and `BLUETOOTH_SCAN` at runtime.
+- `tapIdentifier` is the Bluetooth address from `onTapConnected`. Handle v1 and v2 (`sdk.isV2Tap`) unless the user names the device.
+- v1 needs Controller mode (applied on connect while resumed). v2 also needs `startXRTappingState` or `startXRAirMouseState` so a vision model is selected.
+- Callbacks may run off the main thread. Keep them short and post UI work to the main thread.
+- Knob and D-Pad recipes are v2 only (`tap-knob`, `tap-dpad`).
+- Do not invent APIs or enum values. Test with the real device.
