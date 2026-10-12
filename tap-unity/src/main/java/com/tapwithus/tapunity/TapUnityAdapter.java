@@ -39,7 +39,6 @@ public class TapUnityAdapter {
     private static final String UNITY_TAP_SHIFTSWITCH_CALLBACK = "onTapShiftSwitchReceived";
     private static final String UNITY_RAW_SENSOR_DATA_CALLBACK = "onRawSensorDataReceived";
     private static final String UNITY_MOUSE_INPUT_CALLBACK = "onMouseInputReceived";
-    // /private static final String UNITY_AIR_MOUSE_INPUT_CALLBACK = "onAirMouseInputReceived";
     private static final String UNITY_AIRMOUSE_INPUT_CALLBACK = "onAirGestureInputReceived";
     private static final String UNITY_TAP_CHANGED_STATE_CALLBACK = "onTapChangedAirGestureState";
     private static final String UNITY_CONNECTED_TAPS_CALLBACK = "onConnectedTapsReceived";
@@ -52,6 +51,8 @@ public class TapUnityAdapter {
     protected TapUnityAdapter() { }
 
     public TapUnityAdapter(Context context) {
+//        tapSdk = sdk;
+//        tapSdk.registerTapListener(tapListener);
         tapSdk = TapSdkFactory.getDefault(context);
         tapSdk.registerTapListener(tapListener);
     }
@@ -264,13 +265,9 @@ public class TapUnityAdapter {
         }
 
         @Override
-        public void onTextModeStarted(@NonNull String tapIdentifier) {
-            log("Text mode started " + tapIdentifier);
-            UnityPlayer.UnitySendMessage(UNITY_GAME_OBJECT, UNITY_TEXT_MODE_CALLBACK, tapIdentifier);
-        }
-
         public void onTapShiftSwitchReceived(@NonNull String tapIdentifier, int data) {
             log(tapIdentifier + " TAP ShiftSwitch received " + data);
+
             String args = tapIdentifier + UNITY_ARGS_SEPARATOR + data;
             UnityPlayer.UnitySendMessage(UNITY_GAME_OBJECT, UNITY_TAP_SHIFTSWITCH_CALLBACK, args);
         }
@@ -305,6 +302,7 @@ public class TapUnityAdapter {
             UnityPlayer.UnitySendMessage(UNITY_GAME_OBJECT, UNITY_MOUSE_INPUT_CALLBACK, args);
         }
 
+        @Override
         public void onImuMotionInputReceived(@NonNull String tapIdentifier, @NonNull ImuMotionPacket packet) {
             log(tapIdentifier + " imu motion input received " + packet);
         }
