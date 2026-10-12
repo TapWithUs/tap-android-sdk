@@ -6,6 +6,7 @@ import com.tapwithus.sdk.airmouse.AirMousePacket;
 import com.tapwithus.sdk.mouse.MousePacket;
 import com.tapwithus.sdk.mode.RawSensorData;
 import com.tapwithus.sdk.v2.ImuMotionPacket;
+import com.tapwithus.sdk.xr.XRAirGesture;
 public interface TapListener {
     void onBluetoothTurnedOn();
     void onBluetoothTurnedOff();
@@ -32,4 +33,11 @@ public interface TapListener {
      * Standby state change of a V2 Tap device.
      */
     default void onTapStandbyStateChanged(@NonNull String tapIdentifier, boolean standby) { }
+
+    /**
+     * Processed XR air gesture. V2 devices (other than hardware 4.x.x) are run
+     * through the gesture post-processor. Legacy devices, and V2 hardware 4.x.x,
+     * are run through {@code XRGesturesMain}.
+     */
+    default void onXRAirGestureReceived(@NonNull String tapIdentifier, @NonNull XRAirGesture gesture) { }
 }

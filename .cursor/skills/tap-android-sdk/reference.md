@@ -115,7 +115,8 @@ public interface TapListener {
     void onRawSensorInputReceived(String tapIdentifier, RawSensorData rsData);
     void onTapChangedState(String tapIdentifier, int state);
     void onError(String tapIdentifier, int code, String description);
-    // V2-only, default methods:
+    // default methods:
+    default void onXRAirGestureReceived(String tapIdentifier, XRAirGesture gesture) { }
     default void onImuMotionInputReceived(String tapIdentifier, ImuMotionPacket packet) { }
     default void onTapStandbyStateChanged(String tapIdentifier, boolean standby) { }
 }
@@ -124,6 +125,7 @@ public interface TapListener {
 Notes:
 - `onTapInputReceived`: `data` is 1–31 finger bitmask (LSB=thumb), `repeatData` 1/2/3 = single/double/triple (V2 always 1).
 - `onTapChangedState`: reports `TapXRState` constants (`NONE=0, USER_CONTROL=1, TAPPING=2, AIR_MOUSE=4`).
+- `onAirMouseInputReceived`: raw air-gesture packet. `onXRAirGestureReceived`: the same stream after `GesturePostprocessor` (V2, except hardware 4.x.x) or `XRGesturesMain` (legacy, and V2 hardware 4.x.x). Hardware 4.x.x maps new class indexes to legacy states first: none 100→100, AB 105→101, AC 106→102, AD 107→103, AE 108→104, FIST 109→105.
 
 ## Data classes
 

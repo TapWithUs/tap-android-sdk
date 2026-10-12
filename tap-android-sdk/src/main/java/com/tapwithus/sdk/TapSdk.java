@@ -26,6 +26,10 @@ import com.tapwithus.sdk.v2.TapV2InputModeMapper;
 import com.tapwithus.sdk.v2.TapV2Message;
 import com.tapwithus.sdk.v2.VisionSensorModel;
 import com.tapwithus.sdk.v2.VisionSensorOpMode;
+import com.tapwithus.sdk.xr.GesturePostprocessor;
+import com.tapwithus.sdk.xr.LegacyXRAirGesture;
+import com.tapwithus.sdk.xr.XRAirGesture;
+import com.tapwithus.sdk.xr.XRGesturesMain;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -54,6 +58,8 @@ public class TapSdk {
     private final Map<String, TapInputMode> modeSubscribers = new ConcurrentHashMap<>();
     private final Map<String, TapXRState> stateSubscribers = new ConcurrentHashMap<>();
     private final Map<String, ImuSensitivity> v2ImuSensitivities = new ConcurrentHashMap<>();
+    private final Map<String, GesturePostprocessor> gesturePostprocessors = new ConcurrentHashMap<>();
+    private final Map<String, XRGesturesMain> xrGestures = new ConcurrentHashMap<>();
     private final Map<String, PendingV2Request> pendingV2Requests = new ConcurrentHashMap<>();
     private final Handler v2RequestHandler = new Handler(Looper.getMainLooper());
 
@@ -1057,11 +1063,17 @@ public class TapSdk {
 
         @Override
         public void onMouseInputReceived(@NonNull String tapAddress, @NonNull MousePacket data) {
+            if (data.proximity.getInt() == 1) {
+                int vx = (short) data.dx.getUnsignedInt();
+                int vy = (short) data.dy.getUnsignedInt();
+                xrGesturesFor(tapAddress).onMouse(vx, vy);
+            }
             notifyOnMouseInputReceived(tapAddress, data);
         }
 
         @Override
         public void onAirMouseInputReceived(@NonNull String tapAddress, @NonNull AirMousePacket data) {
+            processAirGesture(tapAddress, data.gesture.getInt());
             notifyOnAirMouseInputReceived(tapAddress, data);
         }
 
@@ -1239,6 +1251,11 @@ public class TapSdk {
         modeSubscribers.remove(tapIdentifier);
         stateSubscribers.remove(tapIdentifier);
         v2ImuSensitivities.remove(tapIdentifier);
+        gesturePostprocessors.remove(tapIdentifier);
+        XRGesturesMain gestures = xrGestures.remove(tapIdentifier);
+        if (gestures != null) {
+            gestures.stop();
+        }
         cancelV2Requests(tapIdentifier);
 //        HIDMouseInRawModeSubscribers.remove(tapIdentifier);
         if (!isClosing) {
@@ -1380,6 +1397,69 @@ public class TapSdk {
 
     private boolean isFeatureSupported(@NonNull Tap tap, int feature) {
         return FeatureVersionSupport.isFeatureSupported(tap, feature);
+    }
+
+    /**
+     * V2 taps on hardware 4.x.x emit the new class indexes but must be parsed
+     * as legacy XR gesture states.
+     */
+    private boolean usesLegacyAirGestureParsing(@NonNull String tapIdentifier) {
+        if (!isV2Tap(tapIdentifier)) {
+            return false;
+        }
+        Tap tap = cache.getCached(tapIdentifier);
+        if (tap == null || tap.getHwVer() == null || tap.getHwVer().isEmpty()) {
+            return false;
+        }
+        int hw = FeatureVersionSupport.semVerToInt(tap.getHwVer());
+        return hw >= 40000 && hw < 50000;
+    }
+
+    private void processAirGesture(@NonNull String tapIdentifier, int code) {
+        if (isV2Tap(tapIdentifier) && !usesLegacyAirGestureParsing(tapIdentifier)) {
+            for (XRAirGesture gesture : gesturePostprocessorFor(tapIdentifier).toXRAirGestures(code)) {
+                notifyOnXRAirGestureReceived(tapIdentifier, gesture);
+            }
+            return;
+        }
+        int gesture = usesLegacyAirGestureParsing(tapIdentifier)
+                ? LegacyXRAirGesture.fromV2Class(code)
+                : code;
+        if (gesture >= 100) {
+            xrGesturesFor(tapIdentifier).onGestureState(gesture);
+        }
+    }
+
+    @NonNull
+    private GesturePostprocessor gesturePostprocessorFor(@NonNull final String tapIdentifier) {
+        GesturePostprocessor existing = gesturePostprocessors.get(tapIdentifier);
+        if (existing != null) {
+            return existing;
+        }
+        GesturePostprocessor created = new GesturePostprocessor(true, false);
+        GesturePostprocessor raced = gesturePostprocessors.putIfAbsent(tapIdentifier, created);
+        return raced != null ? raced : created;
+    }
+
+    @NonNull
+    private XRGesturesMain xrGesturesFor(@NonNull final String tapIdentifier) {
+        XRGesturesMain existing = xrGestures.get(tapIdentifier);
+        if (existing != null) {
+            return existing;
+        }
+        XRGesturesMain created = new XRGesturesMain();
+        created.setListener(new XRGesturesMain.Listener() {
+            @Override
+            public void onXRAirGesture(XRAirGesture gesture) {
+                notifyOnXRAirGestureReceived(tapIdentifier, gesture);
+            }
+        });
+        XRGesturesMain raced = xrGestures.putIfAbsent(tapIdentifier, created);
+        return raced != null ? raced : created;
+    }
+
+    private void notifyOnXRAirGestureReceived(@NonNull final String tapIdentifier, @NonNull final XRAirGesture gesture) {
+        tapListeners.notifyAll(listener -> listener.onXRAirGestureReceived(tapIdentifier, gesture));
     }
 
 

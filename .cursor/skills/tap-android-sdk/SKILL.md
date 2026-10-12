@@ -59,13 +59,16 @@ void onTapDisconnected(String tapIdentifier);
 void onTapInputReceived(String tapIdentifier, int data, int repeatData);
 void onTapShiftSwitchReceived(String tapIdentifier, int data);
 void onMouseInputReceived(String tapIdentifier, MousePacket data);
-void onAirMouseInputReceived(String tapIdentifier, AirMousePacket data);
+void onAirMouseInputReceived(String tapIdentifier, AirMousePacket data); // raw packet
 void onRawSensorInputReceived(String tapIdentifier, RawSensorData rsData);
 void onError(String tapIdentifier, int code, String description);
-// V2-only (default methods):
+// default methods:
+default void onXRAirGestureReceived(String tapIdentifier, XRAirGesture gesture);
 default void onImuMotionInputReceived(String tapIdentifier, ImuMotionPacket packet);
 default void onTapStandbyStateChanged(String tapIdentifier, boolean standby);
 ```
+
+`onAirMouseInputReceived` is the raw characteristic value. Prefer `onXRAirGestureReceived` for pinches, drags, swipes, and fists. The SDK runs each tap through `GesturePostprocessor` (V2, hardware other than 4.x.x) or `XRGesturesMain` (legacy, and V2 hardware 4.x.x, after mapping the new class indexes onto the legacy XR states).
 
 ### Decoding tap input
 
@@ -122,13 +125,7 @@ sdk.setDefaultXRState(TapXRState.tapping(), /* applyImmediate */ true);
 TapBand and V2-firmware TapXR use a framed BLE protocol, detected automatically —
 the callbacks and mode APIs above work unchanged. Check with `sdk.isV2Tap(tapIdentifier)`.
 
-V2 air gestures arrive in `onAirMouseInputReceived` with codes from
-`com.tapwithus.sdk.v2.UnifiedAirGesture` (100–114: NONE, LEFT/RIGHT/UP/DOWN,
-pinches AB/AC/AD/AE, FIST, and `_HOLD` variants):
-
-```java
-UnifiedAirGesture g = UnifiedAirGesture.fromCode(data.gesture.getInt()); // null if not V2 code
-```
+The raw V2 class index still arrives in `onAirMouseInputReceived` (`UnifiedAirGesture`, codes 100–114). Processed gestures arrive in `onXRAirGestureReceived` as `com.tapwithus.sdk.xr.XRAirGesture` (`CLICK_INDEX`, `DRAG_INDEX`, `DROP`, `FIST_BEGIN`/`FIST_END`, swipes, and so on). Hardware 4.x.x V2 taps are converted from the new indexes (AB=105 … FIST=109) to the legacy XR states before `XRGesturesMain`.
 
 V2-only configuration (all `get*` reply async on `TapV2Callback`; value is `null`
 on 2s timeout; calling on a v1 device raises error `TapSdk.ERR_V2_NOT_SUPPORTED` = 103):
