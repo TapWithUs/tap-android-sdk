@@ -39,7 +39,7 @@ public class TapUnityAdapter {
     private static final String UNITY_TAP_SHIFTSWITCH_CALLBACK = "onTapShiftSwitchReceived";
     private static final String UNITY_RAW_SENSOR_DATA_CALLBACK = "onRawSensorDataReceived";
     private static final String UNITY_MOUSE_INPUT_CALLBACK = "onMouseInputReceived";
-    private static final String UNITY_AIR_MOUSE_INPUT_CALLBACK = "onAirMouseInputReceived";
+    // /private static final String UNITY_AIR_MOUSE_INPUT_CALLBACK = "onAirMouseInputReceived";
     private static final String UNITY_AIRMOUSE_INPUT_CALLBACK = "onAirGestureInputReceived";
     private static final String UNITY_TAP_CHANGED_STATE_CALLBACK = "onTapChangedAirGestureState";
     private static final String UNITY_CONNECTED_TAPS_CALLBACK = "onConnectedTapsReceived";
@@ -305,14 +305,6 @@ public class TapUnityAdapter {
             UnityPlayer.UnitySendMessage(UNITY_GAME_OBJECT, UNITY_MOUSE_INPUT_CALLBACK, args);
         }
 
-        @Override
-<<<<<<< HEAD
-        public void onAirMouseInputReceived(@NonNull String tapIdentifier, @NonNull AirMousePacket data) {
-            log(tapIdentifier + " air mouse input received " + data.gesture.getInt());
-
-            String args = tapIdentifier + UNITY_ARGS_SEPARATOR + data.gesture.getInt();
-            UnityPlayer.UnitySendMessage(UNITY_GAME_OBJECT, UNITY_AIR_MOUSE_INPUT_CALLBACK, args);
-=======
         public void onImuMotionInputReceived(@NonNull String tapIdentifier, @NonNull ImuMotionPacket packet) {
             log(tapIdentifier + " imu motion input received " + packet);
         }
@@ -320,7 +312,6 @@ public class TapUnityAdapter {
         @Override
         public void onTapStandbyStateChanged(@NonNull String tapIdentifier, boolean standby) {
             log(tapIdentifier + " standby state changed " + standby);
->>>>>>> master
         }
 
         @Override
