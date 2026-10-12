@@ -2,7 +2,7 @@ package com.tapwithus.sdk.bluetooth.operations;
 
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattService;
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 import com.tapwithus.sdk.bluetooth.ErrorStrings;
 
@@ -17,8 +17,13 @@ public class DiscoverServicesOperation extends GattOperation<List<BluetoothGattS
 
     @Override
     public void onExecute(@NonNull BluetoothGatt gatt) {
-        if (!gatt.discoverServices()) {
+        try {
+            if (!gatt.discoverServices()) {
+                postOnError(ErrorStrings.DISCOVER_SERVICES_OP_INIT_FAIL);
+            }
+        } catch (SecurityException se) {
             postOnError(ErrorStrings.DISCOVER_SERVICES_OP_INIT_FAIL);
+            postOnError(ErrorStrings.LACKING_PERMISSION_FAIL);
         }
     }
 

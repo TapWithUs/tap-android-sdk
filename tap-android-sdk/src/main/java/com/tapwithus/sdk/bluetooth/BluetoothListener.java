@@ -1,6 +1,6 @@
 package com.tapwithus.sdk.bluetooth;
 
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 import java.util.UUID;
 
@@ -12,6 +12,7 @@ public interface BluetoothListener {
     void onDeviceAlreadyConnected(@NonNull String deviceAddress);
     void onDeviceDisconnected(@NonNull String deviceAddress);
     void onCharacteristicRead(@NonNull String deviceAddress, @NonNull UUID characteristic, @NonNull byte[] data);
+    void onCharacteristicNotFound(@NonNull String deviceAddress, @NonNull UUID characteristic);
     void onCharacteristicWrite(@NonNull String deviceAddress, @NonNull UUID characteristic, @NonNull byte[] data);
     void onNotificationSubscribed(@NonNull String deviceAddress, @NonNull UUID characteristic);
     void onNotificationReceived(@NonNull String deviceAddress, @NonNull UUID characteristic, @NonNull byte[] data);

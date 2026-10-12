@@ -12,7 +12,7 @@ public class TapSdkFactory {
 
     public static TapSdk getDefault(Context context) {
         if (sdk == null) {
-            BluetoothManager bluetoothManager = new BluetoothManager(context.getApplicationContext(), BluetoothAdapter.getDefaultAdapter());
+            BluetoothManager bluetoothManager = new BluetoothManager(context.getApplicationContext(),  BluetoothAdapter.getDefaultAdapter());
             TapBluetoothManager tapBluetoothManager = new TapBluetoothManager(bluetoothManager);
             sdk = new TapSdk(tapBluetoothManager);
         }

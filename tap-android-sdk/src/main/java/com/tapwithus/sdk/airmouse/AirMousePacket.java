@@ -14,10 +14,17 @@ public class AirMousePacket extends Packet {
     public static final int AIR_MOUSE_GESTURE_LEFT_TWO_FINGERS = 7;
     public static final int AIR_MOUSE_GESTURE_RIGHT = 8;
     public static final int AIR_MOUSE_GESTURE_RIGHT_TWO_FINGERS = 9;
+    public static final int AIR_MOUSE_GESTURE_INDEX_TO_THUMB_TOUCH = 10;
+    public static final int AIR_MOUSE_GESTURE_MIDDLE_TO_THUMB_TOUCH = 11;
+
+    public static final int XR_AIR_GESTURE_NONE = 100;
+    public static final int XR_AIR_GESTURE_THUMB_INDEX = 101;
+    public static final int XR_AIR_GESTURE_THUMB_MIDDLE = 102;
 
     public AirMousePacket(byte[] data) {
-        super(data, 1);
+        super(data, 2);
     }
 
     public PacketValue gesture = new PacketValue(0, 8);
+    public PacketValue state = new PacketValue(8,8);
 }

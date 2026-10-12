@@ -1,5 +1,13 @@
 # TAP Official Android SDK
 
+Updates 
+=======
+
+September 2026 - Added **V2 Tap devices (framed protocol)** support - feature toggles, vision sensor configuration, IMU motion + Euler angles, standby state, unified air gestures and keepalive (See below). Aligned with [tap-python-sdk](https://github.com/TapWithUs/tap-python-sdk) and tap-ios-sdk.
+
+July 2024 - Added **TAPXR Gestures** (See below).
+
+
 What Is This?
 =============
 TAP Android SDK allows you to build an Android app that can receive inputs from TAP devices,
@@ -8,10 +16,10 @@ In a way that each tap is being interpreted as an array of fingers that are tapp
 Getting started
 ===============
 To add TAP SDK library to your project:
-- Make sure you have JCenter in your Gradle repositories.
+- Make sure you have mavenCentral in your Gradle repositories.
 - Add the following Gradle dependency to your build.gradle:
 ```Groovy
-  implementation 'com.tapwithus:tap-android-sdk:0.3.3'
+  implementation 'io.github.tapwithus:tap-android-sdk:0.3.6'
 ```
 
 Getting instance of TapSdk
@@ -29,12 +37,16 @@ TapSdk sdk = new TapSdk(tapBluetoothManager);
 
 Key features
 ============
-##### Controller Mode & Text Mode
+##### Input Modes
 As stated in the official [Tap BLE API Documentation](https://www.tapwithus.com/api), once you turn ON the TAP device, by default, it will be booted into Text Mode, meaning that the TAP device functions as a bluetooth keyboard, every recognized tap will be mapped to a letter, and __no input data will be sent to the SDK__.
 
 When using the SDK, it is required to get the input data for a specific TAP device. In order to achieve this goal, after a connection with the TAP been established, we need to switch the TAP device to Controller Mode. In addition, it is important we switch back to Text Mode once the application goes to background, so the regular TAP behaviour will be restored.
 
 To simplify the process TAP SDK will perform the needed actions in order to correctly connect and switch between Modes _automatically_, __so you don't have to.__
+
+Two additional modes to Text and Controller :
+Controller with Mouse HID: Behaves as a controller, but also allow the TAP to control the mouse cursor).
+Raw Sensor Mode: Streams raw sensor data (from Gyro and Accelerometer sensors on TAP). More or that later... 
 
 What now?
 =========
@@ -54,23 +66,26 @@ Registering TapListener
 public interface TapListener {
     void onBluetoothTurnedOn();
     void onBluetoothTurnedOff();
-    void onTapStartConnecting(String tapIdentifier);
-    void onTapConnected(String tapIdentifier);
-    void onTapDisconnected(String tapIdentifier);
-    void onTapResumed(String tapIdentifier);
-    void onTapChanged(String tapIdentifier);
-    void onControllerModeStarted(String tapIdentifier);
-    void onTextModeStarted(String tapIdentifier);
-    void onTapInputReceived(String tapIdentifier, int data);
-    void onMouseInputReceived(String tapIdentifier, MousePacket data);
-    void onError(String tapIdentifier, int code, String description);
+    void onTapStartConnecting(@NonNull String tapIdentifier);
+    void onTapConnected(@NonNull String tapIdentifier);
+    void onTapDisconnected(@NonNull String tapIdentifier);
+    void onTapResumed(@NonNull String tapIdentifier);
+    void onTapChanged(@NonNull String tapIdentifier);
+    void onTapInputReceived(@NonNull String tapIdentifier, int data, int repeatData);
+    void onTapShiftSwitchReceived(@NonNull String tapIdentifier, int data);
+    void onMouseInputReceived(@NonNull String tapIdentifier, @NonNull MousePacket data);
+    void onAirMouseInputReceived(@NonNull String tapIdentifier, @NonNull AirMousePacket data);
+    void onRawSensorInputReceived(@NonNull String tapIdentifier, @NonNull RawSensorData rsData);
+    void onTapChangedState(@NonNull String tapIdentifier, @NonNull int state);
+    void onError(@NonNull String tapIdentifier, int code, @NonNull String description);
 }
 ```
 Just implement it and pass it to `TapSdk` class by calling `sdk.registerTapListener(tapListener)`.
 
 ___
 #### Important Note:  
-`onTapInputReceived` is a callback function which will be triggered every time a specific TAP device was being tapped, and which fingers were tapped. The returned data is an integer representing a 8-bit unsigned number, between 1 and 31. It's binary form represents the fingers that are tapped. The LSB is thumb finger, the MSB (bit number 5) is the pinky finger. For example: if combination equals 3 - it's binary form is 10100, Which means that the thumb and the middle fingers were tapped. For your convenience, you can convert the binary format into fingers boolean array by calling static function `TapSdk.toFingers(tapInput)` listed below.
+`onTapInputReceived` is a callback function which will be triggered every time a specific TAP device was being tapped, and which fingers were tapped. The returned data is an integer representing a 8-bit unsigned number, between 1 and 31. It's binary form represents the fingers that are tapped. The LSB is thumb finger, the MSB (bit number 5) is the pinky finger. For example: if combination equals 3 - it's binary form is 10100, Which means that the thumb and the middle fingers were tapped. For your convenience, you can convert the binary format into fingers boolean array by calling static function `TapSdk.toFingers(tapInput)` listed below.. The repeat data parameter is one for single taps, 2 for double 3 for triple
+`onTapShiftSwitchReceived` is a callback function which will be triggered every time a specific TAP device was being tapped, holds the state of Shift (0=off, 1=on, 2=locked) and Switch (0=off, 1=on). The returned data is an integer representing a 8-bit unsigned number, between 1 and 31. It's binary form represents the fingers that are tapped. The LSB is thumb finger, the MSB (bit number 5) is the pinky finger. For example: if combination equals 3 - it's binary form is 10100, Which means that the thumb and the middle fingers were tapped. For your convenience, you can convert the binary format into an array of 2 ints by calling static function `TapSdk.toShiftAndSwitch(tapShiftSwitch)` listed below.
 ___
 
 Tap Class
@@ -93,7 +108,13 @@ TapSdk API
 &nbsp;
 &nbsp;
 #### `void enableAutoSetControllerModeOnConnection() & void disableAutoSetControllerModeOnConnection()`
-> As described in the 'Key features' section, the default `TapSdk` behaviour is to switch the connected TAP device to controller mode once it connected. Calling `disableAutoSetControllerModeOnConnection` method will disable this functionality, so each connected TAP device will remain in its initial Mode.
+#### ** DEPRECATED ** 
+> Use SetDefaultMode instead:
+```java
+public void setDefaultMode(TapInputMode mode, Boolean applyImmediate)
+```
+This will set the default mode for new connected devices. 
+pass true to applyImmediate if you wish to apply this mode to current connected devices.
 &nbsp;
 &nbsp;
 #### `void enablePauseResumeHandling() & void disablePauseResumeHandling()`
@@ -113,16 +134,37 @@ TapSdk API
 &nbsp;  
 &nbsp;
 #### `void startMode(String tapIdentifier, int mode)`
-> If your application needs to use the TAP device as a regular bluetooth keyboard, you can manually switch to Text mode by passing the relevant TAP identifier and `TapSdk.MODE_TEXT` as the second argument. Or you can manually switch to Controller mode, by passing the relevant TAP identifier and `TapSdk.MODE_CONTROLLER`.
+#### ** DEPRECATED **
+Use the following methods to change TAP mode:
+```java
+public void startControllerMode(@NonNull String tapIdentifier);
+public  void startTextMode(@NonNull String tapIdentifier);
+public void startControllerWithMouseHIDMode(@NonNull String tapIdentifier); 
+public void startRawSensorMode(@NonNull String tapIdentifier, byte deviceAccelerometerSensitivity, byte imuGyroSensitivity, byte imuAccelerometerSensitivity);
+public void startControllerWithFullHIDMode(@NonNull String tapIdentifier);
+```
 &nbsp;
 &nbsp;
 #### `int getMode(String tapIdentifier)`
-> Retrieve the TAP's Mode. Can be `MODE_TEXT` or `MODE_CONTROLLER`.
+#### ** DEPRECATED **
 &nbsp;
 &nbsp;
 #### `boolean isInMode(String tapIdentifier, int mode)`
+#### ** DEPRECATED **
 > Another helper method to check what Mode is enabled for a specific TAP device.
 &nbsp;  
+&nbsp;
+#### `public void vibrate(@NonNull String tapIdentifier, int[] durations)`
+Send haptic/vibrations to a TAP device.
+durations: An array of durations in the format of haptic, pause, haptic, pause ... You can specify up to 18 elements in this array. The rest will be ignored.
+Each array element is defined in milliseconds.
+When [tapIdentifiers] is null or missing - the mode will be applied to ALL connected TAPs.
+Example:
+```java
+sdk.vibrate(tapIdentifier, new int[] { 500,100,500});
+```
+Will send two 500 milliseconds haptics with a 100 milliseconds pause in the middle.
+&nbsp;
 &nbsp;
 #### `void writeName(String tapIdentifier, String name)`
 > Write TAP device's name.
@@ -146,9 +188,243 @@ fingers\[4\] indicates if the pinky finger was tapped.
 &nbsp;  
 &nbsp;
 
+#### `static boolean[] toShiftAndSwitch(int tapShiftSwitch)`
+> As said before, the `tapInput` is an unsigned 8-bit integer. to convert it to array of booleans:
+```Java
+int[] shiftSwitch = TapSdk.toShiftAndSwitch(tapShiftSwitch);
+```
+> While:
+shiftSwitch\[0\] indicates the shift value (0=off, 1=on, 2=locked).
+shiftSwitch\[1\] indicates the switch value (0=off, !0=on).
+&nbsp;
+&nbsp;
+
+# Raw Sensor Mode
+In raw sensors mode, the TAP continuously sends raw data from the following sensors:
+1. Five 3-axis accelerometers on each finger ring.
+2. IMU (3-axis accelerometer + gyro) located on the thumb (**for TAP Strap 2 only**).
+
+### To put a TAP into Raw Sensor Mode
+```java
+public void startRawSensorMode(@NonNull String tapIdentifier, byte deviceAccelerometerSensitivity, byte imuGyroSensitivity, byte imuAccelerometerSensitivity);
+
+...
+
+sdk.startRawSensorMode(tapIdentifier, (byte)0,(byte)0,(byte)0);
+```
+When puting TAP in Raw Sensor Mode, the sensitivities of the values can be defined by the developer.
+deviceAccelerometer refers to the sensitivities of the fingers' accelerometers. Range: 1 to 4.
+imuGyro refers to the gyro sensitivity on the thumb's sensor. Range: 1 to 4.
+imuAccelerometer refers to the accelerometer sensitivity on the thumb's sensor. Range: 1 to 5.
+The default value for all sensitivities is 0. 
+
+### Stream callback:
+
+```java
+public void onRawSensorInputReceived(@NonNull String tapIdentifier,@NonNull RawSensorData rsData) {
+    //RawSensorData Object has a timestamp, dataType and an array points(x,y,z).
+    if (rsData .dataType == RawSensorData.DataType.Device) {
+        // Fingers accelerometer.
+        // Each point in array represents the accelerometer value of a finger (thumb, index, middle, ring, pinky).
+        Point3 thumb = rsData.getPoint(RawSensorData.iDEV_INDEX);
+        if (thumb != null) {
+            double x = thumb.x;
+            double y = thumb.y;
+            double z = thumb.z;
+        }
+        // Etc... use indexes: RawSensorData.iDEV_THUMB, RawSensorData.iDEV_INDEX, RawSensorData.iDEV_MIDDLE, RawSensorData.iDEV_RING, RawSensorData.iDEV_PINKY
+    } else if (data.dataType == RawSensorData.DataType.IMU) {
+        // Refers to an additional accelerometer on the Thumb sensor and a Gyro (placed on the thumb unit as well).
+        Point3 gyro = rsData.getPoint(RawSensorData.iIMU_GYRO);
+        if (point3 != null) {
+            double x = gyro.x;
+            double y = gyro.y;
+            double z = gyro.z;
+        }
+        // Etc... use indexes: RawSensorData.iIMU_GYRO, RawSensorData.iIMU_ACCELEROMETER
+    }
+}
+```
+
+[For more information about raw sensor mode click here](https://tapwithus.atlassian.net/wiki/spaces/TD/pages/792002574/Tap+Strap+Raw+Sensors+Mode)
+
+# TAPXR Gestures (July 2024) - Spatial Control
+
+Added support to read the hand state while in AirMouse mode, for the TapXR device.
+
+Authorized developers can gain access to the experimantal Spatial Control features:
+1. Extended AirGesture state - enabling aggregation for pinch, drag and swipe gestures.
+2. Select input type - enabling the selection of input type to be activated - i.e. AirMouse/Tapping. 
+
+These featureas are only available on TapXR and only for qualified developers. Request access [here](https://www.tapwithus.com/contact-us/)
+
+## AirMousePacket
+
+Added 3 states for the class AirMousePacket:
+
+```java
+public class AirMousePacket extends Packet {
+    .
+    .
+    .
+    public static final int XR_AIR_GESTURE_NONE = 100;
+    public static final int XR_AIR_GESTURE_THUMB_INDEX = 101;
+    public static final int XR_AIR_GESTURE_THUMB_MIDDLE = 102;
+```
+
+    XR_AIR_GESTURE_NONE: The hand is in resting state.
+    XR_AIR_GESTURE_THUMB_INDEX : the thumb is touching the index finger.
+    XR_AIR_GESTURE_THUMB_MIDDLE : the thumb is touching the middle finger. 
+
+These states will be sent continously multiple times per second.
+
+The best practice is the take the most common one out of the last 3 events received to allow margin for errors.
+
+This will allow you to combine these states and the mouse-move event into "Drag and Drop" Gesture for example.
+
+##TapXRState
+
+In addition to TAPInputMode, the new TAPXR has input states.
+
+You can force TAPXR to switch to input state as follows:
+
+AIRMOUSE - The TAPXR will operate in AIRMOUSE mode ONLY.
+TAPPING - The TAPXR will operate in TAPPING mode only.
+USERCONTROL - The user will freely switch states as wished.
+
+
+Examples:
+
+```java
+tapSdk.setDefaultXRState(TapXRState.tapping(), true);
+tapSdk.setDefaultXRState(TapXRState.userControl(), false);
+tapSdk.startXRAirMouseState("identifier");
+```
+You can change the state of individual connected device or devices by calling one of these methods:
+
+```java
+public void startXRUserControlState(@NonNull String tapIdentifier)
+public void startXRAirMouseState(@NonNull String tapIdentifier)
+public void startXRTappingState(@NonNull String tapIdentifier)
+```
+
+or call this function to set the default XR State:
+
+```java
+public void setDefaultXRState(TapXRState state, Boolean applyImmediate)
+```
+
+While calling setDefaultTAPXRState, it'll set the default state that will be applied to newly connected devices. 
+If you wish to apply this state to already-connected devices, call with "applyImmediate": true.
+
+
+# V2 Tap Devices (September 2026)
+
+Newer Tap devices (TapBand, and TapXR with V2 firmware) speak a framed BLE protocol ("V2" / TapSDK2) instead of the classic characteristic-per-stream protocol. The SDK detects the protocol automatically after connection - no code changes are required for basic usage:
+
+* Tap events keep arriving via `onTapInputReceived` (V2 taps always report `repeatData == 1`).
+* Mouse / pointer movement keeps arriving via `onMouseInputReceived`, and additionally via `onImuMotionInputReceived` which includes Euler angles (roll, pitch, yaw).
+* Raw sensor data keeps arriving via `onRawSensorInputReceived` (V2 devices stream the thumb IMU only - there are no finger accelerometers).
+* Air gestures keep arriving via `onAirMouseInputReceived`, with gesture codes from the `UnifiedAirGesture` enum (100-114): directional gestures, pinches (AB/AC/AD/AE), fist, and their hold variants.
+* The existing mode API (`startControllerMode`, `startTextMode`, `startRawSensorMode`, XR states...) is translated automatically into V2 feature commands.
+* `vibrate` is sent through the framed protocol automatically.
+* A keepalive message is sent automatically every 10 seconds to every connected V2 Tap (matching tap-ios-sdk and tap-python-sdk). You can also send one manually with `sdk.sendKeepAlive(tapIdentifier)`.
+
+You can check the protocol of a connected Tap with:
+
+```java
+boolean isV2 = sdk.isV2Tap(tapIdentifier);
+```
+
+### Device features
+
+Instead of a single input mode, V2 devices expose independent feature toggles (`com.tapwithus.sdk.v2.DeviceFeature`): `RAW_IMU_DATA`, `MODEL_DETECTION` (taps + air gestures), `IMU_MOTION_DATA`, `STANDBY_GESTURE_DETECTION`. For fine-grained control you can set them directly:
+
+```java
+sdk.setFeature(tapIdentifier, DeviceFeature.MODEL_DETECTION, true);
+sdk.getFeature(tapIdentifier, DeviceFeature.MODEL_DETECTION, (identifier, enabled) -> {
+    // enabled is null on timeout
+});
+```
+
+### Unified air gestures
+
+On V2 devices air gestures arrive through the same `onAirMouseInputReceived` callback, but the gesture value holds a code from the `com.tapwithus.sdk.v2.UnifiedAirGesture` enum (100-114) instead of the classic `AirMousePacket` constants:
+
+```java
+@Override
+public void onAirMouseInputReceived(@NonNull String tapIdentifier, @NonNull AirMousePacket data) {
+    if (sdk.isV2Tap(tapIdentifier)) {
+        UnifiedAirGesture gesture = UnifiedAirGesture.fromCode(data.gesture.getInt());
+        if (gesture != null) {
+            switch (gesture) {
+                case LEFT:      // swipe left
+                case RIGHT:     // swipe right
+                case UP:        // swipe up
+                case DOWN:      // swipe down
+                case AB:        // thumb-index pinch (AC/AD/AE for the other fingers)
+                case FIST:
+                case AB_HOLD:   // held pinch (drag) - also AC/AD/AE/FIST _HOLD variants
+                case NONE:
+                    break;
+            }
+        }
+    } else {
+        // classic device - use the AirMousePacket.AIR_MOUSE_GESTURE_* constants
+    }
+}
+```
+
+### Vision sensor (model & op-mode)
+
+The vision sensor runs one detection model at a time - `TAPPING` or `AIR_GESTURE` - with an operating mode controlling when it streams. The existing XR state API maps onto it automatically: `startXRTappingState` selects the `TAPPING` model with op-mode `TRIGGER`, and `startXRAirMouseState` selects the `AIR_GESTURE` model with op-mode `STREAM`. For direct control:
+
+```java
+sdk.setVisionSensorModel(tapIdentifier, VisionSensorModel.AIR_GESTURE); // or TAPPING
+sdk.setVisionSensorOpMode(tapIdentifier, VisionSensorOpMode.STREAM);    // or TRIGGER / STREAM_ON_TRIGGER
+sdk.getVisionSensorModel(tapIdentifier, (identifier, model) -> { });
+sdk.getVisionSensorOpMode(tapIdentifier, (identifier, opMode) -> { });
+```
+
+### IMU sensitivity
+
+```java
+sdk.setImuSensitivity(tapIdentifier, /* gyro 0-5 */ 3, /* accelerometer 0-4 */ 2);
+sdk.getImuSensitivity(tapIdentifier, (identifier, sensitivity) -> { });
+```
+
+### Standby state
+
+```java
+sdk.setStandbyState(tapIdentifier, true);
+sdk.getStandbyState(tapIdentifier, (identifier, standby) -> { });
+```
+
+Standby changes are also delivered through the listener callback:
+
+```java
+default void onTapStandbyStateChanged(@NonNull String tapIdentifier, boolean standby) { }
+```
+
+### IMU motion with orientation
+
+```java
+default void onImuMotionInputReceived(@NonNull String tapIdentifier, @NonNull ImuMotionPacket packet) {
+    // packet.dx, packet.dy, packet.isMouse, packet.roll, packet.pitch, packet.yaw
+}
+```
+
+All `get*` calls reply asynchronously on a `TapV2Callback`; if the device doesn't answer within 2 seconds the callback fires with a `null` value. Calling a V2-only API on a v1 device reports error `TapSdk.ERR_V2_NOT_SUPPORTED` (103) via `onError`.
+
 Example app
 ===========
-The Android Studio project contains an example app where you can see how to use some of the features of `TapSdk`.
+The Android Studio project contains an example app (the `app` module) where you can see how to use some of the features of `TapSdk`. Each connected Tap is shown as a list row demonstrating:
+
+* Tap input (finger combination + repeat), shift/switch state and mouse/air-gesture events.
+* The detected protocol (`V2` or `Legacy`, via `sdk.isV2Tap`).
+* The last air gesture performed, decoded per protocol (`UnifiedAirGesture` for V2 devices, `AirMousePacket` constants for classic devices).
+* Switching between Tapping and AirMouse detection by tapping the mode label (`startXRTappingState` / `startXRAirMouseState`).
+* Changing input modes (text / controller / raw sensor...) by tapping the row, and sending haptics via `vibrate`.
 
 Support
 ===========

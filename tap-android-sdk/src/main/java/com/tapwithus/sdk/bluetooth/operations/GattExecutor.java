@@ -3,22 +3,28 @@ package com.tapwithus.sdk.bluetooth.operations;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
+
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 
 import com.tapwithus.sdk.bluetooth.callbacks.OnCompletionListener;
 import com.tapwithus.sdk.bluetooth.callbacks.OnErrorListener;
+import com.tapwithus.sdk.bluetooth.callbacks.OnNotFoundListener;
 
 import java.util.Queue;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.LinkedBlockingDeque;
 
-public class GattExecutor implements OnCompletionListener<Object>, OnErrorListener {
+public class GattExecutor implements OnCompletionListener<Object>, OnErrorListener, OnNotFoundListener {
 
     private static final String TAG = "GattExecutor";
 
     private final BluetoothGatt gatt;
     private final String deviceAddress;
-    private static Queue<GattOperation> operations = new LinkedBlockingDeque<>();
+    private Queue<GattOperation> operations = new LinkedBlockingDeque<>();
     private GattOperation currentOperation;
 
     private boolean isRunning = false;
@@ -35,6 +41,7 @@ public class GattExecutor implements OnCompletionListener<Object>, OnErrorListen
     public GattExecutor addOperation(GattOperation operation) {
         operation.addOnCompletionListener(this);
         operation.addOnErrorListener(this);
+        operation.addOnNotFoundListener(this);
 
         operations.add(operation);
         run();
@@ -89,8 +96,17 @@ public class GattExecutor implements OnCompletionListener<Object>, OnErrorListen
     public void onError(String msg) {
         logError("GattExecutor onError - " + msg);
 
-        currentOperation.removeOnErrorListener(this);
+        if (currentOperation != null) {
+            currentOperation.removeOnErrorListener(this);
+        }
         isRunning = false;
+    }
+
+    @Override
+    public void onNotFound(String message) {
+        currentOperation.removeOnNotFoundListener(this);
+        isRunning = false;
+        run();
     }
 
     public void clear() {

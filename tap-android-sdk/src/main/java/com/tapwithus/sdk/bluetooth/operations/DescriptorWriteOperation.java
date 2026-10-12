@@ -2,7 +2,7 @@ package com.tapwithus.sdk.bluetooth.operations;
 
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattDescriptor;
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 import com.tapwithus.sdk.bluetooth.ErrorStrings;
 
@@ -35,8 +35,14 @@ public class DescriptorWriteOperation extends DescriptorOperation {
             return;
         }
 
-        if (!gatt.writeDescriptor(d)) {
+        try {
+            if (!gatt.writeDescriptor(d)) {
+                postOnError(ErrorStrings.WRITE_OP_INIT_FAIL);
+            }
+        } catch (SecurityException se) {
             postOnError(ErrorStrings.WRITE_OP_INIT_FAIL);
+            postOnError(ErrorStrings.LACKING_PERMISSION_FAIL);
         }
+
     }
 }

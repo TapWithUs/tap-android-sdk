@@ -1,0 +1,150 @@
+apply plugin: 'maven-publish'
+apply plugin: 'signing'
+
+// taken from https://getstream.io/blog/publishing-libraries-to-mavencentral-2021/
+// in order to produce Javadoc call ./gradlew generateApiDoc
+// in order to upload to Nexus for mavenCentral call ./gradlew tap-android-sdk:publishReleasePublicationToSonatypeRepository
+// then got to https://s01.oss.sonatype.org/#stagingRepositories and close and release
+
+task androidSourcesJar(type: Jar) {
+    archiveClassifier.set('sources')
+    if (project.plugins.findPlugin("com.android.library")) {
+        // For Android libraries
+        from android.sourceSets.main.java.srcDirs
+        //from android.sourceSets.main.kotlin.srcDirs
+    } else {
+        // For pure Kotlin libraries, in case you have them
+        from sourceSets.main.java.srcDirs
+        from sourceSets.main.kotlin.srcDirs
+    }
+}
+
+artifacts {
+    archives androidSourcesJar
+}
+
+task androidJavadocs(type: Javadoc) {
+	source = android.sourceSets.main.java.srcDirs
+	classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
+	android.libraryVariants.all { variant ->
+		if (variant.name == 'release') {
+			owner.classpath += variant.javaCompileProvider.get().classpath
+		}
+	}
+	exclude '**/R.html', '**/R.*.html', '**/index.html'
+}
+
+task generateApiDoc(type: Javadoc) {
+    group "reporting"
+    description "Generates Javadoc."
+}
+
+task androidJavadocsJar(type: Jar, dependsOn: generateApiDoc) {
+    archiveClassifier.set('javadoc')
+    from androidJavadocs.destinationDir
+}
+
+android.libraryVariants.all { variant ->
+
+    def task = project.tasks.create("generate${variant.name.capitalize()}Javadoc", Javadoc) {
+        title "API Documentation (${project.android.defaultConfig.versionName})"
+        group "ApiDoc"
+        description "Generates Javadoc for $variant.name."
+
+        // Source files from the variant
+        source = variant.sourceSets.collect { it.java.sourceFiles }.inject { m, i -> m + i }
+
+        // To fix issue: Error: Can not create variant 'android-lint' after configuration ': library: debugRuntimeElements' has been resolved
+        doFirst {
+            classpath = project.files(variant.javaCompileProvider.get().classpath.files,
+                    project.android.getBootClasspath())
+        }
+
+        if (JavaVersion.current().isJava8Compatible()) {
+            options.addStringOption('Xdoclint:none', '-quiet')
+        }
+
+        exclude "**/R"
+        exclude "**/R.**"
+        exclude "**/R\$**"
+        exclude "**/BuildConfig*"
+
+        if (JavaVersion.current().isJava8Compatible()) {
+            options.addStringOption('Xdoclint:none', '-quiet')
+        }
+
+        options.windowTitle = "API Documentation (${project.android.defaultConfig.versionName})"
+        options.memberLevel = JavadocMemberLevel.PROTECTED
+        options.linkSource false
+        options.author = false
+
+        failOnError true
+    }
+
+    task.dependsOn "assemble${variant.name.capitalize()}"
+    generateApiDoc.dependsOn task
+}
+
+group = PUBLISH_GROUP_ID
+version = PUBLISH_VERSION
+
+afterEvaluate {
+    publishing {
+        publications {
+            release(MavenPublication) {
+                // The coordinates of the library, being set from variables that
+                // we'll set up later
+                groupId PUBLISH_GROUP_ID
+                artifactId PUBLISH_ARTIFACT_ID
+                version PUBLISH_VERSION
+
+                // Two artifacts, the `aar` (or `jar`) and the sources
+                if (project.plugins.findPlugin("com.android.library")) {
+                    from components.release
+                } else {
+                    artifact("$buildDir/libs/${project.getName()}-${version}.jar")
+                }
+
+                artifact androidSourcesJar
+                artifact androidJavadocsJar
+
+                // Mostly self-explanatory metadata
+                pom {
+                    name = PUBLISH_ARTIFACT_ID
+                    description = 'Tap Strap Official Android SDK'
+                    url = 'https://github.com/TapWithUs/tap-android-sdk'
+                    licenses {
+                        license {
+                            name = 'The Apache Software License, Version 2.0'
+                            url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                        }
+                    }
+                    developers {
+                        developer {
+                          id = 'tap'
+                          name = 'Kibi Hofmann'
+                          email = 'kibi@tapwithus.com'
+                        }
+                        // Add all other devs here...
+                    }
+
+                    // Version control info - if you're using GitHub, follow the 
+                    // format as seen here
+                    scm {
+                        connection = 'scm:git:github.com/TapWithUs/tap-android-sdk.git'
+                        developerConnection = 'scm:git:ssh://github.com/TapWithUs/tap-android-sdk.git'
+                        url = 'https://github.com/TapWithUs/tap-android-sdk/tree/master'
+                    }
+                }
+            }
+        }
+    }
+}
+
+ext["signing.keyId"] = rootProject.ext["signing.keyId"]
+ext["signing.password"] = rootProject.ext["signing.password"]
+ext["signing.secretKeyRingFile"] = rootProject.ext["signing.secretKeyRingFile"]
+
+signing {
+    sign publishing.publications
+}

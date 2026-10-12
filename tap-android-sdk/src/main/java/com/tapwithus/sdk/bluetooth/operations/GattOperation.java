@@ -1,10 +1,11 @@
 package com.tapwithus.sdk.bluetooth.operations;
 
 import android.bluetooth.BluetoothGatt;
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 import com.tapwithus.sdk.bluetooth.callbacks.OnCompletionListener;
 import com.tapwithus.sdk.bluetooth.callbacks.OnErrorListener;
+import com.tapwithus.sdk.bluetooth.callbacks.OnNotFoundListener;
 
 import java.util.Iterator;
 import java.util.List;
@@ -15,7 +16,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public abstract class GattOperation<T> {
 
     public static final int GATT_SUCCESS = BluetoothGatt.GATT_SUCCESS;
-    public static final int OP_TIMEOUT = 5000;
+    public static final int OP_TIMEOUT = 30000;
+
 
     private boolean isRunning = false;
     private boolean isCompleted = false;
@@ -26,6 +28,7 @@ public abstract class GattOperation<T> {
 
     private final List<OnCompletionListener<T>> cCallbacks = new CopyOnWriteArrayList<>();
     private final List<OnErrorListener> eCallbacks = new CopyOnWriteArrayList<>();
+    private final List<OnNotFoundListener> nfCallbacks = new CopyOnWriteArrayList<>();
 
     public abstract OperationType type();
     public abstract void onExecute(@NonNull BluetoothGatt gatt);
@@ -85,13 +88,25 @@ public abstract class GattOperation<T> {
         return this;
     }
 
+    public GattOperation<T> addOnNotFoundListener(@NonNull OnNotFoundListener<T> listener) {
+        if (!nfCallbacks.contains(listener)) {
+            nfCallbacks.add(listener);
+        }
+        return this;
+    }
+
+    public GattOperation<T> removeOnNotFoundListener(@NonNull OnNotFoundListener<T> listener) {
+        nfCallbacks.remove(listener);
+        return this;
+    }
+
     public void execute(@NonNull final BluetoothGatt gatt) {
         isRunning = true;
         isCompleted = false;
         isTimedout = false;
 
         if (preDelay == 0) {
-            setTimeout();
+            setTimeout(gatt.toString());
             onExecute(gatt);
             return;
         }
@@ -99,7 +114,7 @@ public abstract class GattOperation<T> {
         delay(preDelay, new OnCompletionListener<Void>() {
             @Override
             public void onCompletion(Void data) {
-                setTimeout();
+                setTimeout(gatt.toString());
                 onExecute(gatt);
             }
         });
@@ -140,6 +155,15 @@ public abstract class GattOperation<T> {
         }
     }
 
+    protected void postOnNotFound(@NonNull final String message) {
+        isRunning = false;
+        isCompleted = true;
+
+        for (Iterator<OnNotFoundListener> iterator = nfCallbacks.iterator(); iterator.hasNext();) {
+            iterator.next().onNotFound(message);
+        }
+    }
+
     private void doPostOnCompletion(T data) {
         isRunning = false;
         isCompleted = true;
@@ -149,13 +173,13 @@ public abstract class GattOperation<T> {
         }
     }
 
-    private void setTimeout() {
+    private void setTimeout(String description) {
         delay(OP_TIMEOUT, new OnCompletionListener<Void>() {
             @Override
             public void onCompletion(Void data) {
                 if (!isCompleted) {
                     isTimedout = true;
-                    postOnError("Operation timeout");
+                    postOnError("Operation timeout (" + type().toString()  + ") " + description);
                 }
             }
         });

@@ -7,19 +7,21 @@ import android.bluetooth.BluetoothGattCallback;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
+import android.bluetooth.BluetoothProfile;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Handler;
 import android.os.Looper;
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 import android.util.Log;
 
 import com.tapwithus.sdk.ListenerManager;
 import com.tapwithus.sdk.NotifyAction;
 import com.tapwithus.sdk.bluetooth.callbacks.OnCompletionListener;
 import com.tapwithus.sdk.bluetooth.callbacks.OnErrorListener;
+import com.tapwithus.sdk.bluetooth.callbacks.OnNotFoundListener;
 import com.tapwithus.sdk.bluetooth.operations.CharacteristicReadOperation;
 import com.tapwithus.sdk.bluetooth.operations.CharacteristicWriteOperation;
 import com.tapwithus.sdk.bluetooth.operations.DiscoverServicesOperation;
@@ -47,7 +49,7 @@ public class BluetoothManager {
     private static final Map<String, BluetoothGatt> gatts = new ConcurrentHashMap<>();
     private static final Map<String, GattExecutor> executors = new ConcurrentHashMap<>();
     private static final List<String> establishConnectionSent = new CopyOnWriteArrayList<>();
-    private List<String> connectionInProgress = new CopyOnWriteArrayList<>();
+    private final List<String> connectionInProgress = new CopyOnWriteArrayList<>();
     private static final Set<String> connectedDevices = new CopyOnWriteArraySet<>();
     private static final Set<String> ignoredDevices = new CopyOnWriteArraySet<>();
     private static final Set<String> ignoreInProgress = new CopyOnWriteArraySet<>();
@@ -58,11 +60,13 @@ public class BluetoothManager {
     public static final int ERR_C_DEVICE_NOT_CONNECTED = 4;
     public static final int ERR_C_GATT_OP = 5;
 
-    private Context context;
-    private BluetoothAdapter bluetoothAdapter;
-    private ListenerManager<BluetoothListener> bluetoothListeners = new ListenerManager<>();
 
-    private boolean debug = false;
+
+    private final Context context;
+    private final BluetoothAdapter bluetoothAdapter;
+    private final ListenerManager<BluetoothListener> bluetoothListeners = new ListenerManager<>();
+
+    private boolean debug = true;
     private boolean restartBondRequested = false;
     private boolean isClosing = false;
     private boolean isClosed = false;
@@ -130,6 +134,10 @@ public class BluetoothManager {
 
     public void refreshConnections() {
         isClosed = false;
+        establishConnectionSent.clear();
+        gatts.clear();
+
+//        executors.clear();
         establishConnections();
     }
 
@@ -160,6 +168,7 @@ public class BluetoothManager {
     private void establishConnections() {
         log("Establishing connections...");
 
+
         if (bluetoothAdapter == null) {
             notifyOnError(EMPTY_DEVICE_ADDRESS, ERR_C_BLUETOOTH_NOT_SUPPORTED, ErrorStrings.BLUETOOTH_NOT_SUPPORTED);
             return;
@@ -169,18 +178,30 @@ public class BluetoothManager {
             notifyOnDeviceAlreadyConnected(deviceAddress);
         }
 
-        Set<BluetoothDevice> bondedDevices = bluetoothAdapter.getBondedDevices();
+//        BluetoothManager bm = (BluetoothManager) context.getSystemService(Context.BLUETOOTH_SERVICE);
+
+
+
+        Set<BluetoothDevice> bondedDevices = null;
+        try {
+            bondedDevices = bluetoothAdapter.getBondedDevices();
+        } catch (SecurityException se) {
+            logError("Security Exception - no permission (Android 12) - " + se.getMessage());
+        }
+
         if (bondedDevices == null) {
             notifyOnError(EMPTY_DEVICE_ADDRESS, ERR_C_PAIRED_DEVICES, ErrorStrings.PAIRED_DEVICES);
             return;
         }
-
         for (BluetoothDevice bondedDevice : bondedDevices) {
             String deviceAddress = bondedDevice.getAddress();
+            log("BONDED : " + deviceAddress);
+
             if (!ignoredDevices.contains(deviceAddress) && !establishConnectionSent.contains(deviceAddress)) {
                 establishConnectionSent.add(deviceAddress);
                 establishConnection(bondedDevice);
             }
+
         }
     }
 
@@ -191,11 +212,17 @@ public class BluetoothManager {
 
         // check if gatt connection already exists
         if (gatts.containsKey(device.getAddress())) {
+//            log("Not connecting because we have it in gatts already");
             return;
         }
 
         log("Trying to connect to gatt");
-        device.connectGatt(context, true, bluetoothGattCallback);
+        try {
+
+            device.connectGatt(context, true, bluetoothGattCallback);
+        } catch (SecurityException se) {
+            log("No permission granted (Android 12)");
+        }
     }
 
     private void establishConnection(String deviceAddress) {
@@ -211,7 +238,14 @@ public class BluetoothManager {
             notifyOnDeviceAlreadyConnected(connectedDeviceAddress);
         }
 
-        Set<BluetoothDevice> bondedDevices = bluetoothAdapter.getBondedDevices();
+        Set<BluetoothDevice> bondedDevices = null;
+        try {
+            bondedDevices = bluetoothAdapter.getBondedDevices();
+        } catch (SecurityException se) {
+            log("No permission granted for getBondedDevices (Android 12)");
+            notifyOnError(EMPTY_DEVICE_ADDRESS, ERR_C_PAIRED_DEVICES, ErrorStrings.PAIRED_DEVICES);
+            return;
+        }
         if (bondedDevices == null) {
             notifyOnError(EMPTY_DEVICE_ADDRESS, ERR_C_PAIRED_DEVICES, ErrorStrings.PAIRED_DEVICES);
             return;
@@ -229,7 +263,7 @@ public class BluetoothManager {
         }
     }
 
-    private BluetoothGattCallback bluetoothGattCallback = new BluetoothGattCallback() {
+    private final BluetoothGattCallback bluetoothGattCallback = new BluetoothGattCallback() {
 
         @Override
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
@@ -246,7 +280,11 @@ public class BluetoothManager {
              */
 
             BluetoothDevice device = gatt.getDevice();
-            log("Connection state changed - " + device.getName() + " " + device.getAddress() + " status: " + status + " newState: " + newState);
+            try {
+                log("Connection state changed - " + device.getName() + " " + device.getAddress() + " status: " + status + " newState: " + newState);
+            } catch (SecurityException se) {
+                log("Connection state changed - No permission granted for device.getName() (Android 12)");
+            }
 
             if (ignoredDevices.contains(device.getAddress())) {
                 return;
@@ -263,7 +301,11 @@ public class BluetoothManager {
                     handleDeviceConnection(gatt);
                     break;
                 case BluetoothAdapter.STATE_DISCONNECTED:
+
                     handleDeviceDisconnection(gatt);
+//                    if (connectedDevices.contains(device.getAddress())) {
+//                        handleDeviceDisconnection(gatt);
+//                    }
                     break;
             }
         }
@@ -318,6 +360,8 @@ public class BluetoothManager {
     };
 
     private void onDiscoverServicesCompleted(BluetoothGatt gatt, List<BluetoothGattService> services) {
+            log("DISCOVER SERVICES COMPLETED FOR DEVICE ADDRESS: " + gatt.getDevice().getAddress());
+
             String deviceAddress = gatt.getDevice().getAddress();
             gatts.put(deviceAddress, gatt);
 
@@ -335,6 +379,7 @@ public class BluetoothManager {
     }
 
     private void handleDeviceConnection(final BluetoothGatt gatt) {
+
         final String deviceAddress = gatt.getDevice().getAddress();
 
         if (ignoredDevices.contains(deviceAddress)) {
@@ -360,50 +405,38 @@ public class BluetoothManager {
 
         log(deviceAddress + " connected.");
 
-        final GattOperation refreshOp = new RefreshOperation()
-                .addOnCompletionListener(new OnCompletionListener<Void>() {
-                    @Override
-                    public void onCompletion(Void data) {
-                        log("Refresh finished successfully");
-                    }
-                })
-                .addOnErrorListener(new OnErrorListener() {
-                    @Override
-                    public void onError(String msg) {
-                        logError("refreshOperation - " + msg);
-                        notifyOnError(deviceAddress, ERR_C_GATT_OP, msg);
-                    }
+        final GattOperation<?> refreshOp = new RefreshOperation()
+                .addOnCompletionListener(data -> log("Refresh finished successfully"))
+                .addOnErrorListener(msg -> {
+                    logError("refreshOperation - " + msg);
+                    notifyOnError(deviceAddress, ERR_C_GATT_OP, msg);
                 });
 
-        final GattOperation discoverServicesOp = new DiscoverServicesOperation()
-                .addOnCompletionListener(new OnCompletionListener<List<BluetoothGattService>>() {
-                    @Override
-                    public void onCompletion(List<BluetoothGattService> data) {
-                        log("Discover services finished successfully");
-                        onDiscoverServicesCompleted(gatt, data);
-                    }
+        final GattOperation<?> discoverServicesOp = new DiscoverServicesOperation()
+                .addOnCompletionListener(data -> {
+                    log("Discover services finished successfully");
+                    onDiscoverServicesCompleted(gatt, data);
                 })
-                .addOnErrorListener(new OnErrorListener() {
-                    @Override
-                    public void onError(String msg) {
-                        logError("discoverServicesOperation - " + msg);
-                        notifyOnError(deviceAddress, ERR_C_GATT_OP, msg);
-                    }
+                .addOnErrorListener(msg -> {
+                    logError("discoverServicesOperation - " + msg);
+                    notifyOnError(deviceAddress, ERR_C_GATT_OP, msg);
                 });
 
-        GattExecutor executor = getExecutor(gatt);
-        addExecutor(executor);
+        GattExecutor executor = CreateExecutor(gatt);
         executor.addOperation(refreshOp);
         executor.addOperation(discoverServicesOp);
     }
 
     private void handleDeviceDisconnection(BluetoothGatt gatt) {
+        Log.i("TAPSDK", "HandleDeviceDisconnection Call");
         BluetoothDevice device = gatt.getDevice();
         String deviceAddress = device.getAddress();
 
         if (ignoredDevices.contains(deviceAddress)) {
             return;
         }
+
+
 
         BluetoothGatt storedGatt = gatts.get(deviceAddress);
 
@@ -429,6 +462,13 @@ public class BluetoothManager {
 
         log(deviceAddress + " disconnected.");
 
+
+        // FIX: Remove the executor is neccessary when the device is disconnected. There were scenarios when the executor kept running in the background.
+        GattExecutor e = getExecutor(gatt);
+        if (e != null) {
+            removeExecutor(e);
+        }
+
         if (ignoreInProgress.contains(deviceAddress) || isClosing || isBluetoothTurnedOff) {
             closeGatt(gatt);
             removeFromLists(deviceAddress);
@@ -444,6 +484,7 @@ public class BluetoothManager {
         }
 
         notifyOnDeviceDisconnected(deviceAddress);
+
     }
 
     private void handleDeviceUnpaired(BluetoothGatt gatt) {
@@ -478,8 +519,16 @@ public class BluetoothManager {
     }
 
     private void closeGatt(BluetoothGatt gatt) {
-        removeExecutor(getExecutor(gatt));
-        gatt.close();
+        GattExecutor e = getExecutor(gatt);
+        if (e!=null) {
+            removeExecutor(e);
+        }
+
+        try {
+            gatt.close();
+        } catch (SecurityException se) {
+            log("Failed to call gatt.close() - No permission granted (Android 12)");
+        }
     }
 
     private void removeFromLists(@NonNull String deviceAddress) {
@@ -499,22 +548,15 @@ public class BluetoothManager {
             return;
         }
 
-        GattOperation setNotificationOp = new SetNotificationOperation(serviceUUID, characteristicUUID)
-                .addOnCompletionListener(new OnCompletionListener<byte[]>() {
-                    @Override
-                    public void onCompletion(byte[] data) {
-                        notifyOnNotificationSubscribed(deviceAddress, characteristicUUID);
-                    }
-                })
-                .addOnErrorListener(new OnErrorListener() {
-                    @Override
-                    public void onError(String msg) {
-                        notifyOnError(deviceAddress, ERR_C_DEVICE_NOT_CONNECTED, msg);
-                    }
-                });
+        GattOperation<?> setNotificationOp = new SetNotificationOperation(serviceUUID, characteristicUUID)
+                .addOnCompletionListener(data -> notifyOnNotificationSubscribed(deviceAddress, characteristicUUID))
+                .addOnErrorListener(msg -> notifyOnError(deviceAddress, ERR_C_DEVICE_NOT_CONNECTED, msg));
 
+        GattExecutor e = getExecutor(gatt);
+        if (e!= null) {
+            e.addOperation(setNotificationOp);
+        }
 
-        getExecutor(gatt).addOperation(setNotificationOp);
     }
 
     public void readCharacteristic(@NonNull final String deviceAddress, @NonNull UUID serviceUUID, @NonNull final UUID characteristicUUID) {
@@ -528,21 +570,16 @@ public class BluetoothManager {
             return;
         }
 
-        GattOperation characteristicReadOp = new CharacteristicReadOperation(serviceUUID, characteristicUUID)
-                .addOnCompletionListener(new OnCompletionListener<byte[]>() {
-                    @Override
-                    public void onCompletion(byte[] data) {
-                        notifyOnCharacteristicRead(deviceAddress, characteristicUUID, data);
-                    }
-                })
-                .addOnErrorListener(new OnErrorListener() {
-                    @Override
-                    public void onError(String msg) {
-                        notifyOnError(deviceAddress, ERR_C_DEVICE_NOT_CONNECTED, msg);
-                    }
-                });
+        GattOperation<?> characteristicReadOp = new CharacteristicReadOperation(serviceUUID, characteristicUUID)
+                .addOnCompletionListener(data -> notifyOnCharacteristicRead(deviceAddress, characteristicUUID, data))
+                .addOnErrorListener(msg -> notifyOnError(deviceAddress, ERR_C_DEVICE_NOT_CONNECTED, msg))
+                .addOnNotFoundListener(message -> notifyOnCharacteristicNotFound(deviceAddress, characteristicUUID));
 
-        getExecutor(gatt).addOperation(characteristicReadOp);
+        GattExecutor e = getExecutor(gatt);
+        if (e!= null) {
+            e.addOperation(characteristicReadOp);
+        }
+
     }
 
     public void writeCharacteristic(@NonNull final String deviceAddress, @NonNull UUID serviceUUID, @NonNull final UUID characteristicUUID, @NonNull byte[] data) {
@@ -556,21 +593,14 @@ public class BluetoothManager {
             return;
         }
 
-        GattOperation characteristicWriteOp = new CharacteristicWriteOperation(serviceUUID, characteristicUUID, data)
-                .addOnCompletionListener(new OnCompletionListener<byte[]>() {
-                    @Override
-                    public void onCompletion(byte[] data) {
-                        notifyOnCharacteristicWrite(deviceAddress, characteristicUUID, data);
-                    }
-                })
-                .addOnErrorListener(new OnErrorListener() {
-                    @Override
-                    public void onError(String msg) {
-                        notifyOnError(deviceAddress, ERR_C_DEVICE_NOT_CONNECTED, msg);
-                    }
-                });
+        GattOperation<?> characteristicWriteOp = new CharacteristicWriteOperation(serviceUUID, characteristicUUID, data)
+                .addOnCompletionListener(data1 -> notifyOnCharacteristicWrite(deviceAddress, characteristicUUID, data1))
+                .addOnErrorListener(msg -> notifyOnError(deviceAddress, ERR_C_DEVICE_NOT_CONNECTED, msg));
 
-        getExecutor(gatt).addOperation(characteristicWriteOp);
+        GattExecutor e = getExecutor(gatt);
+        if (e!= null) {
+            e.addOperation(characteristicWriteOp);
+        }
     }
 
     private void disconnectAllDevices() {
@@ -584,12 +614,36 @@ public class BluetoothManager {
         if (gatt == null) {
             return;
         }
-        gatt.disconnect();
+        try {
+            gatt.disconnect();
+        } catch (SecurityException se) {
+            log("Failed to call gatt.disconnect() - No permission granted (Android 12)");
+        }
     }
 
     @NonNull
     public Set<String> getConnectedDevices() {
         return connectedDevices;
+    }
+
+    /**
+     * @return true if GATT service discovery has completed for the given device,
+     *         meaning characteristic presence can be queried reliably
+     */
+    public boolean isDeviceDiscovered(@NonNull String deviceAddress) {
+        return gatts.containsKey(deviceAddress);
+    }
+
+    public boolean isCharacteristicPresent(@NonNull String deviceAddress, @NonNull UUID serviceUUID, @NonNull UUID characteristicUUID) {
+        BluetoothGatt gatt = gatts.get(deviceAddress);
+        if (gatt == null) {
+            return false;
+        }
+        BluetoothGattService service = gatt.getService(serviceUUID);
+        if (service == null) {
+            return false;
+        }
+        return service.getCharacteristic(characteristicUUID) != null;
     }
 
     public int numOfConnectedDevices() {
@@ -598,10 +652,15 @@ public class BluetoothManager {
 
     public boolean setBluetooth(boolean enable) {
         boolean isEnabled = bluetoothAdapter.isEnabled();
-        if (enable && !isEnabled) {
-            return bluetoothAdapter.enable();
-        } else if(!enable && isEnabled) {
-            return bluetoothAdapter.disable();
+        try {
+            if (enable && !isEnabled) {
+                return bluetoothAdapter.enable();
+            } else if(!enable && isEnabled) {
+                return bluetoothAdapter.disable();
+            }
+        } catch (SecurityException se) {
+            log("Failed to call bluetoothAdapter.enable()/bluetoothAdapter.disable() - No permission granted (Android 12)");
+            return false;
         }
         // No need to change bluetooth state
         return true;
@@ -624,7 +683,7 @@ public class BluetoothManager {
         }
     }
 
-    private BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
+    private final BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             if (isClosed) {
@@ -683,6 +742,21 @@ public class BluetoothManager {
                 if (state == BluetoothDevice.BOND_NONE && prevState == BluetoothDevice.BOND_BONDED) {
                     log("Unpaired - " + device.toString());
 
+                    BluetoothGatt storedGatt = gatts.get(device.toString());
+                    if (storedGatt == null) {
+                        log("while trying to handle device unpaired, unable to retrieve stored gatt.");
+                    } else {
+                        GattExecutor executor = getExecutor(storedGatt);
+                        if (executor == null) {
+                            log("while trying to handle device unpaired, unable to retrieve executor. Skipping executor clear");
+                        } else {
+                            executor.clear();
+                        }
+                        closeGatt(storedGatt);
+                    }
+                    connectedDevices.remove(device.toString());
+                    removeFromLists(device.toString());
+
                     if (restartBondRequested) {
                         createBond(device);
                     }
@@ -703,29 +777,26 @@ public class BluetoothManager {
             return;
         }
 
-        new Handler(Looper.getMainLooper()).post(new Runnable() {
-            @Override
-            public void run() {
+        new Handler(Looper.getMainLooper()).post(() -> {
 
-                log("Pairing device - " + device.getAddress());
-                Method localMethod;
-                try {
-                    localMethod = device.getClass().getMethod("createBond");
+            log("Pairing device - " + device.getAddress());
+            Method localMethod;
+            try {
+                localMethod = device.getClass().getMethod("createBond");
 
-                    boolean success;
-                    int numOfRequests = 0;
-                    do {
-                        numOfRequests++;
-                        success = (boolean) localMethod.invoke(device);
-                        log("Create bond - " + success);
-                    } while (!success && numOfRequests < 3);
+                boolean success;
+                int numOfRequests = 0;
+                do {
+                    numOfRequests++;
+                    success = (boolean) localMethod.invoke(device);
+                    log("Create bond - " + success);
+                } while (!success && numOfRequests < 3);
 
-                } catch (Exception e) {
-                    String message = e.getMessage() == null ? "Unknown error" : e.getMessage();
-                    logError("An exception occurred while creating bond. " + message);
-                }
-
+            } catch (Exception e) {
+                String message = e.getMessage() == null ? "Unknown error" : e.getMessage();
+                logError("An exception occurred while creating bond. " + message);
             }
+
         });
     }
 
@@ -734,31 +805,39 @@ public class BluetoothManager {
             return;
         }
 
-        new Handler(Looper.getMainLooper()).post(new Runnable() {
-            @Override
-            public void run() {
+        new Handler(Looper.getMainLooper()).post(() -> {
 
-                log("Unpairing device - " + device.getAddress());
-                Method localMethod;
-                try {
-                    localMethod = device.getClass().getMethod("removeBond");
+            log("Unpairing device - " + device.getAddress());
+            Method localMethod;
+            try {
+                // TODO - this probably doesn't work anymore on version of Android over 24
+                localMethod = device.getClass().getMethod("removeBond");
 
-                    boolean success;
-                    int numOfDiscoverRequests = 0;
-                    do {
-                        numOfDiscoverRequests++;
-                        success = (boolean) localMethod.invoke(device);
-                        log("Remove bond - " + success);
-                    } while (!success && numOfDiscoverRequests < 3);
+                boolean success;
+                int numOfDiscoverRequests = 0;
+                do {
+                    numOfDiscoverRequests++;
+                    success = (boolean) localMethod.invoke(device);
+                    log("Remove bond - " + success);
+                } while (!success && numOfDiscoverRequests < 3);
 
-                } catch (Exception e) {
-                    logError(e.toString());
-                    String message = e.getMessage() == null ? "Unknown error" : e.getMessage();
-                    logError("An exception occurred while removing bond. " + message);
-                }
-
+            } catch (Exception e) {
+                logError(e.toString());
+                String message = e.getMessage() == null ? "Unknown error" : e.getMessage();
+                logError("An exception occurred while removing bond. " + message);
             }
+
         });
+    }
+
+    private GattExecutor CreateExecutor(BluetoothGatt gatt) {
+        String deviceAddress = gatt.getDevice().getAddress();
+        if (executors.containsKey(deviceAddress)) {
+            return executors.get(deviceAddress);
+        }
+        GattExecutor executor = new GattExecutor(gatt);
+        executors.put(deviceAddress, executor);
+        return executor;
     }
 
     private GattExecutor getExecutor(BluetoothGatt gatt) {
@@ -766,8 +845,18 @@ public class BluetoothManager {
         if (executors.containsKey(deviceAddress)) {
             return executors.get(deviceAddress);
         }
-        log("Creating new executor");
-        return new GattExecutor(gatt);
+
+        // Fix: Don't create a new executor . Creation of the executor should happen once - when the gatt is connecting.
+        return null;
+//        if (createNewIfNull) {
+//            log("Creating new executor");
+//            GattExecutor executor = new GattExecutor(gatt);
+//            executors.put(deviceAddress, executor);
+//            return executor;
+//        }
+//        return null;
+
+//        return new GattExecutor(gatt);
     }
 
     private void addExecutor(GattExecutor executor) {
@@ -782,6 +871,7 @@ public class BluetoothManager {
         }
     }
 
+
     private void removeExecutor(GattExecutor executor) {
         if (executor != null) {
             executor.clear();
@@ -790,103 +880,52 @@ public class BluetoothManager {
     }
 
     private void notifyOnBluetoothTurnedOn() {
-        bluetoothListeners.notifyAll(new NotifyAction<BluetoothListener>() {
-            @Override
-            public void onNotify(BluetoothListener listener) {
-                listener.onBluetoothTurnedOn();
-            }
-        });
+        bluetoothListeners.notifyAll(BluetoothListener::onBluetoothTurnedOn);
     }
 
     private void notifyOnBluetoothTurnedOff() {
-        bluetoothListeners.notifyAll(new NotifyAction<BluetoothListener>() {
-            @Override
-            public void onNotify(BluetoothListener listener) {
-                listener.onBluetoothTurnedOff();
-            }
-        });
+        bluetoothListeners.notifyAll(BluetoothListener::onBluetoothTurnedOff);
     }
 
     private void notifyOnDeviceStartConnecting(@NonNull final String deviceAddress) {
-        bluetoothListeners.notifyAll(new NotifyAction<BluetoothListener>() {
-            @Override
-            public void onNotify(BluetoothListener listener) {
-                listener.onDeviceStartConnecting(deviceAddress);
-            }
-        });
+        bluetoothListeners.notifyAll(listener -> listener.onDeviceStartConnecting(deviceAddress));
     }
 
     private void notifyOnDeviceConnected(@NonNull final String deviceAddress) {
-        bluetoothListeners.notifyAll(new NotifyAction<BluetoothListener>() {
-            @Override
-            public void onNotify(BluetoothListener listener) {
-                listener.onDeviceConnected(deviceAddress);
-            }
-        });
+        bluetoothListeners.notifyAll(listener -> listener.onDeviceConnected(deviceAddress));
     }
 
     private void notifyOnDeviceAlreadyConnected(@NonNull final String deviceAddress) {
-        bluetoothListeners.notifyAll(new NotifyAction<BluetoothListener>() {
-            @Override
-            public void onNotify(BluetoothListener listener) {
-                listener.onDeviceAlreadyConnected(deviceAddress);
-            }
-        });
+        bluetoothListeners.notifyAll(listener -> listener.onDeviceAlreadyConnected(deviceAddress));
     }
 
     private void notifyOnDeviceDisconnected(@NonNull final String deviceAddress) {
-        bluetoothListeners.notifyAll(new NotifyAction<BluetoothListener>() {
-            @Override
-            public void onNotify(BluetoothListener listener) {
-                listener.onDeviceDisconnected(deviceAddress);
-            }
-        });
+        bluetoothListeners.notifyAll(listener -> listener.onDeviceDisconnected(deviceAddress));
     }
 
     private void notifyOnCharacteristicRead(@NonNull final String deviceAddress, @NonNull final UUID characteristic, @NonNull final byte[] data) {
-        bluetoothListeners.notifyAll(new NotifyAction<BluetoothListener>() {
-            @Override
-            public void onNotify(BluetoothListener listener) {
-                listener.onCharacteristicRead(deviceAddress, characteristic, data);
-            }
-        });
+        bluetoothListeners.notifyAll(listener -> listener.onCharacteristicRead(deviceAddress, characteristic, data));
+    }
+
+    private void notifyOnCharacteristicNotFound(@NonNull final String deviceAddress, @NonNull final UUID characteristic) {
+        bluetoothListeners.notifyAll(listener -> listener.onCharacteristicNotFound(deviceAddress, characteristic));
     }
 
     private void notifyOnCharacteristicWrite(@NonNull final String deviceAddress, @NonNull final UUID characteristic, @NonNull final byte[] data) {
-        bluetoothListeners.notifyAll(new NotifyAction<BluetoothListener>() {
-            @Override
-            public void onNotify(BluetoothListener listener) {
-                listener.onCharacteristicWrite(deviceAddress, characteristic, data);
-            }
-        });
+        bluetoothListeners.notifyAll(listener -> listener.onCharacteristicWrite(deviceAddress, characteristic, data));
     }
 
     private void notifyOnNotificationSubscribed(@NonNull final String deviceAddress, @NonNull final UUID characteristic) {
-        bluetoothListeners.notifyAll(new NotifyAction<BluetoothListener>() {
-            @Override
-            public void onNotify(BluetoothListener listener) {
-                listener.onNotificationSubscribed(deviceAddress, characteristic);
-            }
-        });
+        bluetoothListeners.notifyAll(listener -> listener.onNotificationSubscribed(deviceAddress, characteristic));
     }
 
     private void notifyOnNotificationReceived(@NonNull final String deviceAddress, @NonNull final UUID characteristic, @NonNull final byte[] data) {
-        bluetoothListeners.notifyAll(new NotifyAction<BluetoothListener>() {
-            @Override
-            public void onNotify(BluetoothListener listener) {
-                listener.onNotificationReceived(deviceAddress, characteristic, data);
-            }
-        });
+        bluetoothListeners.notifyAll(listener -> listener.onNotificationReceived(deviceAddress, characteristic, data));
     }
 
     private void notifyOnError(@NonNull final String deviceAddress, final int code, @NonNull final String description) {
         connectionInProgress.clear();
-        bluetoothListeners.notifyAll(new NotifyAction<BluetoothListener>() {
-            @Override
-            public void onNotify(BluetoothListener listener) {
-                listener.onError(deviceAddress, code, description);
-            }
-        });
+        bluetoothListeners.notifyAll(listener -> listener.onError(deviceAddress, code, description));
     }
 
     protected void log(String message) {
