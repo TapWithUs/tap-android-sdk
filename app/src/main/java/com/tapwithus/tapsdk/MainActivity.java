@@ -28,6 +28,7 @@ import com.tapwithus.sdk.mode.TapXRState;
 import com.tapwithus.sdk.mouse.MousePacket;
 import com.tapwithus.sdk.tap.Tap;
 import com.tapwithus.sdk.v2.ImuMotionPacket;
+import com.tapwithus.sdk.xr.XRAirGesture;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -465,8 +466,16 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onAirMouseInputReceived(@NonNull String tapIdentifier, @NonNull AirMousePacket data) {
-            log(tapIdentifier + " air mouse input received " + data.gesture.getInt());
+            // Raw sensor detections (same stream every Tap SDK receives).
+            log(tapIdentifier + " raw air gesture " + data.gesture.getInt());
             adapter.updateAirGesture(tapIdentifier, data.gesture.getInt());
+        }
+
+        @Override
+        public void onXRAirGestureReceived(@NonNull String tapIdentifier, @NonNull XRAirGesture gesture) {
+            // Android processed layer: click / drag / drop / fist / swipe.
+            log(tapIdentifier + " processed air gesture " + gesture.descriptionString());
+            adapter.updateProcessedAirGesture(tapIdentifier, gesture);
         }
 
         @Override

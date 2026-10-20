@@ -1,17 +1,24 @@
 # TAP Official Android SDK
 
-Updates 
+Updates
 =======
 
-September 2026 - Added **V2 Tap devices (framed protocol)** support - feature toggles, vision sensor configuration, IMU motion + Euler angles, standby state, unified air gestures and keepalive (See below). Aligned with [tap-python-sdk](https://github.com/TapWithUs/tap-python-sdk) and tap-ios-sdk.
+October 2026 - Product messaging: current TapXR developer firmware reports the **full gesture set** (taps, thumb swipes, pinches with hold, fist with hold). TapBand uses the **same BLE API** as TapXR and is coming soon. Android documents raw sensor detections and the processed `onXRAirGestureReceived` layer. Coding-agent skills are in [AI-Assisted Development](#ai-assisted-development). There is one SDK — do not call it "SDK v1" or "SDK v2".
+
+September 2026 - Added **framed BLE protocol** support - feature toggles, vision sensor configuration, IMU motion + Euler angles, standby state, unified air gestures and keepalive (See below). Aligned with [tap-python-sdk](https://github.com/TapWithUs/tap-python-sdk) and tap-ios-sdk.
 
 July 2024 - Added **TAPXR Gestures** (See below).
 
 
 What Is This?
 =============
-TAP Android SDK allows you to build an Android app that can receive inputs from TAP devices,
-In a way that each tap is being interpreted as an array of fingers that are tapped, or as a binary combination integer (explanation follows), thus allowing the TAP device to act as a controller for your app!
+TAP Android SDK lets you build an Android app that receives input from TAP devices: Tap Strap, Tap Strap 2, and TapXR. Each tap is an array of fingers, or a binary combination integer (explanation follows), so the TAP device can act as a controller for your app.
+
+TapBand uses the **same BLE API** as TapXR. TapBand is coming soon (it is not for sale yet). Join the waitlist: https://www.tapwithus.com/tapband-waitlist/
+
+The current TapXR developer firmware reports the **full gesture set**: taps, thumb swipes (up, down, left, right), thumb-to-finger pinches with hold, and fist with hold. Do not invent a firmware version number.
+
+Every Tap SDK delivers **raw** gesture detections from the sensor. Android also offers a **processed** air-gesture layer (`onXRAirGestureReceived`) with per-finger click, drag, drop, fist begin/end, and swipe (debounce and hold latch).
 
 Getting started
 ===============
@@ -76,11 +83,15 @@ public interface TapListener {
     void onMouseInputReceived(@NonNull String tapIdentifier, @NonNull MousePacket data);
     void onAirMouseInputReceived(@NonNull String tapIdentifier, @NonNull AirMousePacket data);
     void onRawSensorInputReceived(@NonNull String tapIdentifier, @NonNull RawSensorData rsData);
-    void onTapChangedState(@NonNull String tapIdentifier, @NonNull int state);
+    void onTapChangedState(@NonNull String tapIdentifier, int state);
     void onError(@NonNull String tapIdentifier, int code, @NonNull String description);
+    // default methods:
+    default void onXRAirGestureReceived(@NonNull String tapIdentifier, @NonNull XRAirGesture gesture) { }
+    default void onImuMotionInputReceived(@NonNull String tapIdentifier, @NonNull ImuMotionPacket packet) { }
+    default void onTapStandbyStateChanged(@NonNull String tapIdentifier, boolean standby) { }
 }
 ```
-Just implement it and pass it to `TapSdk` class by calling `sdk.registerTapListener(tapListener)`.
+Implement it and pass it to `TapSdk` by calling `sdk.registerTapListener(tapListener)`.
 
 ___
 #### Important Note:  
@@ -248,45 +259,97 @@ public void onRawSensorInputReceived(@NonNull String tapIdentifier,@NonNull RawS
 
 [For more information about raw sensor mode click here](https://tapwithus.atlassian.net/wiki/spaces/TD/pages/792002574/Tap+Strap+Raw+Sensors+Mode)
 
-# TAPXR Gestures (July 2024) - Spatial Control
+# Gestures — raw detections and the Android processed layer
 
-Added support to read the hand state while in AirMouse mode, for the TapXR device.
+Current TapXR developer firmware reports the full gesture set. TapBand uses the same BLE API (coming soon: https://www.tapwithus.com/tapband-waitlist/).
 
-Authorized developers can gain access to the experimantal Spatial Control features:
-1. Extended AirGesture state - enabling aggregation for pinch, drag and swipe gestures.
-2. Select input type - enabling the selection of input type to be activated - i.e. AirMouse/Tapping. 
+Every Tap SDK delivers **raw** detections from the sensor. On Android they arrive on `onAirMouseInputReceived`. Android also runs a **processed** layer and delivers `onXRAirGestureReceived`.
 
-These featureas are only available on TapXR and only for qualified developers. Request access [here](https://www.tapwithus.com/contact-us/)
+## Raw detections (`onAirMouseInputReceived`)
 
-## AirMousePacket
-
-Added 3 states for the class AirMousePacket:
+On the framed protocol (`sdk.isV2Tap(id)`), decode with `UnifiedAirGesture.fromCode`. Gate on `isV2Tap` first: codes 100–102 also exist on classic TapXR packets.
 
 ```java
-public class AirMousePacket extends Packet {
-    .
-    .
-    .
-    public static final int XR_AIR_GESTURE_NONE = 100;
-    public static final int XR_AIR_GESTURE_THUMB_INDEX = 101;
-    public static final int XR_AIR_GESTURE_THUMB_MIDDLE = 102;
+@Override
+public void onAirMouseInputReceived(@NonNull String tapIdentifier, @NonNull AirMousePacket data) {
+    if (!sdk.isV2Tap(tapIdentifier)) {
+        return;
+    }
+    UnifiedAirGesture gesture = UnifiedAirGesture.fromCode(data.gesture.getInt());
+    if (gesture == null) {
+        return;
+    }
+    switch (gesture) {
+        case LEFT:    // thumb swipe left
+        case RIGHT:
+        case UP:
+        case DOWN:
+        case AB:      // thumb-index pinch (AC/AD/AE for the other fingers)
+        case FIST:
+        case AB_HOLD: // held pinch — also AC/AD/AE/FIST _HOLD
+        case NONE:    // hand relaxed / hold released
+            break;
+    }
+}
 ```
 
-    XR_AIR_GESTURE_NONE: The hand is in resting state.
-    XR_AIR_GESTURE_THUMB_INDEX : the thumb is touching the index finger.
-    XR_AIR_GESTURE_THUMB_MIDDLE : the thumb is touching the middle finger. 
+```kotlin
+override fun onAirMouseInputReceived(tapIdentifier: String, data: AirMousePacket) {
+    if (!sdk.isV2Tap(tapIdentifier)) return
+    when (UnifiedAirGesture.fromCode(data.gesture.getInt())) {
+        UnifiedAirGesture.AB -> { /* short pinch */ }
+        UnifiedAirGesture.AB_HOLD -> { /* pinch held */ }
+        UnifiedAirGesture.LEFT -> { /* swipe */ }
+        else -> {}
+    }
+}
+```
 
-These states will be sent continously multiple times per second.
+`UnifiedAirGesture` codes 100–114: `NONE`, `LEFT`/`RIGHT`/`UP`/`DOWN`, pinches `AB`/`AC`/`AD`/`AE`, `FIST`, and `_HOLD` variants.
 
-The best practice is the take the most common one out of the last 3 events received to allow margin for errors.
+On classic firmware, use `AirMousePacket.AIR_MOUSE_GESTURE_*` (0–11). Older TapXR continuous hand states `XR_AIR_GESTURE_NONE` (100), `XR_AIR_GESTURE_THUMB_INDEX` (101), `XR_AIR_GESTURE_THUMB_MIDDLE` (102) still arrive several times per second. Take the majority of the last 3 samples if you consume that path.
 
-This will allow you to combine these states and the mouse-move event into "Drag and Drop" Gesture for example.
+## Processed layer (`onXRAirGestureReceived`)
 
-##TapXRState
+Prefer this callback for UI. The SDK debounce-filters the raw stream and latches holds (`GesturePostprocessor` on the framed protocol; `XRGesturesMain` on classic firmware and framed-protocol hardware 4.x.x).
 
-In addition to TAPInputMode, the new TAPXR has input states.
+```java
+@Override
+public void onXRAirGestureReceived(@NonNull String tapIdentifier, @NonNull XRAirGesture gesture) {
+    switch (gesture) {
+        case CLICK_INDEX: // short pinch, index — also CLICK_MIDDLE / RING / PINKY
+        case DRAG_INDEX:  // hold latched
+        case DROP:        // hold released after a drag
+        case FIST_BEGIN:
+        case FIST_END:
+        case SWIPE_LEFT:  // also SWIPE_RIGHT / UP / DOWN
+            break;
+        default:
+            break;
+    }
+}
+```
 
-You can force TAPXR to switch to input state as follows:
+```kotlin
+override fun onXRAirGestureReceived(tapIdentifier: String, gesture: XRAirGesture) {
+    when (gesture) {
+        XRAirGesture.CLICK_INDEX -> { }
+        XRAirGesture.DRAG_INDEX -> { }
+        XRAirGesture.DROP -> { }
+        XRAirGesture.FIST_BEGIN -> { }
+        XRAirGesture.SWIPE_UP -> { }
+        else -> {}
+    }
+}
+```
+
+Raw `onAirMouseInputReceived` still fires for the same packets.
+
+## TapXRState
+
+In addition to TAPInputMode, TapXR has input states that select tapping vs air gestures. The same calls apply on the framed protocol (they map to vision-model commands).
+
+You can force a TapXR to switch state as follows:
 
 AIRMOUSE - The TAPXR will operate in AIRMOUSE mode ONLY.
 TAPPING - The TAPXR will operate in TAPPING mode only.
@@ -318,27 +381,29 @@ While calling setDefaultTAPXRState, it'll set the default state that will be app
 If you wish to apply this state to already-connected devices, call with "applyImmediate": true.
 
 
-# V2 Tap Devices (September 2026)
+# Framed BLE protocol (September 2026)
 
-Newer Tap devices (TapBand, and TapXR with V2 firmware) speak a framed BLE protocol ("V2" / TapSDK2) instead of the classic characteristic-per-stream protocol. The SDK detects the protocol automatically after connection - no code changes are required for basic usage:
+There is one SDK. Current TapXR developer firmware, and TapBand when it ships, use a framed BLE protocol. Older Tap Strap / TapXR firmware uses the classic characteristic-per-stream protocol. `TapSdk` detects the protocol after connection — no extra connect code is required for basic usage.
 
-* Tap events keep arriving via `onTapInputReceived` (V2 taps always report `repeatData == 1`).
+`isV2Tap` and types in `com.tapwithus.sdk.v2` name that framed protocol. Do not call this "SDK v1" or "SDK v2". TapBand uses the same BLE API as TapXR (coming soon: https://www.tapwithus.com/tapband-waitlist/).
+
+* Tap events keep arriving via `onTapInputReceived` (framed-protocol taps always report `repeatData == 1`).
 * Mouse / pointer movement keeps arriving via `onMouseInputReceived`, and additionally via `onImuMotionInputReceived` which includes Euler angles (roll, pitch, yaw).
-* Raw sensor data keeps arriving via `onRawSensorInputReceived` (V2 devices stream the thumb IMU only - there are no finger accelerometers).
-* Air gestures keep arriving via `onAirMouseInputReceived`, with gesture codes from the `UnifiedAirGesture` enum (100-114): directional gestures, pinches (AB/AC/AD/AE), fist, and their hold variants.
-* The existing mode API (`startControllerMode`, `startTextMode`, `startRawSensorMode`, XR states...) is translated automatically into V2 feature commands.
+* Raw sensor data keeps arriving via `onRawSensorInputReceived` (framed protocol streams the thumb IMU only — there are no finger accelerometers).
+* Air gestures keep arriving via `onAirMouseInputReceived` (`UnifiedAirGesture` codes 100-114) and, processed, via `onXRAirGestureReceived`.
+* The existing mode API (`startControllerMode`, `startTextMode`, `startRawSensorMode`, XR states...) is translated automatically into framed feature commands.
 * `vibrate` is sent through the framed protocol automatically.
-* A keepalive message is sent automatically every 10 seconds to every connected V2 Tap (matching tap-ios-sdk and tap-python-sdk). You can also send one manually with `sdk.sendKeepAlive(tapIdentifier)`.
+* A keepalive message is sent automatically every 10 seconds to every connected framed-protocol Tap (matching tap-ios-sdk and tap-python-sdk). You can also send one manually with `sdk.sendKeepAlive(tapIdentifier)`.
 
 You can check the protocol of a connected Tap with:
 
 ```java
-boolean isV2 = sdk.isV2Tap(tapIdentifier);
+boolean framed = sdk.isV2Tap(tapIdentifier);
 ```
 
 ### Device features
 
-Instead of a single input mode, V2 devices expose independent feature toggles (`com.tapwithus.sdk.v2.DeviceFeature`): `RAW_IMU_DATA`, `MODEL_DETECTION` (taps + air gestures), `IMU_MOTION_DATA`, `STANDBY_GESTURE_DETECTION`. For fine-grained control you can set them directly:
+Instead of a single input mode, the framed protocol exposes independent feature toggles (`com.tapwithus.sdk.v2.DeviceFeature`): `RAW_IMU_DATA`, `MODEL_DETECTION` (taps + air gestures), `IMU_MOTION_DATA`, `STANDBY_GESTURE_DETECTION`. For fine-grained control you can set them directly:
 
 ```java
 sdk.setFeature(tapIdentifier, DeviceFeature.MODEL_DETECTION, true);
@@ -349,31 +414,7 @@ sdk.getFeature(tapIdentifier, DeviceFeature.MODEL_DETECTION, (identifier, enable
 
 ### Unified air gestures
 
-On V2 devices air gestures arrive through the same `onAirMouseInputReceived` callback, but the gesture value holds a code from the `com.tapwithus.sdk.v2.UnifiedAirGesture` enum (100-114) instead of the classic `AirMousePacket` constants:
-
-```java
-@Override
-public void onAirMouseInputReceived(@NonNull String tapIdentifier, @NonNull AirMousePacket data) {
-    if (sdk.isV2Tap(tapIdentifier)) {
-        UnifiedAirGesture gesture = UnifiedAirGesture.fromCode(data.gesture.getInt());
-        if (gesture != null) {
-            switch (gesture) {
-                case LEFT:      // swipe left
-                case RIGHT:     // swipe right
-                case UP:        // swipe up
-                case DOWN:      // swipe down
-                case AB:        // thumb-index pinch (AC/AD/AE for the other fingers)
-                case FIST:
-                case AB_HOLD:   // held pinch (drag) - also AC/AD/AE/FIST _HOLD variants
-                case NONE:
-                    break;
-            }
-        }
-    } else {
-        // classic device - use the AirMousePacket.AIR_MOUSE_GESTURE_* constants
-    }
-}
-```
+See [Gestures — raw detections and the Android processed layer](#gestures--raw-detections-and-the-android-processed-layer) for Java and Kotlin examples of raw `UnifiedAirGesture` and processed `XRAirGesture`.
 
 ### Vision sensor (model & op-mode)
 
@@ -414,17 +455,78 @@ default void onImuMotionInputReceived(@NonNull String tapIdentifier, @NonNull Im
 }
 ```
 
-All `get*` calls reply asynchronously on a `TapV2Callback`; if the device doesn't answer within 2 seconds the callback fires with a `null` value. Calling a V2-only API on a v1 device reports error `TapSdk.ERR_V2_NOT_SUPPORTED` (103) via `onError`.
+All `get*` calls reply asynchronously on a `TapV2Callback`; if the device doesn't answer within 2 seconds the callback fires with a `null` value. Calling a framed-protocol API on classic firmware reports error `TapSdk.ERR_V2_NOT_SUPPORTED` (103) via `onError`. After standby, send the input mode / XR state again if events stop (`startXRTappingState` or `startXRAirMouseState`).
 
 Example app
 ===========
 The Android Studio project contains an example app (the `app` module) where you can see how to use some of the features of `TapSdk`. Each connected Tap is shown as a list row demonstrating:
 
 * Tap input (finger combination + repeat), shift/switch state and mouse/air-gesture events.
-* The detected protocol (`V2` or `Legacy`, via `sdk.isV2Tap`).
-* The last air gesture performed, decoded per protocol (`UnifiedAirGesture` for V2 devices, `AirMousePacket` constants for classic devices).
+* The detected BLE protocol (`Framed` or `Classic`, via `sdk.isV2Tap`).
+* The last **raw** air gesture (`UnifiedAirGesture` on the framed protocol, `AirMousePacket` constants on classic firmware).
+* The last **processed** air gesture (`onXRAirGestureReceived` / `XRAirGesture`: click, drag, drop, fist, swipe).
 * Switching between Tapping and AirMouse detection by tapping the mode label (`startXRTappingState` / `startXRAirMouseState`).
 * Changing input modes (text / controller / raw sensor...) by tapping the row, and sending haptics via `vibrate`.
+
+Listener source: `app/src/main/java/com/tapwithus/tapsdk/MainActivity.java`.
+
+AI-Assisted Development
+=======================
+
+Install the Tap skills into your coding agent, then describe the Android app you want. The agent knows the Android order: `TapSdkFactory.getDefault(context)`, then `registerTapListener`, then `resume()` / `pause()`. There is no `connect()` or `start()` call. `getDefault()` alone delivers no taps.
+
+The installer writes into the **current folder**. Add `-g` to install for your user instead, so the skills are available in every project.
+
+| Tool | This folder (default) | Every project (`-g`) |
+|------|------------------------|----------------------|
+| Claude Code | `.claude/skills/` | `claude plugin install … --scope user` |
+| Codex | `.agents/skills/` | `codex plugin add …` |
+| Cursor | `.cursor/skills/` + [`.cursor/rules/tap-sdk.mdc`](.cursor/rules/tap-sdk.mdc) | `~/.cursor/skills/` + `~/.cursor/rules/tap-sdk.mdc` |
+| Any agent that reads `AGENTS.md` | [`AGENTS.md`](AGENTS.md) | `~/.codex/AGENTS.md` |
+
+Run the commands below in your app's project folder (or from a clone of this repository).
+
+```console
+./install-skills.sh claude    # .claude/skills/
+./install-skills.sh codex     # .agents/skills/
+./install-skills.sh cursor    # .cursor/skills/ and .cursor/rules/
+./install-skills.sh agents    # ./AGENTS.md
+./install-skills.sh all       # all four, this folder
+./install-skills.sh -g all    # all four, every project
+```
+
+Or, without a clone (after these files are on `master`):
+
+```console
+curl -sL https://raw.githubusercontent.com/TapWithUs/tap-android-sdk/master/install-skills.sh | bash -s cursor
+curl -sL https://raw.githubusercontent.com/TapWithUs/tap-android-sdk/master/install-skills.sh | bash
+curl -sL https://raw.githubusercontent.com/TapWithUs/tap-android-sdk/master/install-skills.sh | bash -s -- -g all
+```
+
+`-g claude` and `-g codex` need the `claude` and `codex` commands. You can also open `/plugins` in Codex and install **Tap Android SDK** from the marketplace list.
+
+#### What's included
+
+- **tap-android-getting-started**: Gradle dependency, Bluetooth permissions, pairing, connect, troubleshooting
+- **tap-android-tapping**: which fingers tapped, finger combos, double taps, haptics, input modes
+- **tap-android-vision-models**: tapping vs air-gesture models; raw `UnifiedAirGesture` and processed `XRAirGesture`
+- **tap-android-imu-motion**: pointer movement, tilt, roll / pitch / yaw (framed protocol) and mouse events (classic)
+- **tap-android-raw-sensors**: raw accelerometer and gyro streams, sensitivity
+- **tap-android-knob**: hold a pinch and twist to turn a value up or down (framed protocol)
+- **tap-android-dpad**: swipe for directions, pinch to select, hold to rotate or drag (framed protocol)
+- **tap-android-build-an-app**: turn Tap events into an Android app (main thread, connection status, lifecycle)
+- **tap-android-sdk**: method-by-method API reference
+
+Skill source: [`plugins/tap-android-sdk/skills`](plugins/tap-android-sdk/skills).
+
+#### Onboard your agent
+
+1. Open your Android project in the coding agent.
+2. Install the skills (see above).
+3. Turn on your Tap, charge it, pair it in Android Bluetooth settings, and update its firmware with Tap Manager.
+4. Tell the agent which device you have (Tap Strap, Tap Strap 2, or TapXR). TapBand uses the same API as TapXR and is coming soon.
+5. Ask it to connect first: *"Use the tap-android-getting-started skill to connect to my Tap and show my taps."* Tap your fingers and tell the agent what you see.
+6. When taps arrive, describe your app. Build one interaction at a time and try each one with the device.
 
 Support
 ===========

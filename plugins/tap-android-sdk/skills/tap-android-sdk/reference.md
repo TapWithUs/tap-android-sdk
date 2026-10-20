@@ -1,8 +1,14 @@
 # TAP Android SDK — API Reference
 
+Connect order: `TapSdkFactory.getDefault(context)`, then `registerTapListener`, then `resume()` / `pause()`. There is no `connect()` or `start()`. See `../tap-android-getting-started/SKILL.md` before using this page.
+
 Complete public API surface. Package root: `com.tapwithus.sdk`.
 Everywhere below, `tapIdentifier` is the device's Bluetooth address (`String`),
 delivered first via `TapListener.onTapConnected`.
+
+There is one SDK. Types in `com.tapwithus.sdk.v2` are the framed BLE protocol.
+`sdk.isV2Tap(id)` is that protocol check. TapBand uses the same BLE API as TapXR
+and is coming soon: https://www.tapwithus.com/tapband-waitlist/
 
 ## TapSdk
 
@@ -50,7 +56,7 @@ TapSdk sdk = new TapSdk(tapBluetoothManager);
 | `startTextMode(String)` | Device acts as a Bluetooth keyboard; no SDK input |
 | `startControllerWithMouseHIDMode(String)` | Controller + system mouse cursor |
 | `startControllerWithFullHIDMode(String)` | Controller + full HID |
-| `startRawSensorMode(String, byte devAccelSens, byte imuGyroSens, byte imuAccelSens)` | Raw sensor streaming. Sensitivities: device accelerometer 1–4, IMU gyro 1–4, IMU accelerometer 1–5, 0 = default |
+| `startRawSensorMode(String, byte devAccelSens, byte imuGyroSens, byte imuAccelSens)` | Raw sensor streaming. Finger accelerometer 1–4, IMU gyro 1–5, IMU accelerometer 1–4, 0 = default |
 
 Deprecated: `startMode(String, int)`, `getMode(String)`, `isInMode(String, int)`.
 
@@ -74,10 +80,10 @@ Query helpers: `isTapInAirMouseState(String)`, `isAnyTapInAirGestureState()`,
 
 | Method | Purpose |
 |---|---|
-| `void vibrate(String tapIdentifier, int[] durations)` | Haptics; alternating on/pause durations in ms, max 18 elements |
+| `void vibrate(String tapIdentifier, int[] durations)` | Haptics; alternating on/pause durations in ms, max 18 elements, each clamped to 10–2500 |
 | `void writeName(String tapIdentifier, String name)` | Rename device |
-| `void requestShiftSwitchState(String tapIdentifier)` | Ask for current shift/switch state |
-| `void requestTap(String tapIdentifier, byte combination)` | Simulate a tap |
+| `void requestShiftSwitchState(String tapIdentifier)` | Ask for current shift/switch state (classic protocol) |
+| `void requestTap(String tapIdentifier, byte combination)` | Simulate a tap (classic protocol) |
 
 ### Static helpers
 
@@ -95,7 +101,7 @@ int[] ss = TapSdk.toShiftAndSwitch(int data);
 |---|---|---|
 | `TapSdk.ERR_SUBSCRIBE_MODE` | 101 | Mode subscription failed |
 | `TapSdk.ERR_HAPTIC` | 102 | Haptic write failed |
-| `TapSdk.ERR_V2_NOT_SUPPORTED` | 103 | V2-only API called on a v1 device |
+| `TapSdk.ERR_V2_NOT_SUPPORTED` | 103 | Framed-protocol API called on classic firmware |
 
 ## TapListener
 
@@ -123,9 +129,10 @@ public interface TapListener {
 ```
 
 Notes:
-- `onTapInputReceived`: `data` is 1–31 finger bitmask (LSB=thumb), `repeatData` 1/2/3 = single/double/triple (V2 always 1).
-- `onTapChangedState`: reports `TapXRState` constants (`NONE=0, USER_CONTROL=1, TAPPING=2, AIR_MOUSE=4`).
-- `onAirMouseInputReceived`: raw air-gesture packet. `onXRAirGestureReceived`: the same stream after `GesturePostprocessor` (V2, except hardware 4.x.x) or `XRGesturesMain` (legacy, and V2 hardware 4.x.x). Hardware 4.x.x maps new class indexes to legacy states first: none 100→100, AB 105→101, AC 106→102, AD 107→103, AE 108→104, FIST 109→105.
+- `onTapInputReceived`: `data` is 1–31 finger bitmask (LSB=thumb), `repeatData` 1/2/3 = single/double/triple (framed protocol always 1).
+- `onTapChangedState`: fired when an air-mouse packet's gesture is 20. `state` is `AirMousePacket.state` (the device byte). The SDK treats `state == 1` as air-mouse and then suppresses `onTapInputReceived`. Do not compare this value to `TapXRState` constants (`AIR_MOUSE` there is 4).
+- `onAirMouseInputReceived`: raw air-gesture packet. Gate `UnifiedAirGesture.fromCode` on `sdk.isV2Tap(id)` — codes 100–102 also exist on classic TapXR packets.
+- `onXRAirGestureReceived`: the same stream after `GesturePostprocessor` (framed protocol, except hardware 4.x.x) or `XRGesturesMain` (classic protocol, and framed-protocol hardware 4.x.x). Hardware 4.x.x maps new class indexes to classic states first: none 100→100, AB 105→101, AC 106→102, AD 107→103, AE 108→104, FIST 109→105.
 
 ## Data classes
 
@@ -149,9 +156,19 @@ AIR_MOUSE_GESTURE_UP = 2              AIR_MOUSE_GESTURE_RIGHT = 8
 AIR_MOUSE_GESTURE_UP_TWO_FINGERS = 3  AIR_MOUSE_GESTURE_RIGHT_TWO_FINGERS = 9
 AIR_MOUSE_GESTURE_DOWN = 4            AIR_MOUSE_GESTURE_INDEX_TO_THUMB_TOUCH = 10
 AIR_MOUSE_GESTURE_DOWN_TWO_FINGERS = 5  AIR_MOUSE_GESTURE_MIDDLE_TO_THUMB_TOUCH = 11
-// TapXR continuous hand states (sent multiple times/second; take majority of last 3):
+// Older TapXR continuous hand states (sent multiple times/second; take majority of last 3):
 XR_AIR_GESTURE_NONE = 100, XR_AIR_GESTURE_THUMB_INDEX = 101, XR_AIR_GESTURE_THUMB_MIDDLE = 102
 ```
+
+### XRAirGesture (`com.tapwithus.sdk.xr.XRAirGesture`)
+
+Processed air-gesture enum delivered on `onXRAirGestureReceived`:
+
+`NONE(0)`, `CLICK_INDEX(1)`, `CLICK_MIDDLE(2)`, `CLICK_RING(3)`, `CLICK_PINKY(4)`,
+`DRAG_INDEX(5)`, `DRAG_MIDDLE(6)`, `DRAG_RING(7)`, `DRAG_PINKY(8)`, `DROP(9)`,
+`POTENTIAL_DRAG_OR_CLICK_INDEX(10)` … `_PINKY(13)` (classic processor),
+`FIST_BEGIN(14)`, `FIST_END(15)`, `SWIPE_LEFT(17)`, `SWIPE_RIGHT(18)`,
+`SWIPE_UP(19)`, `SWIPE_DOWN(20)`.
 
 ### RawSensorData (`com.tapwithus.sdk.mode.RawSensorData`)
 
@@ -159,16 +176,16 @@ Fields: `int timestamp`, `DataType dataType` (`Device` or `IMU`), `Point3[] poin
 `Point3 getPoint(int index)` with indexes:
 
 - `DataType.Device` (finger accelerometers): `iDEV_THUMB=0, iDEV_INDEX=1, iDEV_MIDDLE=2, iDEV_RING=3, iDEV_PINKY=4`
-- `DataType.IMU` (thumb unit, TAP Strap 2 / V2 devices): `iIMU_GYRO=0, iIMU_ACCELEROMETER=1`
+- `DataType.IMU` (thumb unit, TAP Strap 2 / framed protocol): `iIMU_GYRO=0, iIMU_ACCELEROMETER=1`
 
 `Point3` has `double x, y, z`.
 
-## V2 API (`com.tapwithus.sdk.v2`)
+## Framed protocol API (`com.tapwithus.sdk.v2`)
 
 All `get*` methods reply asynchronously on `TapV2Callback<T>`
-(`void onResult(String tapIdentifier, @Nullable T value)`); `value` is `null`
-if the device doesn't answer within 2 seconds. Calling any of these on a v1
-device fires `onError` with `ERR_V2_NOT_SUPPORTED` (103).
+(`void onResponse(String tapIdentifier, @Nullable T value)`); `value` is `null`
+if the device doesn't answer within 2 seconds. Calling any of these on classic
+firmware fires `onError` with `ERR_V2_NOT_SUPPORTED` (103).
 
 ```java
 boolean isV2Tap(String tapIdentifier);
@@ -195,19 +212,19 @@ void sendKeepAlive(String id); // automatic every 10s; manual send optional
 - `DeviceFeature`: `RAW_IMU_DATA(0)`, `MODEL_DETECTION(1)` (taps + air gestures), `IMU_MOTION_DATA(2)`, `TRIGGER_DETECTIONS(3)`, `STANDBY_GESTURE_DETECTION(4)`
 - `VisionSensorModel`: `TAPPING`, `AIR_GESTURE` (one model active at a time)
 - `VisionSensorOpMode`: `TRIGGER`, `STREAM`, `STREAM_ON_TRIGGER`
-- `UnifiedAirGesture` (codes 100–114, decode with `fromCode(int)` — returns `null` for non-V2 codes): `NONE(100)`, `LEFT(101)`, `RIGHT(102)`, `UP(103)`, `DOWN(104)`, `AB(105)`, `AC(106)`, `AD(107)`, `AE(108)`, `FIST(109)`, `AB_HOLD(110)`, `AC_HOLD(111)`, `AD_HOLD(112)`, `AE_HOLD(113)`, `FIST_HOLD(114)`. AB/AC/AD/AE = thumb pinching index/middle/ring/pinky; `_HOLD` = held pinch (drag).
+- `UnifiedAirGesture` (codes 100–114, decode with `fromCode(int)` — returns `null` for unknown codes): `NONE(100)`, `LEFT(101)`, `RIGHT(102)`, `UP(103)`, `DOWN(104)`, `AB(105)`, `AC(106)`, `AD(107)`, `AE(108)`, `FIST(109)`, `AB_HOLD(110)`, `AC_HOLD(111)`, `AD_HOLD(112)`, `AE_HOLD(113)`, `FIST_HOLD(114)`. AB/AC/AD/AE = thumb pinching index/middle/ring/pinky; `_HOLD` = held pinch (drag). Gate on `isV2Tap` before decode.
 
 ### ImuMotionPacket
 
 Public fields: `int dx, dy` (pointer delta), `boolean isMouse`, `int roll, pitch, yaw` (Euler angles).
 Delivered via `onImuMotionInputReceived` when `IMU_MOTION_DATA` is enabled (default in controller mode).
 
-### Mode mapping on V2 devices
+### Mode mapping on the framed protocol
 
-The classic mode API is translated to V2 feature commands automatically:
+The classic mode API is translated to framed feature commands automatically:
 
 - `startControllerMode` → enables `MODEL_DETECTION` + `IMU_MOTION_DATA`
-- `startRawSensorMode` → enables `RAW_IMU_DATA` (thumb IMU only; no finger accelerometers on V2)
+- `startRawSensorMode` → enables `RAW_IMU_DATA` (thumb IMU only; no finger accelerometers)
 - `startXRTappingState` → vision model `TAPPING`, op-mode `TRIGGER`
 - `startXRAirMouseState` → vision model `AIR_GESTURE`, op-mode `STREAM`
 - `vibrate` → framed haptic command

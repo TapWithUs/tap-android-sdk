@@ -1,0 +1,19 @@
+---
+description: Tap Android SDK. Order is TapSdkFactory.getDefault(context), then registerTapListener, then resume() and pause(). getDefault() alone delivers no taps.
+alwaysApply: true
+---
+
+# Tap Android SDK
+
+When the user wants to build an Android app with a Tap device, read `.cursor/skills/tap-android-getting-started/SKILL.md` first.
+
+- Order: `TapSdkFactory.getDefault(context)`, then `registerTapListener`, then `resume()` in `onResume` and `pause()` in `onPause`. There is no `connect()` or `start()`. `getDefault()` alone delivers no taps.
+- The SDK connects only to Taps already paired in Android Bluetooth settings. On Android 12+ request `BLUETOOTH_CONNECT` and `BLUETOOTH_SCAN` at runtime.
+- `tapIdentifier` is the Bluetooth address from `onTapConnected`. Handle classic and framed protocols (`sdk.isV2Tap`) unless the user names the device. `isV2Tap` is the framed BLE protocol check. Do not call this "SDK v1" or "SDK v2".
+- TapBand uses the same BLE API as TapXR. TapBand is coming soon (not for sale): https://www.tapwithus.com/tapband-waitlist/
+- Current TapXR developer firmware reports the full gesture set (taps, thumb swipes, pinches with hold, fist with hold). Do not say TapXR supports a subset.
+- Classic protocol: Controller mode is applied on connect while resumed. Framed protocol: also call `startXRTappingState` or `startXRAirMouseState` so a vision model is selected.
+- Raw gesture detections arrive on `onAirMouseInputReceived`. Prefer `onXRAirGestureReceived` for processed click / drag / drop / fist / swipe.
+- Callbacks may run off the main thread. Keep them short and post UI work to the main thread.
+- Knob and D-Pad recipes need the framed protocol (`tap-android-knob`, `tap-android-dpad`).
+- Do not invent APIs or enum values. Test with the real device.
