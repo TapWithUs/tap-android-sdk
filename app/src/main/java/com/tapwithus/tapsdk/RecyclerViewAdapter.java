@@ -12,6 +12,7 @@ import android.widget.TextView;
 import com.tapwithus.sdk.TapSdk;
 import com.tapwithus.sdk.airmouse.AirMousePacket;
 import com.tapwithus.sdk.v2.UnifiedAirGesture;
+import com.tapwithus.sdk.xr.XRAirGesture;
 
 import java.util.List;
 
@@ -109,6 +110,18 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
             if (item.tapIdentifier.equals(tapIdentifier)) {
                 if (!onBind) {
                     item.airGestureInt = gestureInt;
+                    notifyItemChanged(position);
+                }
+            }
+        }
+    }
+
+    public void updateProcessedAirGesture(String tapIdentifier, XRAirGesture gesture) {
+        for (int position = 0; position < dataSet.size(); position++) {
+            TapListItem item = dataSet.get(position);
+            if (item.tapIdentifier.equals(tapIdentifier)) {
+                if (!onBind) {
+                    item.processedAirGesture = gesture.descriptionString();
                     notifyItemChanged(position);
                 }
             }
@@ -278,9 +291,8 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
             mode.setText(listItem.isInControllerMode ? "Controller Mode" : "Text Mode");
             fwVer.setText(listItem.tapFwVer);
             specialChar.setText("Repeat = " + listItem.tapRepeatInt);
-            protocol.setText(listItem.isV2 ? "V2" : "Legacy");
-            airGesture.setText(listItem.airGestureInt == -1
-                    ? "" : "Air Gesture: " + gestureName(listItem));
+            protocol.setText(listItem.isV2 ? "Framed" : "Classic");
+            airGesture.setText(airGestureLabel(listItem));
             xrState.setText(listItem.isAirMouseState ? "AirMouse Mode" : "Tapping Mode");
             xrState.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -290,7 +302,22 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
             });
         }
 
-        private static String gestureName(TapListItem listItem) {
+        private static String airGestureLabel(TapListItem listItem) {
+            String processed = listItem.processedAirGesture == null ? "" : listItem.processedAirGesture;
+            if (listItem.airGestureInt == -1 && processed.isEmpty()) {
+                return "";
+            }
+            String raw = listItem.airGestureInt == -1 ? "" : rawGestureName(listItem);
+            if (processed.isEmpty()) {
+                return "Raw: " + raw;
+            }
+            if (raw.isEmpty()) {
+                return "Processed: " + processed;
+            }
+            return "Raw: " + raw + "  Processed: " + processed;
+        }
+
+        private static String rawGestureName(TapListItem listItem) {
             int code = listItem.airGestureInt;
             if (listItem.isV2) {
                 UnifiedAirGesture gesture = UnifiedAirGesture.fromCode(code);
