@@ -42,14 +42,14 @@ Single-finger taps are the most reliable. Prefer them for frequent actions. Use 
 ## Turn on tap events
 
 - **Classic protocol** (`!sdk.isV2Tap(id)`): Controller mode is the default after connect while the Activity is resumed.
-  - `startTextMode(id)`: the Tap types on the OS keyboard. The SDK gets no taps.
+  - `startTextMode(id)`: Tap Strap / stock TapXR: the Tap types on the OS keyboard. The SDK gets no taps. On the framed protocol (TapXR developer firmware) there is no HID: this call is remapped without an error and turns all streams off (no keyboard).
   - `startControllerMode(id)`: the SDK gets tap, mouse, and air-gesture events. No typing.
-  - `startControllerWithMouseHIDMode(id)`: controller plus the system mouse cursor.
-  - `startControllerWithFullHIDMode(id)`: controller plus keyboard HID.
+  - `startControllerWithMouseHIDMode(id)`: controller plus the system mouse cursor (classic protocol; this SDK enables it only on Tap Strap hardware, else falls back to Controller). On the framed protocol (TapXR developer firmware) there is no HID: this call is remapped without an error to plain Controller.
+  - `startControllerWithFullHIDMode(id)`: controller plus keyboard HID (classic protocol; same Tap Strap hardware gate). On the framed protocol (TapXR developer firmware) there is no HID: this call is remapped without an error to plain Controller.
   - `setDefaultMode(TapInputMode.controller(), true)` sets the mode for new connections and, when the second argument is true, for Taps already connected.
 - **Framed protocol** (`sdk.isV2Tap(id)`): Controller mode enables `MODEL_DETECTION` and `IMU_MOTION_DATA` but does not select a vision model. For taps call `startXRTappingState(id)`, which sets `VisionSensorModel.TAPPING` and `VisionSensorOpMode.TRIGGER`. The direct calls are `setFeature`, `setVisionSensorModel`, and `setVisionSensorOpMode`.
 
-`pause()` switches every connected Tap to Text mode. `resume()` restores the mode you set. Skipping those calls is the usual reason taps work once and then stop.
+`pause()` switches every connected classic-protocol Tap to Text mode and turns framed-protocol streams off. `resume()` restores the mode you set. Skipping those calls is the usual reason taps work once and then stop.
 
 ## Double taps and multi-taps
 

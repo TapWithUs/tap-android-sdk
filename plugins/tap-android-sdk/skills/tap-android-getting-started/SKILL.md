@@ -12,7 +12,7 @@ description: >-
 
 One SDK (`com.tapwithus.sdk.TapSdk`) talks to Tap Strap, Tap Strap 2, and TapXR. TapBand uses the same BLE API as TapXR. TapBand is coming soon (it is not for sale yet): https://www.tapwithus.com/tapband-waitlist/
 
-Do not call this "SDK v1" or "SDK v2". `sdk.isV2Tap(tapIdentifier)` is true when the device uses the **framed BLE protocol** (current TapXR developer firmware, and TapBand when it ships). It is false for the **classic protocol** (Tap Strap, Tap Strap 2, older TapXR firmware). Write code that handles both unless the user names the device.
+Do not call this "SDK v1" or "SDK v2". `sdk.isV2Tap(tapIdentifier)` is true when the device uses the **framed BLE protocol** (TapXR developer firmware from the opt-in developer program, and TapBand when it ships; **no HID**, tap detection off at boot). It is false for the **classic protocol** (Tap Strap, Tap Strap 2, and TapXR on stock firmware, which is every TapXR by default; has HID / Text mode). Write code that handles both unless the user names the device.
 
 The current TapXR developer firmware reports the full gesture set: taps, thumb swipes (up, down, left, right), thumb-to-finger pinches with hold, and fist with hold. Do not describe TapXR as a subset. Do not invent a firmware version number.
 
@@ -50,10 +50,10 @@ There is no `connect()` and no `start()`. The required order is:
 
 1. `TapSdk sdk = TapSdkFactory.getDefault(context);` — one instance for the process. It connects to Taps that are already paired.
 2. `sdk.registerTapListener(listener);` — register immediately, before the first `onTapConnected`. A listener registered late misses the connection callback.
-3. `sdk.resume()` in `onResume`, `sdk.pause()` in `onPause`. `pause()` puts connected Taps in Text mode. `resume()` restores the mode you set. If `isPaused` is true, a new connection does not start Controller mode and does not notify `onTapConnected`.
+3. `sdk.resume()` in `onResume`, `sdk.pause()` in `onPause`. `pause()` puts classic-protocol Taps in Text mode (keyboard) and turns framed-protocol streams off (no keyboard on the developer firmware). `resume()` restores the mode you set. If `isPaused` is true, a new connection does not start Controller mode and does not notify `onTapConnected`.
 4. Enable input from `onTapConnected`:
    - Classic protocol: Controller mode is applied automatically while resumed. The SDK gets taps. Text mode types on the OS keyboard and sends **no** tap events.
-   - Framed protocol: Controller mode enables `DeviceFeature.MODEL_DETECTION` and `IMU_MOTION_DATA` only. It does not pick a vision model. Call `sdk.startXRTappingState(tapIdentifier)` for taps, or `sdk.startXRAirMouseState(tapIdentifier)` for air gestures.
+   - Framed protocol (boots with tap detection off, no Text mode): Controller mode enables `DeviceFeature.MODEL_DETECTION` and `IMU_MOTION_DATA` only. It does not pick a vision model. Call `sdk.startXRTappingState(tapIdentifier)` for taps, or `sdk.startXRAirMouseState(tapIdentifier)` for air gestures.
 5. Keep the Activity (or Service) alive. Do not `finish()` when the Tap connects.
 
 ```java
@@ -145,8 +145,8 @@ class TapActivity : AppCompatActivity() {
 | Logcat: no permission / SecurityException | Request `BLUETOOTH_CONNECT` and `BLUETOOTH_SCAN` at runtime (Android 12+). |
 | Connected but no tap events (classic) | Call `sdk.resume()` and `sdk.startControllerMode(id)`. |
 | Connected but no tap events (framed) | Call `sdk.startXRTappingState(id)` after `onTapConnected`. |
-| Letters appear in other apps when tapping | The Tap is in Text mode. `resume()` or `startControllerMode(id)`. |
-| Events stop after leaving the app | `pause()` restores Text mode on purpose. `resume()` switches back. |
+| Letters appear in other apps when tapping | The Tap (Tap Strap / stock TapXR) is in Text mode. `resume()` or `startControllerMode(id)`. Cannot happen on the TapXR developer firmware (no HID). |
+| Events stop after leaving the app | `pause()` restores Text mode on purpose (framed protocol: streams off). `resume()` switches back. |
 | `onError` code 103 | A framed-protocol API was called on classic firmware (`TapSdk.ERR_V2_NOT_SUPPORTED`). |
 | Bluetooth is off | `onBluetoothTurnedOff` fires. Ask the user to turn Bluetooth on. |
 

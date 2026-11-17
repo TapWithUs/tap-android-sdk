@@ -28,7 +28,7 @@ TapSdk sdk = new TapSdk(tapBluetoothManager);
 
 | Method | Purpose |
 |---|---|
-| `void resume()` / `void pause()` | Must be called from the app's `onResume`/`onPause`; drives automatic Controller/Text mode switching |
+| `void resume()` / `void pause()` | Must be called from the app's `onResume`/`onPause`; drives automatic Controller/Text mode switching (framed protocol: streams on/off, no Text mode) |
 | `void enablePauseResumeHandling()` / `void disablePauseResumeHandling()` | Toggle automatic background mode restore |
 | `void clearCacheOnTapDisconnection(boolean)` | Whether cached device data is cleared on disconnect |
 | `void setDefaultMode(TapInputMode mode, Boolean applyImmediate)` | Mode applied to newly connected devices; `applyImmediate` also applies to already-connected ones |
@@ -53,9 +53,9 @@ TapSdk sdk = new TapSdk(tapBluetoothManager);
 | Method | Mode |
 |---|---|
 | `startControllerMode(String)` | Taps/gestures delivered to the app (default) |
-| `startTextMode(String)` | Device acts as a Bluetooth keyboard; no SDK input |
-| `startControllerWithMouseHIDMode(String)` | Controller + system mouse cursor |
-| `startControllerWithFullHIDMode(String)` | Controller + full HID |
+| `startTextMode(String)` | Classic: device acts as a Bluetooth keyboard; no SDK input. Framed: all streams off, no keyboard |
+| `startControllerWithMouseHIDMode(String)` | Classic: Controller + system mouse cursor (Tap Strap hardware only in this SDK; else falls back to Controller). Framed: plain Controller |
+| `startControllerWithFullHIDMode(String)` | Classic: Controller + full HID (Tap Strap hardware only in this SDK; else falls back to Controller). Framed: plain Controller |
 | `startRawSensorMode(String, byte devAccelSens, byte imuGyroSens, byte imuAccelSens)` | Raw sensor streaming. Finger accelerometer 1–4, IMU gyro 1–5, IMU accelerometer 1–4, 0 = default |
 
 Deprecated: `startMode(String, int)`, `getMode(String)`, `isInMode(String, int)`.
@@ -68,7 +68,7 @@ Constants: `TEXT=1, CONTROLLER=2, CONTROLLER_WITH_MOUSEHID=3, RAW_SENSOR=4, CONT
 
 | Method | Effect |
 |---|---|
-| `startXRUserControlState(String)` | User switches freely between tapping and air mouse |
+| `startXRUserControlState(String)` | User switches freely between tapping and air mouse (framed: default features only) |
 | `startXRAirMouseState(String)` | Air-mouse detection only |
 | `startXRTappingState(String)` | Tapping detection only |
 
@@ -224,7 +224,10 @@ Delivered via `onImuMotionInputReceived` when `IMU_MOTION_DATA` is enabled (defa
 The classic mode API is translated to framed feature commands automatically:
 
 - `startControllerMode` → enables `MODEL_DETECTION` + `IMU_MOTION_DATA`
+- `startTextMode` and `pause()` → disable `MODEL_DETECTION`, `IMU_MOTION_DATA`, `RAW_IMU_DATA` (no HID on the framed protocol; no error)
+- `startControllerWithMouseHIDMode` / `startControllerWithFullHIDMode` → same as `startControllerMode` (no HID; no error)
 - `startRawSensorMode` → enables `RAW_IMU_DATA` (thumb IMU only; no finger accelerometers)
 - `startXRTappingState` → vision model `TAPPING`, op-mode `TRIGGER`
 - `startXRAirMouseState` → vision model `AIR_GESTURE`, op-mode `STREAM`
+- `startXRUserControlState` → default features only (no vision-model command)
 - `vibrate` → framed haptic command

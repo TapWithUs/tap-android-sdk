@@ -35,7 +35,7 @@ Prefer the XR-state helpers. They map onto the vision sensor on the framed proto
 ```java
 sdk.startXRTappingState(id);    // TAPPING + TRIGGER
 sdk.startXRAirMouseState(id);   // AIR_GESTURE + STREAM
-sdk.startXRUserControlState(id); // user switches on the device
+sdk.startXRUserControlState(id); // stock TapXR: user switches on the device; framed: default features only
 ```
 
 Direct control (framed protocol only; on classic firmware `onError` fires with `TapSdk.ERR_V2_NOT_SUPPORTED` = 103):
@@ -55,9 +55,9 @@ sdk.getVisionSensorOpMode(id, (identifier, opMode) -> { });
 
 Controller mode on connect enables `MODEL_DETECTION` but leaves the vision model unset (`TapXRState.none()` is the default). If taps never arrive on framed firmware, call `startXRTappingState`.
 
-## Raw detections (all Tap SDKs)
+## Raw detections (Python, Web, and Android)
 
-Every Tap SDK delivers **raw** gesture detections from the sensor. On Android they arrive on `onAirMouseInputReceived`. Decode with `UnifiedAirGesture.fromCode(data.gesture.getInt())`. **Gate on `sdk.isV2Tap(id)` first** — codes 100–102 also exist on classic TapXR packets (`XR_AIR_GESTURE_NONE` / `THUMB_INDEX` / `THUMB_MIDDLE`) and must not be read as `UnifiedAirGesture`.
+Python, Web, and Android deliver **raw** gesture detections from the sensor (iOS exposes only a processed layer). On Android they arrive on `onAirMouseInputReceived`. Decode with `UnifiedAirGesture.fromCode(data.gesture.getInt())`. **Gate on `sdk.isV2Tap(id)` first** — codes 100–102 also exist on classic TapXR packets (`XR_AIR_GESTURE_NONE` / `THUMB_INDEX` / `THUMB_MIDDLE`) and must not be read as `UnifiedAirGesture`.
 
 Letters: A = thumb, B = index, C = middle, D = ring, E = pinky. "AB" = thumb touches index (pinch).
 

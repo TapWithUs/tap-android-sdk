@@ -16,8 +16,8 @@ One SDK. Do not call it "SDK v1" or "SDK v2". Method names such as `isV2Tap` and
 
 `TapSdk` is one entry point. After connect it detects the BLE protocol:
 
-- **Classic protocol** (`sdk.isV2Tap(id) == false`): Tap Strap, Tap Strap 2, and older TapXR firmware. Input modes such as `startControllerMode`.
-- **Framed protocol** (`sdk.isV2Tap(id) == true`): current TapXR developer firmware, and TapBand when it ships. Feature switches, vision models (`TAPPING` / `AIR_GESTURE`), IMU motion with roll / pitch / yaw.
+- **Classic protocol** (`sdk.isV2Tap(id) == false`): Tap Strap, Tap Strap 2, and TapXR on stock firmware (every TapXR by default). Input modes such as `startControllerMode`. Has HID: Text mode is a Bluetooth keyboard; HID controller modes (this SDK enables those only on Tap Strap hardware, else falls back to Controller); TapXR input states.
+- **Framed protocol** (`sdk.isV2Tap(id) == true`): TapXR developer firmware (opt-in developer program only), and TapBand when it ships. Feature switches, vision models (`TAPPING` / `AIR_GESTURE`), IMU motion with roll / pitch / yaw. **No HID**: `startTextMode` turns all streams off and the HID modes become Controller, silently. Boots with tap detection off. Tap Strap cannot run this firmware.
 
 `tapIdentifier` is the Bluetooth address from `onTapConnected`. Write code that handles both protocols unless the user names the device. One `TapSdk` can serve several Taps at once.
 
@@ -26,7 +26,8 @@ One SDK. Do not call it "SDK v1" or "SDK v2". Method names such as `isV2Tap` and
 ```java
 TapSdk sdk = TapSdkFactory.getDefault(context);   // 1. instance; auto-connects paired Taps
 sdk.registerTapListener(listener);                // 2. register before events arrive
-// 3. lifecycle — without this, backgrounding leaves the Tap in Text mode
+// 3. lifecycle — pause() returns classic Taps to Text mode (keyboard) and turns framed-protocol
+//    streams off; resume() restores your mode. Without this, the Tap stays in Controller mode in background.
 @Override protected void onResume() { super.onResume(); sdk.resume(); }
 @Override protected void onPause()  { super.onPause();  sdk.pause();  }
 // 4. from onTapConnected, enable the input you want:
@@ -37,7 +38,7 @@ sdk.registerTapListener(listener);                // 2. register before events a
 
 ## Raw gestures and the Android processed layer
 
-Every Tap SDK delivers **raw** gesture detections from the sensor on `onAirMouseInputReceived`. Decode framed-protocol codes with `UnifiedAirGesture.fromCode(...)` (100–114): swipes, pinches `AB`/`AC`/`AD`/`AE`, fist, and `_HOLD` variants. Gate on `sdk.isV2Tap(id)` before that decode — codes 100–102 also exist on classic TapXR packets.
+Python, Web, and Android deliver **raw** gesture detections from the sensor (iOS does not expose them); on Android that is `onAirMouseInputReceived`. Decode framed-protocol codes with `UnifiedAirGesture.fromCode(...)` (100–114): swipes, pinches `AB`/`AC`/`AD`/`AE`, fist, and `_HOLD` variants. Gate on `sdk.isV2Tap(id)` before that decode — codes 100–102 also exist on classic TapXR packets.
 
 Android also emits a **processed** air-gesture stream on `onXRAirGestureReceived` (`com.tapwithus.sdk.xr.XRAirGesture`): per-finger click, drag, drop, fist begin/end, and swipe. The SDK debounce-filters the raw stream and latches holds. Prefer this callback for UI actions. Keep the raw callback when you need the same events other SDKs see.
 

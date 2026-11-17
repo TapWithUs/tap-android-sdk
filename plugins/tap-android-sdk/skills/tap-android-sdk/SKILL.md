@@ -62,7 +62,8 @@ sdk.registerTapListener(tapListener); // implements com.tapwithus.sdk.TapListene
 The SDK auto-connects to *already-paired* TAP devices — there is no scan/pair API;
 users pair the TAP in Android Bluetooth settings first. On connect, while resumed,
 the SDK switches the device to Controller Mode. `pause()` restores Text Mode
-(regular keyboard behavior). On the framed protocol, Controller Mode does not
+(regular keyboard behavior) on Tap Strap / stock TapXR; on the framed protocol (TapXR
+developer firmware, no HID) it turns all data streams off instead. On the framed protocol, Controller Mode does not
 select a vision model; call `startXRTappingState` or `startXRAirMouseState` from
 `onTapConnected`.
 
@@ -103,9 +104,9 @@ Per-device, by `tapIdentifier`:
 
 ```java
 sdk.startControllerMode(tapIdentifier);            // default; taps sent to app
-sdk.startTextMode(tapIdentifier);                  // device acts as BT keyboard, no SDK input
-sdk.startControllerWithMouseHIDMode(tapIdentifier);
-sdk.startControllerWithFullHIDMode(tapIdentifier);
+sdk.startTextMode(tapIdentifier);                  // classic: BT keyboard, no SDK input; framed: all streams off
+sdk.startControllerWithMouseHIDMode(tapIdentifier); // classic HID (Tap Strap hw in this SDK); framed: = Controller
+sdk.startControllerWithFullHIDMode(tapIdentifier);  // classic HID (Tap Strap hw in this SDK); framed: = Controller
 sdk.startRawSensorMode(tapIdentifier, devAccelSens, imuGyroSens, imuAccelSens); // bytes
 ```
 
@@ -133,7 +134,7 @@ sdk.close();                                       // release BT resources
 ```java
 sdk.startXRTappingState(tapIdentifier);   // tapping detection only
 sdk.startXRAirMouseState(tapIdentifier);  // air-mouse detection only
-sdk.startXRUserControlState(tapIdentifier); // user switches freely
+sdk.startXRUserControlState(tapIdentifier); // user switches freely (framed: default features only)
 sdk.setDefaultXRState(TapXRState.tapping(), /* applyImmediate */ true);
 ```
 
