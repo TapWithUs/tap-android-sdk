@@ -18,17 +18,7 @@ TapBand uses the **same BLE API** as TapXR. TapBand is coming soon (it is not fo
 
 The current TapXR developer firmware reports the **full gesture set**: taps, thumb swipes (up, down, left, right), thumb-to-finger pinches with hold, and fist with hold. Do not invent a firmware version number.
 
-Which firmware a Tap runs decides whether it has HID (keyboard / mouse):
-
-| Device and firmware | `isV2Tap` | Keyboard / mouse (HID) |
-|---------------------|-----------|------------------------|
-| Tap Strap, Tap Strap 2 | `false` | Yes: Text mode, Controller with Mouse HID, Controller with Full HID |
-| TapXR on stock firmware (every TapXR by default) | `false` | Yes: Text mode and HID controller modes; plus TapXR input states |
-| TapXR on the TapXR developer firmware (opt-in developer program) | `true` | **No.** No Text mode, no HID modes, no input type. Boots with tap detection off. |
-
-Only TapXR owners who join the developer program move to the developer firmware. Tap Strap cannot.
-
-Python, Web, and Android deliver **raw** gesture detections from the sensor (iOS exposes only a processed layer). Android also offers a **processed** air-gesture layer (`onXRAirGestureReceived`) with per-finger click, drag, drop, fist begin/end, and swipe (debounce and hold latch).
+Every Tap SDK delivers **raw** gesture detections from the sensor. Android also offers a **processed** air-gesture layer (`onXRAirGestureReceived`) with per-finger click, drag, drop, fist begin/end, and swipe (debounce and hold latch).
 
 Getting started
 ===============
@@ -55,22 +45,24 @@ TapSdk sdk = new TapSdk(tapBluetoothManager);
 Key features
 ============
 ##### Input Modes
-As stated in the official [Tap BLE API Documentation](https://www.tapwithus.com/api), once you turn ON a Tap Strap or a TapXR on stock firmware, by default, it will be booted into Text Mode, meaning that the TAP device functions as a bluetooth keyboard, every recognized tap will be mapped to a letter, and __no input data will be sent to the SDK__.
+As stated in the official [Tap BLE API Documentation](https://www.tapwithus.com/api), once you turn ON the TAP device, by default, it will be booted into Text Mode, meaning that the TAP device functions as a bluetooth keyboard, every recognized tap will be mapped to a letter, and __no input data will be sent to the SDK__.
 
-When using the SDK, it is required to get the input data for a specific TAP device. In order to achieve this goal, after a connection with the TAP been established, we need to switch the TAP device to Controller Mode. In addition, it is important we switch back to Text Mode once the application goes to background, so the regular TAP keyboard behaviour will be restored. (The TapXR developer firmware has no Text Mode or keyboard: there `pause()` turns all data streams off, and `resume()` turns them back on.)
+When using the SDK, it is required to get the input data for a specific TAP device. In order to achieve this goal, after a connection with the TAP been established, we need to switch the TAP device to Controller Mode. In addition, it is important we switch back to Text Mode once the application goes to background, so the regular TAP behaviour will be restored.
 
 To simplify the process TAP SDK will perform the needed actions in order to correctly connect and switch between Modes _automatically_, __so you don't have to.__
 
 Two additional modes to Text and Controller :
-Controller with Mouse HID: Behaves as a controller, but also allow the TAP to control the mouse cursor). Tap Strap / stock TapXR firmware only.
+Controller with Mouse HID: Behaves as a controller, but also allow the TAP to control the mouse cursor).
 Raw Sensor Mode: Streams raw sensor data (from Gyro and Accelerometer sensors on TAP). More or that later... 
+
+> **HID availability:** Text Mode and the HID modes (`startTextMode`, `startControllerWithMouseHIDMode`, `startControllerWithFullHIDMode`) work only on the standard firmware (every Tap Strap, and TapXR by default). TapXR on the developer firmware, which owners join through the developer program, has no HID: there `sdk.isV2Tap(id)` is `true`, so enable tap detection with `startControllerMode` plus `startXRTappingState` after connecting, and expect Text/HID calls to fall back there without an error (Text turns streams off, HID modes act as Controller).
 
 What now?
 =========
 Once a `TapSdk` instance been instantiated, TAP SDK will start doing his magic, by performing the following actions:
 * Auto establishing connections with paired TAP devices.
 * After a connection with a TAP device been established successfully, switching it to Controller Mode.
-* When the application goes to background, switching back to Text Mode (Tap Strap / stock TapXR). On the TapXR developer firmware, turning data streams off instead (no keyboard).
+* When the application goes to background, switching back to Text Mode.
 * When the application returns from background, switching back to Controller Mode.
 
 The only thing you need to take care of is to register for the necessary events.
@@ -164,7 +156,6 @@ public void startControllerWithMouseHIDMode(@NonNull String tapIdentifier);
 public void startRawSensorMode(@NonNull String tapIdentifier, byte deviceAccelerometerSensitivity, byte imuGyroSensitivity, byte imuAccelerometerSensitivity);
 public void startControllerWithFullHIDMode(@NonNull String tapIdentifier);
 ```
-Text mode and the two HID modes exist only on Tap Strap and stock TapXR firmware. This SDK currently enables the two HID controller modes only on Tap Strap hardware (hardware 3.2–3.x); on other classic hardware it logs an error and falls back to Controller mode. On the TapXR developer firmware there is no HID, and the calls are remapped without an error: `startTextMode` (and `pause()`) turns all data streams off (no keyboard appears), and both HID controller modes become plain Controller.
 &nbsp;
 &nbsp;
 #### `int getMode(String tapIdentifier)`
@@ -274,7 +265,7 @@ public void onRawSensorInputReceived(@NonNull String tapIdentifier,@NonNull RawS
 
 Current TapXR developer firmware reports the full gesture set. TapBand uses the same BLE API (coming soon: https://www.tapwithus.com/tapband-waitlist/).
 
-Python, Web, and Android deliver **raw** detections from the sensor (iOS does not expose them). On Android they arrive on `onAirMouseInputReceived`. Android also runs a **processed** layer and delivers `onXRAirGestureReceived`.
+Every Tap SDK delivers **raw** detections from the sensor. On Android they arrive on `onAirMouseInputReceived`. Android also runs a **processed** layer and delivers `onXRAirGestureReceived`.
 
 ## Raw detections (`onAirMouseInputReceived`)
 
@@ -358,7 +349,7 @@ Raw `onAirMouseInputReceived` still fires for the same packets.
 
 ## TapXRState
 
-In addition to TAPInputMode, TapXR has input states that select tapping vs air gestures. On stock TapXR firmware this is the input-type command. On the TapXR developer firmware the same calls are remapped to vision-model commands: AIRMOUSE → air-gesture model + stream, TAPPING → tapping model + trigger, USERCONTROL → default features only (no model change).
+In addition to TAPInputMode, TapXR has input states that select tapping vs air gestures. The same calls apply on the framed protocol (they map to vision-model commands).
 
 You can force a TapXR to switch state as follows:
 
@@ -394,7 +385,7 @@ If you wish to apply this state to already-connected devices, call with "applyIm
 
 # Framed BLE protocol (September 2026)
 
-There is one SDK. The TapXR developer firmware (opt-in developer program), and TapBand when it ships, use a framed BLE protocol. Tap Strap and TapXR on stock firmware (the main firmware channel, every TapXR by default) use the classic characteristic-per-stream protocol. `TapSdk` detects the protocol after connection — no extra connect code is required for basic usage.
+There is one SDK. Current TapXR developer firmware, and TapBand when it ships, use a framed BLE protocol. Older Tap Strap / TapXR firmware uses the classic characteristic-per-stream protocol. `TapSdk` detects the protocol after connection — no extra connect code is required for basic usage.
 
 `isV2Tap` and types in `com.tapwithus.sdk.v2` name that framed protocol. Do not call this "SDK v1" or "SDK v2". TapBand uses the same BLE API as TapXR (coming soon: https://www.tapwithus.com/tapband-waitlist/).
 
@@ -402,8 +393,7 @@ There is one SDK. The TapXR developer firmware (opt-in developer program), and T
 * Mouse / pointer movement keeps arriving via `onMouseInputReceived`, and additionally via `onImuMotionInputReceived` which includes Euler angles (roll, pitch, yaw).
 * Raw sensor data keeps arriving via `onRawSensorInputReceived` (framed protocol streams the thumb IMU only — there are no finger accelerometers).
 * Air gestures keep arriving via `onAirMouseInputReceived` (`UnifiedAirGesture` codes 100-114) and, processed, via `onXRAirGestureReceived`.
-* The existing mode API (`startControllerMode`, `startRawSensorMode`, XR states...) is translated automatically into framed feature commands. The framed protocol has **no HID**: `startTextMode` turns all data streams off (no keyboard), and `startControllerWithMouseHIDMode` / `startControllerWithFullHIDMode` become plain Controller. No error is reported for these.
-* The framed protocol boots with tap detection off. Controller mode (applied automatically while resumed) enables `MODEL_DETECTION`; pick a vision model with `startXRTappingState` / `startXRAirMouseState`.
+* The existing mode API (`startControllerMode`, `startTextMode`, `startRawSensorMode`, XR states...) is translated automatically into framed feature commands.
 * `vibrate` is sent through the framed protocol automatically.
 * A keepalive message is sent automatically every 10 seconds to every connected framed-protocol Tap (matching tap-ios-sdk and tap-python-sdk). You can also send one manually with `sdk.sendKeepAlive(tapIdentifier)`.
 

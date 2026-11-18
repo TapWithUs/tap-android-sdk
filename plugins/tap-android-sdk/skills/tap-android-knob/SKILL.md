@@ -15,7 +15,7 @@ Needs the framed protocol (`sdk.isV2Tap(id)`): air-gesture holds and IMU roll. C
 
 TapBand uses the same BLE API as TapXR and is coming soon: https://www.tapwithus.com/tapband-waitlist/. Current TapXR developer firmware includes pinch-with-hold in the full gesture set.
 
-You can drive the tracker from raw `UnifiedAirGesture` codes (same detections the Python and Web SDKs see) or from processed `XRAirGesture` (`DRAG_*` / `DROP`). The template below takes raw codes.
+You can drive the tracker from raw `UnifiedAirGesture` codes (same detections every Tap SDK sees) or from processed `XRAirGesture` (`DRAG_*` / `DROP`). The template below takes raw codes.
 
 ## How it works
 

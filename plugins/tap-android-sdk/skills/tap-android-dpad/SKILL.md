@@ -16,7 +16,7 @@ Needs the framed protocol (`sdk.isV2Tap(id)`): air gestures and IMU motion. This
 
 TapBand uses the same BLE API as TapXR and is coming soon: https://www.tapwithus.com/tapband-waitlist/. Current TapXR developer firmware includes swipes, pinches with hold, and fist with hold.
 
-The template consumes **raw** `UnifiedAirGesture` codes (the detections the Python and Web SDKs see). On Android you can also listen to processed `onXRAirGestureReceived` (`SWIPE_*`, `CLICK_*`, `DRAG_*`, `DROP`, `FIST_BEGIN` / `FIST_END`) for UI that does not need the 1 s rotate-vs-drag lock.
+The template consumes **raw** `UnifiedAirGesture` codes (the detections every Tap SDK sees). On Android you can also listen to processed `onXRAirGestureReceived` (`SWIPE_*`, `CLICK_*`, `DRAG_*`, `DROP`, `FIST_BEGIN` / `FIST_END`) for UI that does not need the 1 s rotate-vs-drag lock.
 
 ## Interaction
 

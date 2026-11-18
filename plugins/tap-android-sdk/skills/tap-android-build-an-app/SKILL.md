@@ -56,9 +56,9 @@ Add a keyboard or button fallback (volume keys, on-screen buttons) so the screen
 @Override protected void onPause()  { super.onPause();  sdk.pause(); }
 ```
 
-`pause()` returns a Tap Strap or stock-firmware TapXR to Text mode so it works as a keyboard in other apps. That is the right default. On the TapXR developer firmware (`isV2Tap`), there is no keyboard: `pause()` turns data streams off.
+`pause()` returns the Tap to Text mode so it works as a keyboard in other apps. That is the right default.
 
-If the app must keep receiving taps while stopped, call `sdk.disablePauseResumeHandling()` and tell the user the Tap will not return to keyboard mode by itself (Tap Strap / stock TapXR). Do this only when they asked for background input.
+If the app must keep receiving taps while stopped, call `sdk.disablePauseResumeHandling()` and tell the user the Tap will not return to keyboard mode by itself. Do this only when they asked for background input.
 
 Unregister the listener in `onDestroy`. Call `sdk.close()` only when the process is done with Bluetooth (it releases the shared manager from `TapSdkFactory`).
 
