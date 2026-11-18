@@ -117,6 +117,8 @@ sdk.setDefaultMode(TapInputMode.controller(), /* applyImmediate */ true);
 
 `startMode`/`getMode`/`isInMode` are deprecated — use the methods above.
 
+HID availability: `startTextMode` and the HID modes work only on the standard firmware (every Tap Strap, and TapXR by default); TapXR on the developer firmware (`sdk.isV2Tap(id) == true`, joined through the developer program) has no HID, so enable tap detection with `startControllerMode` plus `startXRTappingState` after connecting.
+
 ## Common operations
 
 ```java

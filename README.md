@@ -55,6 +55,8 @@ Two additional modes to Text and Controller :
 Controller with Mouse HID: Behaves as a controller, but also allow the TAP to control the mouse cursor).
 Raw Sensor Mode: Streams raw sensor data (from Gyro and Accelerometer sensors on TAP). More or that later... 
 
+> **HID availability:** Text Mode and the HID modes (`startTextMode`, `startControllerWithMouseHIDMode`, `startControllerWithFullHIDMode`) work only on the standard firmware (every Tap Strap, and TapXR by default). TapXR on the developer firmware, which owners join through the developer program, has no HID: there `sdk.isV2Tap(id)` is `true`, so enable tap detection with `startControllerMode` plus `startXRTappingState` after connecting, and expect Text/HID calls to fall back there without an error (Text turns streams off, HID modes act as Controller).
+
 What now?
 =========
 Once a `TapSdk` instance been instantiated, TAP SDK will start doing his magic, by performing the following actions:
